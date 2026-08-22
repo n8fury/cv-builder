@@ -64,7 +64,7 @@ and completion state.
     suite (`npm test`) round-trips a temp profile through write→read and asserts
     writes are atomic (temp file plus rename).
 
-- [ ] Task 0.8: Build the variant→library resolver producing a flat render model
+- [x] Task 0.8: Build the variant→library resolver producing a flat render model
   - Verification: `lib/data/resolve.ts` exports `resolveVariant(library, variant)`;
     a vitest case resolving `detailed.json` yields 9 competencies, 2 experience
     entries / 10 bullets, 2 projects / 6 bullets, 1 education entry, 7 skill
