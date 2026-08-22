@@ -51,7 +51,7 @@ and completion state.
     `data/profiles/jordan-rivera/content-library.json` without error and reports
     `schemaVersion: 1`.
 
-- [ ] Task 0.6: Write Zod schemas for variants (§6.2, §12.2, §12.5)
+- [x] Task 0.6: Write Zod schemas for variants (§6.2, §12.2, §12.5)
   - Verification: `lib/schema/variant.ts` exports `variantSchema`; the same
     `validate-data.ts` run parses
     `data/profiles/jordan-rivera/variants/detailed.json` clean, including the
