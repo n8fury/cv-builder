@@ -34,13 +34,24 @@ describe("resume.css generated block", () => {
     }
   });
 
+  it("maps every section type onto its own spacing rule", () => {
+    const handWritten = css.slice(css.indexOf(GENERATED_END));
+    for (const section of SECTION_TYPES) {
+      const name = section.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
+      expect(handWritten, `no rule for ${section}`).toContain(
+        `.resume-section[data-section="${name}"]`,
+      );
+      expect(handWritten).toContain(`var(--space-before-margin-${name})`);
+    }
+  });
+
   it("carries each measured value through to the stylesheet", () => {
     expect(css).toContain(`--space-before-experience: ${SPACE_BEFORE_PT.experience}pt;`);
   });
 
   it("is consumed by the hand-written rules, not restated", () => {
     const handWritten = css.slice(css.indexOf(GENERATED_END));
-    expect(handWritten).toContain("var(--space-before-experience)");
+    expect(handWritten).toContain("var(--space-before-margin-experience)");
     expect(handWritten).toContain("var(--leading-body)");
     expect(handWritten).not.toMatch(/\d+\.\d+pt/);
   });

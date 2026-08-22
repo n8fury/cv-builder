@@ -9,6 +9,8 @@ import { notFound } from "next/navigation";
 
 import { ResumeHeader } from "@/components/resume/ResumeHeader";
 import { ResumePage } from "@/components/resume/ResumePage";
+import { ResumeSection } from "@/components/resume/ResumeSection";
+import { SECTION_TITLE } from "@/lib/render/section-titles";
 import { NotFoundError } from "@/lib/data/store";
 import { loadRenderModel, type LoadedRender } from "@/lib/render/load";
 
@@ -42,7 +44,9 @@ export default async function RenderPage({
         if (section.type === "header") {
           return <ResumeHeader key={key} header={section.header} mode={section.mode} />;
         }
-        return <div key={key}>{section.type}</div>;
+        const title =
+          section.type === "custom" ? section.section.title : SECTION_TITLE[section.type];
+        return <ResumeSection key={key} type={section.type} title={title} />;
       })}
     </ResumePage>
   );

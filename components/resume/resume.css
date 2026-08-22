@@ -39,7 +39,7 @@
   --name-to-contact-margin-full: 11.418pt;
   --contact-line-gap: 17.07pt;
 
-  /* Per-section space-before (§4.2, §16.1) */
+  /* Per-section space-before (§4.2, §16.1) — measured target … */
   --space-before-header: 0;
   --space-before-about-me: 27.2pt;
   --space-before-competencies: 25.03pt;
@@ -51,6 +51,19 @@
   --space-before-languages: 27.2pt;
   --space-before-recommendations: 27.2pt;
   --space-before-custom: 27.2pt;
+
+  /* … and the same target as a CSS top margin on the section */
+  --space-before-margin-header: 0;
+  --space-before-margin-about-me: 14.473pt;
+  --space-before-margin-competencies: 12.303pt;
+  --space-before-margin-experience: 14.713pt;
+  --space-before-margin-projects: 14.473pt;
+  --space-before-margin-education: 14.243pt;
+  --space-before-margin-skills: 14.513pt;
+  --space-before-margin-certifications: 14.413pt;
+  --space-before-margin-languages: 14.473pt;
+  --space-before-margin-recommendations: 14.473pt;
+  --space-before-margin-custom: 14.473pt;
 
   /* Per-section heading → first content baseline (§4.3) */
   --heading-to-content-header: 0;
@@ -77,7 +90,9 @@
   --bullet-marker-offset: 11.18pt;
   --hanging-indent: 20pt;
   --bullet-extra-gap: 0;
+  --heading-line-height: 12pt;
   --heading-rule-weight: 0.4pt;
+  --heading-rule-padding: 3.512pt;
 }
 /* end generated */
 
@@ -134,13 +149,88 @@ body {
   margin-top: var(--name-to-contact-margin-full);
 }
 
+/* Sections (§4.2, §4.5, §16.1). Each section type carries its own measured
+   space-before and heading→content gap; the mapping rules below are the only
+   place a section type is named, so adding one is a single edit — and
+   css-variables.test.ts fails if any type is missing a rule. */
 .resume-section {
-  margin-top: calc(var(--space-before-experience) - var(--leading-body));
+  margin-top: var(--section-space-before);
 }
 
+.resume-section[data-section="header"] {
+  --section-space-before: var(--space-before-margin-header);
+  --section-heading-to-content: var(--heading-to-content-header);
+}
+
+.resume-section[data-section="about-me"] {
+  --section-space-before: var(--space-before-margin-about-me);
+  --section-heading-to-content: var(--heading-to-content-about-me);
+}
+
+.resume-section[data-section="competencies"] {
+  --section-space-before: var(--space-before-margin-competencies);
+  --section-heading-to-content: var(--heading-to-content-competencies);
+}
+
+.resume-section[data-section="experience"] {
+  --section-space-before: var(--space-before-margin-experience);
+  --section-heading-to-content: var(--heading-to-content-experience);
+}
+
+.resume-section[data-section="projects"] {
+  --section-space-before: var(--space-before-margin-projects);
+  --section-heading-to-content: var(--heading-to-content-projects);
+}
+
+.resume-section[data-section="education"] {
+  --section-space-before: var(--space-before-margin-education);
+  --section-heading-to-content: var(--heading-to-content-education);
+}
+
+.resume-section[data-section="skills"] {
+  --section-space-before: var(--space-before-margin-skills);
+  --section-heading-to-content: var(--heading-to-content-skills);
+}
+
+.resume-section[data-section="certifications"] {
+  --section-space-before: var(--space-before-margin-certifications);
+  --section-heading-to-content: var(--heading-to-content-certifications);
+}
+
+.resume-section[data-section="languages"] {
+  --section-space-before: var(--space-before-margin-languages);
+  --section-heading-to-content: var(--heading-to-content-languages);
+}
+
+.resume-section[data-section="recommendations"] {
+  --section-space-before: var(--space-before-margin-recommendations);
+  --section-heading-to-content: var(--heading-to-content-recommendations);
+}
+
+.resume-section[data-section="custom"] {
+  --section-space-before: var(--space-before-margin-custom);
+  --section-heading-to-content: var(--heading-to-content-custom);
+}
+
+/* Title Case, bold, with a hairline rule spanning the full content width
+   (§4.5, §15.9). The padding carries the border down to its measured offset
+   below the baseline; the line box alone stops well short of it. break-after
+   keeps a heading from being stranded at the foot of a page (§15.11). */
 .resume-section-heading {
+  margin: 0;
   font-weight: 700;
   font-size: var(--font-size-heading);
-  border-bottom: var(--heading-rule-weight) solid #000;
+  line-height: var(--heading-line-height);
   break-after: avoid;
+}
+
+/* A filled block, not a border: Chromium rounds any non-zero border width up
+   to a whole pixel, which would print the hairline at nearly twice its
+   measured weight. A background box keeps the exact height. */
+.resume-section-heading::after {
+  content: "";
+  display: block;
+  height: var(--heading-rule-weight);
+  margin-top: var(--heading-rule-padding);
+  background: #000;
 }

@@ -21,6 +21,8 @@ import {
   ENTRY_TO_NEXT_ENTRY_PT,
   HANGING_INDENT_PT,
   HEADING_FONT_SIZE_PT,
+  HEADING_LINE_HEIGHT_PT,
+  HEADING_RULE_PADDING_PT,
   HEADING_RULE_WEIGHT_PT,
   HEADING_TO_CONTENT_PT,
   NAME_FONT_SIZE_PT,
@@ -31,6 +33,7 @@ import {
   PAGE_MARGIN_PT,
   PAGE_WIDTH_PT,
   RIGHT_BLOCK_LIFT_PT,
+  SPACE_BEFORE_MARGIN_PT,
   SPACE_BEFORE_PT,
   SUBTITLE_TO_FIRST_BULLET_PT,
   TITLE_TO_SUBTITLE_PT,
@@ -86,9 +89,14 @@ function declarations(): string[] {
   add("name-to-contact-margin-full", NAME_TO_CONTACT_MARGIN_PT.full);
   add("contact-line-gap", CONTACT_LINE_GAP_PT);
 
-  group("Per-section space-before (§4.2, §16.1)");
+  group("Per-section space-before (§4.2, §16.1) — measured target …");
   for (const section of SECTION_TYPES) {
     add(`space-before-${kebab(section)}`, SPACE_BEFORE_PT[section]);
+  }
+
+  group("… and the same target as a CSS top margin on the section");
+  for (const section of SECTION_TYPES) {
+    add(`space-before-margin-${kebab(section)}`, SPACE_BEFORE_MARGIN_PT[section]);
   }
 
   group("Per-section heading → first content baseline (§4.3)");
@@ -108,7 +116,9 @@ function declarations(): string[] {
   add("bullet-marker-offset", BULLET_MARKER_OFFSET_PT);
   add("hanging-indent", HANGING_INDENT_PT);
   add("bullet-extra-gap", BULLET_TO_BULLET_EXTRA_PT);
+  add("heading-line-height", HEADING_LINE_HEIGHT_PT);
   add("heading-rule-weight", HEADING_RULE_WEIGHT_PT);
+  add("heading-rule-padding", HEADING_RULE_PADDING_PT);
 
   return lines;
 }

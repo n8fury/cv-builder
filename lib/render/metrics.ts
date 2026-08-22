@@ -186,6 +186,15 @@ export const HANGING_INDENT_PT = 20.0;
 export const HEADING_RULE_WEIGHT_PT = 0.4;
 
 /**
+ * Heading baseline → its underline. Measured across all seven headings in the
+ * source: 5.152, 5.153, 5.153, 5.153, 5.164, 5.153 — and one outlier, Core
+ * Competencies at 6.076. The rule is not a text item, so §11.2's harness never
+ * sees it; one constant at the consistent value beats reproducing a 0.9pt
+ * hand-nudge in a single section.
+ */
+export const HEADING_BASELINE_TO_RULE_PT = 5.15;
+
+/**
  * The dates/location block does **not** share a baseline with the
  * title/company block — it sits consistently 2.31pt higher, in both source
  * documents. That exceeds §11.2's ±2pt tolerance, so it is implemented
@@ -340,3 +349,38 @@ export const NAME_TO_CONTACT_MARGIN_PT: Record<"full" | "minimal", number> = {
     { previous: { fontSizePt: NAME_FONT_SIZE_PT, lineHeightPt: NAME_LINE_HEIGHT_PT } },
   ),
 };
+
+/* ── Section heading geometry (§4.2, §4.5), derived ────────────────── */
+
+/** Headings run at one body line height; nothing in §4 asks for more. */
+export const HEADING_LINE_HEIGHT_PT = BODY_LEADING_PT;
+
+/**
+ * Padding under the heading text that carries its border down to the measured
+ * rule offset. The line box alone only reaches 1.64pt past the baseline.
+ */
+export const HEADING_RULE_PADDING_PT =
+  HEADING_BASELINE_TO_RULE_PT -
+  (HEADING_LINE_HEIGHT_PT -
+    boxTopToBaseline(HEADING_FONT_SIZE_PT, HEADING_LINE_HEIGHT_PT));
+
+/**
+ * §4.2's space-before targets, as CSS top margins on the section wrapper.
+ *
+ * The gap always runs from a body line (10pt at 12pt leading — every section
+ * ends in body text, as does the header's contact line) down to a 12pt
+ * heading, so one conversion serves every section type.
+ */
+export const SPACE_BEFORE_MARGIN_PT: Record<SectionType, number> =
+  Object.fromEntries(
+    Object.entries(SPACE_BEFORE_PT).map(([section, target]) => [
+      section,
+      // The header draws no heading and opens the page flush against the top
+      // padding — it has no gap above it to convert.
+      section === "header"
+        ? 0
+        : baselineGap(target, HEADING_FONT_SIZE_PT, HEADING_LINE_HEIGHT_PT, {
+            previous: { fontSizePt: BODY_FONT_SIZE_PT, lineHeightPt: BODY_LEADING_PT },
+          }),
+    ]),
+  ) as Record<SectionType, number>;

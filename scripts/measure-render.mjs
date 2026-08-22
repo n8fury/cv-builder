@@ -53,11 +53,15 @@ const MEASURE = (selectorList, pxPerPt, pageHeightPt) => {
   const pt = (value) => Number((value / pxPerPt).toFixed(2));
 
   /* A zero-sized inline-block aligns its bottom margin edge to the baseline
-     of the line it lands on — the only way to read a baseline out of the DOM. */
-  const lastBaseline = (node) => {
+     of the line it lands on — the only way to read a baseline out of the DOM.
+     Prepended it reports the first line's baseline, appended the last one's.
+     They differ for anything multi-line, and for a heading, whose ::after rule
+     pushes an appended probe onto a line of its own below the text. */
+  const baselineOf = (node, where) => {
     const probe = document.createElement("span");
     probe.style.cssText = "display:inline-block;width:0;height:0;vertical-align:baseline";
-    node.appendChild(probe);
+    if (where === "first") node.insertBefore(probe, node.firstChild);
+    else node.appendChild(probe);
     const { bottom } = probe.getBoundingClientRect();
     probe.remove();
     return bottom;
@@ -70,7 +74,8 @@ const MEASURE = (selectorList, pxPerPt, pageHeightPt) => {
     nodes.forEach((node, index) => {
       const box = node.getBoundingClientRect();
       const style = getComputedStyle(node);
-      const baseline = pt(lastBaseline(node));
+      const firstBaseline = pt(baselineOf(node, "first"));
+      const lastBaseline = pt(baselineOf(node, "last"));
       /* The border box spans the full content width for a block, so the ink
          itself is measured separately — that is what §4's x values refer to. */
       const range = document.createRange();
@@ -83,6 +88,9 @@ const MEASURE = (selectorList, pxPerPt, pageHeightPt) => {
         font: style.fontFamily.split(",")[0].replace(/["']/g, ""),
         fontSize: pt(parseFloat(style.fontSize)),
         lineHeight: pt(parseFloat(style.lineHeight)),
+        weight: style.fontWeight,
+        breakAfter: style.breakAfter,
+        rule: pt(parseFloat(getComputedStyle(node, "::after").height) || 0),
         left: pt(box.left),
         right: pt(box.right),
         width: pt(box.width),
@@ -94,8 +102,10 @@ const MEASURE = (selectorList, pxPerPt, pageHeightPt) => {
         contentRight: pt(box.right - parseFloat(style.paddingRight)),
         textLeft: pt(ink.left),
         textRight: pt(ink.right),
-        lastBaselineY: baseline,
-        lastBaselinePdfY: Number((pageHeightPt - baseline).toFixed(2)),
+        firstBaselineY: firstBaseline,
+        firstBaselinePdfY: Number((pageHeightPt - firstBaseline).toFixed(2)),
+        lastBaselineY: lastBaseline,
+        lastBaselinePdfY: Number((pageHeightPt - lastBaseline).toFixed(2)),
       });
     });
   }
