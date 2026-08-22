@@ -89,6 +89,7 @@ const MEASURE = (selectorList, pxPerPt, pageHeightPt) => {
         fontSize: pt(parseFloat(style.fontSize)),
         lineHeight: pt(parseFloat(style.lineHeight)),
         weight: style.fontWeight,
+        style: style.fontStyle,
         breakAfter: style.breakAfter,
         rule: pt(parseFloat(getComputedStyle(node, "::after").height) || 0),
         left: pt(box.left),

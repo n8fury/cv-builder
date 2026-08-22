@@ -1,0 +1,53 @@
+/**
+ * An entry with a two-column head and a bullet list (SPEC §4.4, §5.4, §5.5).
+ *
+ * The head is a flex row: title and company on the left, dates and location
+ * flush to the right edge of the content box. The right column is lifted
+ * 2.31pt — measured, consistent across both source documents, and beyond
+ * §11.2's tolerance, so it is reproduced rather than rounded away (§4.4).
+ *
+ * `break-inside: avoid` keeps an entry's head and bullets together across a
+ * page break (§11.5).
+ */
+import type { ReactNode } from "react";
+
+import { ResumeBullets } from "./ResumeBullets";
+
+import type { ResolvedBullet } from "@/lib/data/resolve";
+
+export function ResumeEntry({
+  kind,
+  title,
+  subtitle,
+  dates,
+  location,
+  bullets,
+  children,
+}: {
+  kind: "experience" | "projects";
+  title: string;
+  subtitle: ReactNode;
+  dates: string;
+  location?: string;
+  bullets: ResolvedBullet[];
+  children?: ReactNode;
+}) {
+  return (
+    <article className="resume-entry" data-entry={kind}>
+      <div className="resume-entry-head">
+        <div className="resume-entry-left">
+          <div className="resume-entry-title">{title}</div>
+          <div className="resume-entry-subtitle">{subtitle}</div>
+        </div>
+        <div className="resume-entry-right">
+          <div className="resume-entry-dates">{dates}</div>
+          {location === undefined ? null : (
+            <div className="resume-entry-location">{location}</div>
+          )}
+        </div>
+      </div>
+      {children}
+      <ResumeBullets bullets={bullets} />
+    </article>
+  );
+}

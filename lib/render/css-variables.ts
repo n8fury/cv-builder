@@ -13,11 +13,13 @@ import { SECTION_TYPES, type SectionType } from "../schema/variant";
 import {
   BODY_FONT_SIZE_PT,
   BODY_LEADING_PT,
+  BULLET_MARKER_BOX_X_PT,
   BULLET_MARKER_OFFSET_PT,
   BULLET_TO_BULLET_EXTRA_PT,
   COMPANY_TO_FIRST_BULLET_PT,
   CONTACT_LINE_GAP_PT,
   CONTENT_WIDTH_PT,
+  ENTRY_GAP_MARGIN_PT,
   ENTRY_TO_NEXT_ENTRY_PT,
   HANGING_INDENT_PT,
   HEADING_FONT_SIZE_PT,
@@ -36,7 +38,9 @@ import {
   RIGHT_BLOCK_LIFT_PT,
   SPACE_BEFORE_MARGIN_PT,
   SPACE_BEFORE_PT,
+  SUBTITLE_TO_BULLETS_MARGIN_PT,
   SUBTITLE_TO_FIRST_BULLET_PT,
+  TITLE_TO_SUBTITLE_MARGIN_PT,
   TITLE_TO_SUBTITLE_PT,
   TOP_MARGIN_TO_HEADING_BASELINE_PT,
   WIDE_LEADING_PT,
@@ -120,9 +124,15 @@ function declarations(): string[] {
   add("entry-gap-experience", ENTRY_TO_NEXT_ENTRY_PT.experience);
   add("entry-gap-projects", ENTRY_TO_NEXT_ENTRY_PT.projects);
   add("right-block-lift", RIGHT_BLOCK_LIFT_PT);
+  add("title-to-subtitle-margin", TITLE_TO_SUBTITLE_MARGIN_PT);
+  add("subtitle-to-bullets-margin-experience", SUBTITLE_TO_BULLETS_MARGIN_PT.experience);
+  add("subtitle-to-bullets-margin-projects", SUBTITLE_TO_BULLETS_MARGIN_PT.projects);
+  add("entry-gap-margin-experience", ENTRY_GAP_MARGIN_PT.experience);
+  add("entry-gap-margin-projects", ENTRY_GAP_MARGIN_PT.projects);
 
   group("Bullets and rules (§4.4, §4.5)");
   add("bullet-marker-offset", BULLET_MARKER_OFFSET_PT);
+  add("bullet-marker-box-x", BULLET_MARKER_BOX_X_PT);
   add("hanging-indent", HANGING_INDENT_PT);
   add("bullet-extra-gap", BULLET_TO_BULLET_EXTRA_PT);
   add("heading-line-height", HEADING_LINE_HEIGHT_PT);

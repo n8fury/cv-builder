@@ -9,6 +9,7 @@ import { notFound } from "next/navigation";
 
 import { ResumeAboutMe } from "@/components/resume/ResumeAboutMe";
 import { ResumeCompetencies } from "@/components/resume/ResumeCompetencies";
+import { ResumeExperience } from "@/components/resume/ResumeExperience";
 import { ResumeHeader } from "@/components/resume/ResumeHeader";
 import { ResumePage } from "@/components/resume/ResumePage";
 import { ResumeSection } from "@/components/resume/ResumeSection";
@@ -53,6 +54,9 @@ export default async function RenderPage({
             {section.type === "aboutMe" ? <ResumeAboutMe text={section.text} /> : null}
             {section.type === "competencies" ? (
               <ResumeCompetencies items={section.items} />
+            ) : null}
+            {section.type === "experience" ? (
+              <ResumeExperience entries={section.entries} />
             ) : null}
           </ResumeSection>
         );

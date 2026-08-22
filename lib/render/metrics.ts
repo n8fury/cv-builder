@@ -414,3 +414,64 @@ export const HEADING_TO_CONTENT_MARGIN_PT: Record<SectionType, number> =
           ),
     ]),
   ) as Record<SectionType, number>;
+
+/* ── Entry geometry (§4.4), derived ────────────────────────────────── */
+
+/**
+ * Title → company as a CSS margin. The two lines are set in different faces
+ * (Charter bold, then Charis SIL Italic), and Charis sits deeper in its line
+ * box, so the ascent does not quite cancel the way it does within one face.
+ */
+export const TITLE_TO_SUBTITLE_MARGIN_PT = baselineGap(
+  TITLE_TO_SUBTITLE_PT,
+  BODY_FONT_SIZE_PT,
+  BODY_LEADING_PT,
+  {
+    face: "charisItalic",
+    previous: { fontSizePt: BODY_FONT_SIZE_PT, lineHeightPt: BODY_LEADING_PT },
+  },
+);
+
+/** Company (Charis) → first bullet (Charter), as a CSS margin. */
+export const SUBTITLE_TO_BULLETS_MARGIN_PT: Record<
+  "experience" | "projects",
+  number
+> = {
+  experience: baselineGap(
+    COMPANY_TO_FIRST_BULLET_PT,
+    BODY_FONT_SIZE_PT,
+    BODY_LEADING_PT,
+    { previous: { fontSizePt: BODY_FONT_SIZE_PT, lineHeightPt: BODY_LEADING_PT, face: "charisItalic" } },
+  ),
+  projects: baselineGap(
+    SUBTITLE_TO_FIRST_BULLET_PT,
+    BODY_FONT_SIZE_PT,
+    BODY_LEADING_PT,
+    { previous: { fontSizePt: BODY_FONT_SIZE_PT, lineHeightPt: BODY_LEADING_PT, face: "charisItalic" } },
+  ),
+};
+
+/** Entry → next entry, as a CSS margin. Both ends are body-face bullets. */
+export const ENTRY_GAP_MARGIN_PT: Record<"experience" | "projects", number> = {
+  experience: baselineGap(
+    ENTRY_TO_NEXT_ENTRY_PT.experience,
+    BODY_FONT_SIZE_PT,
+    BODY_LEADING_PT,
+  ),
+  projects: baselineGap(
+    ENTRY_TO_NEXT_ENTRY_PT.projects,
+    BODY_FONT_SIZE_PT,
+    BODY_LEADING_PT,
+  ),
+};
+
+/**
+ * Charter's left side bearing on body text: the ink starts 1.18pt right of
+ * the box (§4.5). The bullet marker's box is placed so its own ink lands on
+ * the measured marker x.
+ */
+export const BODY_SIDE_BEARING_PT = 1.18;
+
+/** Box x for the bullet marker, relative to the content box left edge. */
+export const BULLET_MARKER_BOX_X_PT =
+  BULLET_MARKER_OFFSET_PT - BODY_SIDE_BEARING_PT;

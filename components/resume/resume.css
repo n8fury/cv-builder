@@ -98,9 +98,15 @@
   --entry-gap-experience: 28.17pt;
   --entry-gap-projects: 25.41pt;
   --right-block-lift: 2.31pt;
+  --title-to-subtitle-margin: -0.149pt;
+  --subtitle-to-bullets-margin-experience: 7.439pt;
+  --subtitle-to-bullets-margin-projects: 10.339pt;
+  --entry-gap-margin-experience: 16.17pt;
+  --entry-gap-margin-projects: 13.41pt;
 
   /* Bullets and rules (§4.4, §4.5) */
   --bullet-marker-offset: 11.18pt;
+  --bullet-marker-box-x: 10pt;
   --hanging-indent: 20pt;
   --bullet-extra-gap: 0;
   --heading-line-height: 12pt;
@@ -249,6 +255,86 @@ body {
 /* Inline emphasis inside body text is Charter's italic, never Charis (§16.5). */
 .resume-italic {
   font-style: italic;
+}
+
+/* Entries (§4.4, §5.4, §11.5). The head is two columns: title and company at
+   the left margin, dates and location flush right. The right column is lifted
+   by its measured amount — it does not share a baseline with the left. */
+.resume-entry {
+  break-inside: avoid;
+}
+
+.resume-section-heading + .resume-entry {
+  margin-top: var(--section-heading-to-content);
+}
+
+.resume-entry[data-entry="experience"] + .resume-entry {
+  margin-top: var(--entry-gap-margin-experience);
+}
+
+.resume-entry[data-entry="projects"] + .resume-entry {
+  margin-top: var(--entry-gap-margin-projects);
+}
+
+.resume-entry-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.resume-entry-right {
+  text-align: right;
+  margin-top: calc(-1 * var(--right-block-lift));
+  white-space: nowrap;
+}
+
+.resume-entry-title {
+  font-weight: 700;
+}
+
+/* Company, project subtitle, and degree are Charis SIL Italic; locations and
+   inline emphasis are Charter's italic (§16.5). */
+.resume-entry-subtitle {
+  font-family: "Charis SIL", serif;
+  font-style: italic;
+  margin-top: var(--title-to-subtitle-margin);
+}
+
+.resume-entry-dates {
+  font-weight: 700;
+}
+
+.resume-entry-location {
+  font-style: italic;
+}
+
+/* Bullets (§4.5). Consecutive body lines, no gap: the leading is the spacing.
+   The marker is positioned out to the left of the hanging indent so it takes
+   no width from the first line. */
+.resume-bullets {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.resume-entry[data-entry="experience"] .resume-bullets {
+  margin-top: var(--subtitle-to-bullets-margin-experience);
+}
+
+.resume-entry[data-entry="projects"] .resume-bullets {
+  margin-top: var(--subtitle-to-bullets-margin-projects);
+}
+
+.resume-bullet {
+  position: relative;
+  padding-left: var(--hanging-indent);
+  margin-top: var(--bullet-extra-gap);
+  text-align: justify;
+}
+
+.resume-bullet-marker {
+  position: absolute;
+  left: var(--bullet-marker-box-x);
 }
 
 /* Title Case, bold, with a hairline rule spanning the full content width
