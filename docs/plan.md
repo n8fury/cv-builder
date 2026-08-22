@@ -45,7 +45,7 @@ and completion state.
     `public/fonts/`, `out/`, and retains `data/reference/`; `git status --short`
     is clean after `npm install`.
 
-- [ ] Task 0.5: Write Zod schemas for the content library (§6.1, §12.3, §12.4, §15.2)
+- [x] Task 0.5: Write Zod schemas for the content library (§6.1, §12.3, §12.4, §15.2)
   - Verification: `lib/schema/library.ts` exports `contentLibrarySchema`;
     `npx tsx scripts/validate-data.ts` parses
     `data/profiles/jordan-rivera/content-library.json` without error and reports
