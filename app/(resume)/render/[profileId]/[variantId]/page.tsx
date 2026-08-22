@@ -12,6 +12,7 @@ import { ResumeCompetencies } from "@/components/resume/ResumeCompetencies";
 import { ResumeExperience } from "@/components/resume/ResumeExperience";
 import { ResumeHeader } from "@/components/resume/ResumeHeader";
 import { ResumePage } from "@/components/resume/ResumePage";
+import { ResumeProjects } from "@/components/resume/ResumeProjects";
 import { ResumeSection } from "@/components/resume/ResumeSection";
 import { SECTION_TITLE } from "@/lib/render/section-titles";
 import { NotFoundError } from "@/lib/data/store";
@@ -57,6 +58,9 @@ export default async function RenderPage({
             ) : null}
             {section.type === "experience" ? (
               <ResumeExperience entries={section.entries} />
+            ) : null}
+            {section.type === "projects" ? (
+              <ResumeProjects entries={section.entries} />
             ) : null}
           </ResumeSection>
         );

@@ -308,6 +308,21 @@ body {
   font-style: italic;
 }
 
+/* Repo/demo links (§5.5, §6.4). Body colour and an underline — a printed CV
+   has no hover state, and a coloured link would be the only non-black ink on
+   the page. Presence is the toggle; there is no visibility flag. The right
+   column is otherwise nowrap for date ranges, but a URL is long enough to
+   need wrapping rather than to push into the title. */
+.resume-entry-links {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.resume-link {
+  color: inherit;
+  text-decoration: underline;
+}
+
 /* Bullets (§4.5). Consecutive body lines, no gap: the leading is the spacing.
    The marker is positioned out to the left of the hanging indent so it takes
    no width from the first line. */

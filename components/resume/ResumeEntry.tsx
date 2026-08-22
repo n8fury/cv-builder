@@ -6,6 +6,9 @@
  * 2.31pt — measured, consistent across both source documents, and beyond
  * §11.2's tolerance, so it is reproduced rather than rounded away (§4.4).
  *
+ * `aside` fills the right column's second line for entry kinds that have no
+ * location to put there — Projects' repo/demo links (§5.5).
+ *
  * `break-inside: avoid` keeps an entry's head and bullets together across a
  * page break (§11.5).
  */
@@ -21,6 +24,7 @@ export function ResumeEntry({
   subtitle,
   dates,
   location,
+  aside,
   bullets,
   children,
 }: {
@@ -29,6 +33,7 @@ export function ResumeEntry({
   subtitle: ReactNode;
   dates: string;
   location?: string;
+  aside?: ReactNode;
   bullets: ResolvedBullet[];
   children?: ReactNode;
 }) {
@@ -44,6 +49,7 @@ export function ResumeEntry({
           {location === undefined ? null : (
             <div className="resume-entry-location">{location}</div>
           )}
+          {aside}
         </div>
       </div>
       {children}
