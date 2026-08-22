@@ -71,7 +71,7 @@ and completion state.
     groups / 37 skills, 4 certifications (§12.6), and throws a named error on a
     dangling ID reference.
 
-- [ ] Task 0.9: Implement the `*inline italic*` markup parser with `\*` escaping (§16.3)
+- [x] Task 0.9: Implement the `*inline italic*` markup parser with `\*` escaping (§16.3)
   - Verification: `lib/render/markup.ts` exports `parseInlineMarkup`; vitest
     covers paired asterisks → italic span, escaped asterisk → literal `*`, and an
     unpaired asterisk rendering literally without throwing.
