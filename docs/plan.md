@@ -87,7 +87,7 @@ and completion state.
     user font directory; each output is non-empty, and the script exits non-zero
     with a clear message if a source TTF is missing.
 
-- [ ] Task 1.2: Document the font prerequisite and license note in `README.md` (§3)
+- [x] Task 1.2: Document the font prerequisite and license note in `README.md` (§3)
   - Verification: `README.md` lists the four required font files, the
     build-fonts step, and the Charter BT commercial-license caveat;
     `public/fonts/` is confirmed gitignored.
