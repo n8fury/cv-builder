@@ -7,6 +7,7 @@
  */
 import { notFound } from "next/navigation";
 
+import { ResumeHeader } from "@/components/resume/ResumeHeader";
 import { ResumePage } from "@/components/resume/ResumePage";
 import { NotFoundError } from "@/lib/data/store";
 import { loadRenderModel, type LoadedRender } from "@/lib/render/load";
@@ -36,9 +37,13 @@ export default async function RenderPage({
 
   return (
     <ResumePage>
-      {model.sections.map((section, index) => (
-        <div key={`${section.type}-${index}`}>{section.type}</div>
-      ))}
+      {model.sections.map((section, index) => {
+        const key = `${section.type}-${index}`;
+        if (section.type === "header") {
+          return <ResumeHeader key={key} header={section.header} mode={section.mode} />;
+        }
+        return <div key={key}>{section.type}</div>;
+      })}
     </ResumePage>
   );
 }

@@ -32,8 +32,11 @@
 
   /* Header (§4.1, §5.1) */
   --top-margin-to-heading-baseline: 11.77pt;
+  --name-line-height: 23.156pt;
   --name-to-contact-minimal: 23.45pt;
   --name-to-contact-full: 23.58pt;
+  --name-to-contact-margin-minimal: 11.288pt;
+  --name-to-contact-margin-full: 11.418pt;
   --contact-line-gap: 17.07pt;
 
   /* Per-section space-before (§4.2, §16.1) */
@@ -104,6 +107,31 @@ body {
   font-family: "Charter BT", serif;
   font-size: var(--font-size-body);
   line-height: var(--leading-body);
+}
+
+/* Header (§5.1, §15.9). The name block sits flush against the top padding
+   edge; --name-line-height is solved backwards from its measured baseline
+   (see metrics.ts), so no margin is involved here. */
+.resume-name {
+  font-size: var(--font-size-name);
+  line-height: var(--name-line-height);
+  text-align: center;
+}
+
+/* Both contact lines are body-size, so the line-to-line target converts to a
+   margin by subtracting one line height. The gap under the name does not —
+   the two blocks differ in size, so that margin is computed in metrics.ts. */
+.resume-contact {
+  text-align: center;
+  margin-top: calc(var(--contact-line-gap) - var(--leading-body));
+}
+
+.resume-header[data-mode="minimal"] .resume-name + .resume-contact {
+  margin-top: var(--name-to-contact-margin-minimal);
+}
+
+.resume-header[data-mode="full"] .resume-name + .resume-contact {
+  margin-top: var(--name-to-contact-margin-full);
 }
 
 .resume-section {

@@ -24,6 +24,8 @@ import {
   HEADING_RULE_WEIGHT_PT,
   HEADING_TO_CONTENT_PT,
   NAME_FONT_SIZE_PT,
+  NAME_LINE_HEIGHT_PT,
+  NAME_TO_CONTACT_MARGIN_PT,
   NAME_TO_CONTACT_PT,
   PAGE_HEIGHT_PT,
   PAGE_MARGIN_PT,
@@ -44,9 +46,14 @@ function kebab(sectionType: SectionType): string {
   return sectionType.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 }
 
-/** Points, with no trailing zeros; a bare `0` needs no unit in CSS. */
+/**
+ * Points, with no trailing zeros; a bare `0` needs no unit in CSS. Derived
+ * values (the baseline→margin conversions) carry float noise well below a
+ * thousandth of a point, so they are rounded there — measured values from §4
+ * never have that many places and pass through untouched.
+ */
 function pt(value: number): string {
-  return value === 0 ? "0" : `${value}pt`;
+  return value === 0 ? "0" : `${Number(value.toFixed(3))}pt`;
 }
 
 function declarations(): string[] {
@@ -72,8 +79,11 @@ function declarations(): string[] {
 
   group("Header (§4.1, §5.1)");
   add("top-margin-to-heading-baseline", TOP_MARGIN_TO_HEADING_BASELINE_PT);
+  add("name-line-height", NAME_LINE_HEIGHT_PT);
   add("name-to-contact-minimal", NAME_TO_CONTACT_PT.minimal);
   add("name-to-contact-full", NAME_TO_CONTACT_PT.full);
+  add("name-to-contact-margin-minimal", NAME_TO_CONTACT_MARGIN_PT.minimal);
+  add("name-to-contact-margin-full", NAME_TO_CONTACT_MARGIN_PT.full);
   add("contact-line-gap", CONTACT_LINE_GAP_PT);
 
   group("Per-section space-before (§4.2, §16.1)");

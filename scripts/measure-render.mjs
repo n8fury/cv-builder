@@ -7,7 +7,13 @@
  * SPEC §8) and prints the measured page box, its padding, and the content
  * box's left and right edges, all converted back into points.
  *
- * Usage: node scripts/measure-render.mjs [url] [selector]
+ * Baselines are measured, not inferred: a zero-sized inline-block probe is
+ * appended to each element, and its bottom edge sits exactly on that
+ * element's last baseline. Positions are reported both from the top of the
+ * document and as PDF-style y (up from the page bottom), so they can be read
+ * straight against SPEC §4's coordinates.
+ *
+ * Usage: node scripts/measure-render.mjs [url] [comma-separated selectors]
  */
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -16,6 +22,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const PX_PER_PT = 96 / 72;
+const PAGE_HEIGHT_PT = 792;
 
 const CHROME_CANDIDATES = [
   process.env.CHROME_PATH,
@@ -26,7 +33,10 @@ const CHROME_CANDIDATES = [
 ].filter(Boolean);
 
 const url = process.argv[2] ?? "http://localhost:3000/render/jordan-rivera/detailed";
-const selector = process.argv[3] ?? ".resume-page";
+const selectors = (process.argv[3] ?? ".resume-page,.resume-name,.resume-contact")
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
 
 function chromeBinary() {
   const found = CHROME_CANDIDATES.find((path) => existsSync(path));
@@ -39,25 +49,57 @@ function chromeBinary() {
 }
 
 /** The measurement itself, evaluated in the page. Returns points, not pixels. */
-const MEASURE = (sel, pxPerPt) => {
-  const node = document.querySelector(sel);
-  if (!node) return { error: `No element matches ${sel}` };
-  const box = node.getBoundingClientRect();
-  const style = getComputedStyle(node);
-  const pt = (value) => Number((parseFloat(value) / pxPerPt).toFixed(2));
-  return {
-    width: pt(box.width),
-    height: pt(box.height),
-    padding: {
-      top: pt(style.paddingTop),
-      right: pt(style.paddingRight),
-      bottom: pt(style.paddingBottom),
-      left: pt(style.paddingLeft),
-    },
-    contentLeft: pt(box.left + parseFloat(style.paddingLeft)),
-    contentRight: pt(box.right - parseFloat(style.paddingRight)),
-    bodyMargin: pt(getComputedStyle(document.body).marginTop),
+const MEASURE = (selectorList, pxPerPt, pageHeightPt) => {
+  const pt = (value) => Number((value / pxPerPt).toFixed(2));
+
+  /* A zero-sized inline-block aligns its bottom margin edge to the baseline
+     of the line it lands on — the only way to read a baseline out of the DOM. */
+  const lastBaseline = (node) => {
+    const probe = document.createElement("span");
+    probe.style.cssText = "display:inline-block;width:0;height:0;vertical-align:baseline";
+    node.appendChild(probe);
+    const { bottom } = probe.getBoundingClientRect();
+    probe.remove();
+    return bottom;
   };
+
+  const measured = [];
+  for (const selector of selectorList) {
+    const nodes = document.querySelectorAll(selector);
+    if (nodes.length === 0) measured.push({ selector, missing: true });
+    nodes.forEach((node, index) => {
+      const box = node.getBoundingClientRect();
+      const style = getComputedStyle(node);
+      const baseline = pt(lastBaseline(node));
+      /* The border box spans the full content width for a block, so the ink
+         itself is measured separately — that is what §4's x values refer to. */
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      const ink = range.getBoundingClientRect();
+      measured.push({
+        selector,
+        index,
+        text: (node.textContent ?? "").trim().replace(/\s+/g, " ").slice(0, 48),
+        font: style.fontFamily.split(",")[0].replace(/["']/g, ""),
+        fontSize: pt(parseFloat(style.fontSize)),
+        lineHeight: pt(parseFloat(style.lineHeight)),
+        left: pt(box.left),
+        right: pt(box.right),
+        width: pt(box.width),
+        height: pt(box.height),
+        padding: [style.paddingTop, style.paddingRight, style.paddingBottom, style.paddingLeft]
+          .map((value) => pt(parseFloat(value)))
+          .join(" "),
+        contentLeft: pt(box.left + parseFloat(style.paddingLeft)),
+        contentRight: pt(box.right - parseFloat(style.paddingRight)),
+        textLeft: pt(ink.left),
+        textRight: pt(ink.right),
+        lastBaselineY: baseline,
+        lastBaselinePdfY: Number((pageHeightPt - baseline).toFixed(2)),
+      });
+    });
+  }
+  return measured;
 };
 
 async function withBrowser(run) {
@@ -162,7 +204,7 @@ const result = await withBrowser(async (endpoint) => {
     const { result: value } = await cdp.send(
       "Runtime.evaluate",
       {
-        expression: `(${MEASURE.toString()})(${JSON.stringify(selector)}, ${PX_PER_PT})`,
+        expression: `(${MEASURE.toString()})(${JSON.stringify(selectors)}, ${PX_PER_PT}, ${PAGE_HEIGHT_PT})`,
         returnByValue: true,
         awaitPromise: true,
       },
@@ -174,10 +216,10 @@ const result = await withBrowser(async (endpoint) => {
   }
 });
 
-if (result.error) {
-  console.error(result.error);
-  process.exit(1);
-}
+const missing = result.filter((entry) => entry.missing);
+for (const entry of missing) console.error(`No element matches ${entry.selector}`);
 
-console.log(`${url}  ${selector}`);
-console.log(JSON.stringify(result, null, 2));
+console.log(url);
+console.log(JSON.stringify(result.filter((entry) => !entry.missing), null, 2));
+
+if (missing.length > 0) process.exit(1);

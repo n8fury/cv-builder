@@ -296,3 +296,47 @@ export function baselineGap(
 
   return targetPt - previousBaselineToBottom - topToThisBaseline;
 }
+
+/* ── Header geometry (§4.1, §5.1), derived ─────────────────────────── */
+
+/** Content top edge → name baseline on page 1. */
+export const CONTENT_TOP_TO_NAME_BASELINE_PT =
+  CONTENT_TOP_Y_PT - NAME_BASELINE_Y_PT;
+
+/** The line height that puts a block's first baseline at `targetPt` below its
+ *  top edge — the inverse of `boxTopToBaseline()`. */
+export function lineHeightForBaseline(
+  fontSizePt: number,
+  targetPt: number,
+  face: Face = "charter",
+): number {
+  const contentHeight = (ASCENT_RATIO[face] + DESCENT_RATIO[face]) * fontSizePt;
+  return contentHeight + 2 * (targetPt - ASCENT_RATIO[face] * fontSizePt);
+}
+
+/**
+ * The name's line height is not a measured value — no second line of 24.9pt
+ * text exists to measure one from. It is solved for: the name block sits flush
+ * against the top padding edge, so its line height is whatever puts its
+ * baseline at y=716.37 (§4.1's "box top overshoots the top margin by ~3.4pt").
+ */
+export const NAME_LINE_HEIGHT_PT = lineHeightForBaseline(
+  NAME_FONT_SIZE_PT,
+  CONTENT_TOP_TO_NAME_BASELINE_PT,
+);
+
+/** Name baseline → first contact baseline, as a CSS margin, per header mode. */
+export const NAME_TO_CONTACT_MARGIN_PT: Record<"full" | "minimal", number> = {
+  minimal: baselineGap(
+    NAME_TO_CONTACT_PT.minimal,
+    BODY_FONT_SIZE_PT,
+    BODY_LEADING_PT,
+    { previous: { fontSizePt: NAME_FONT_SIZE_PT, lineHeightPt: NAME_LINE_HEIGHT_PT } },
+  ),
+  full: baselineGap(
+    NAME_TO_CONTACT_PT.full,
+    BODY_FONT_SIZE_PT,
+    BODY_LEADING_PT,
+    { previous: { fontSizePt: NAME_FONT_SIZE_PT, lineHeightPt: NAME_LINE_HEIGHT_PT } },
+  ),
+};
