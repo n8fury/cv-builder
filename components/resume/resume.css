@@ -78,6 +78,23 @@
 }
 /* end generated */
 
+/* Page box (§2, §8). @page carries the size so `preferCSSPageSize: true`
+   has an authoritative value to read, and zero margin so the only margins in
+   play are the 55pt of padding on .resume-page below. Letter is stated in
+   inches to match the Puppeteer `format: 'Letter'` the export passes (§15.10). */
+@page {
+  size: 8.5in 11in;
+  margin: 0;
+}
+
+/* The resume document has its own root layout, so nothing has reset these. */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #fff;
+}
+
 .resume-page {
   width: var(--page-width);
   min-height: var(--page-height);

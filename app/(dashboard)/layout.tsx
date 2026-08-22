@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
-import "./globals.css";
+
+import "../globals.css";
 
 export const metadata: Metadata = {
   title: "CV Builder",
   description: "Tailored, pixel-perfect CVs from one content library",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function DashboardLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en">
       <body>{children}</body>

@@ -12,7 +12,8 @@
     "validate:data": "tsx scripts/validate-data.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build:resume-css": "tsx scripts/build-resume-css.ts"
+    "build:resume-css": "tsx scripts/build-resume-css.ts",
+    "measure:page": "node scripts/measure-render.mjs"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.3",
