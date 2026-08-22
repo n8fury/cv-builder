@@ -57,7 +57,7 @@ and completion state.
     `data/profiles/jordan-rivera/variants/detailed.json` clean, including the
     per-section `options` shapes.
 
-- [ ] Task 0.7: Build the filesystem data layer — read/list/write profiles,
+- [x] Task 0.7: Build the filesystem data layer — read/list/write profiles,
       libraries, variants (§9)
   - Verification: `lib/data/store.ts` exports `listProfiles`, `readLibrary`,
     `listVariants`, `readVariant`, `writeVariant`, `deleteVariant`; a vitest

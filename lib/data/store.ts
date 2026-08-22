@@ -1,0 +1,166 @@
+/**
+ * Filesystem data layer (SPEC §9).
+ *
+ *   data/profiles/<profileId>/content-library.json
+ *   data/profiles/<profileId>/variants/<variantId>.json
+ *
+ * Every read is validated against the schemas in lib/schema, so nothing
+ * downstream has to defend against malformed JSON. Variant writes go through
+ * a temp file plus rename, so a crash mid-write can never leave a half-written
+ * variant behind — the variant file is the only thing the editor overwrites in
+ * place, and losing one to a partial write would lose real curation work.
+ */
+import { randomUUID } from "node:crypto";
+import { mkdir, readdir, readFile, rename, rm, unlink, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+
+import { contentLibrarySchema, type ContentLibrary } from "../schema/library";
+import { variantSchema, type Variant } from "../schema/variant";
+
+/** A profile, library, or variant that does not exist on disk. §13 maps this to a 404. */
+export class NotFoundError extends Error {
+  override readonly name = "NotFoundError";
+}
+
+/** A file that exists but does not match its schema. */
+export class InvalidDataError extends Error {
+  override readonly name = "InvalidDataError";
+}
+
+const SLUG = /^[a-z0-9][a-z0-9_-]*$/i;
+
+/**
+ * Profile and variant ids come from URLs and form input; keeping them to a
+ * flat slug means they can never escape the profiles directory.
+ */
+function assertSlug(kind: string, value: string): string {
+  if (!SLUG.test(value)) {
+    throw new NotFoundError(`Invalid ${kind} id: ${JSON.stringify(value)}`);
+  }
+  return value;
+}
+
+/** Root of the profile store. Overridable so tests can point at a temp dir. */
+export function profilesRoot(): string {
+  return process.env.CV_PROFILES_DIR ?? join(process.cwd(), "data", "profiles");
+}
+
+export function profileDir(profileId: string): string {
+  return join(profilesRoot(), assertSlug("profile", profileId));
+}
+
+export function libraryPath(profileId: string): string {
+  return join(profileDir(profileId), "content-library.json");
+}
+
+export function variantsDir(profileId: string): string {
+  return join(profileDir(profileId), "variants");
+}
+
+export function variantPath(profileId: string, variantId: string): string {
+  return join(variantsDir(profileId), `${assertSlug("variant", variantId)}.json`);
+}
+
+function isMissing(error: unknown): boolean {
+  return (error as NodeJS.ErrnoException | null)?.code === "ENOENT";
+}
+
+async function readJsonFile(path: string, label: string): Promise<unknown> {
+  let raw: string;
+  try {
+    raw = await readFile(path, "utf8");
+  } catch (error) {
+    if (isMissing(error)) throw new NotFoundError(`No ${label} at ${path}`);
+    throw error;
+  }
+  try {
+    return JSON.parse(raw) as unknown;
+  } catch (error) {
+    throw new InvalidDataError(`${label} at ${path} is not valid JSON: ${String(error)}`);
+  }
+}
+
+/** Profile ids, sorted. Empty when the store has not been created yet. */
+export async function listProfiles(): Promise<string[]> {
+  let entries;
+  try {
+    entries = await readdir(profilesRoot(), { withFileTypes: true });
+  } catch (error) {
+    if (isMissing(error)) return [];
+    throw error;
+  }
+  return entries
+    .filter((entry) => entry.isDirectory() && SLUG.test(entry.name))
+    .map((entry) => entry.name)
+    .sort();
+}
+
+export async function readLibrary(profileId: string): Promise<ContentLibrary> {
+  const path = libraryPath(profileId);
+  const parsed = contentLibrarySchema.safeParse(await readJsonFile(path, "content library"));
+  if (!parsed.success) {
+    throw new InvalidDataError(`Invalid content library at ${path}: ${parsed.error.message}`);
+  }
+  return parsed.data;
+}
+
+/** Variant ids for a profile, sorted. Empty when the profile has no variants yet. */
+export async function listVariants(profileId: string): Promise<string[]> {
+  let entries;
+  try {
+    entries = await readdir(variantsDir(profileId), { withFileTypes: true });
+  } catch (error) {
+    if (isMissing(error)) return [];
+    throw error;
+  }
+  return entries
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+    .map((entry) => entry.name.slice(0, -".json".length))
+    .filter((id) => SLUG.test(id))
+    .sort();
+}
+
+export async function readVariant(profileId: string, variantId: string): Promise<Variant> {
+  const path = variantPath(profileId, variantId);
+  const parsed = variantSchema.safeParse(await readJsonFile(path, "variant"));
+  if (!parsed.success) {
+    throw new InvalidDataError(`Invalid variant at ${path}: ${parsed.error.message}`);
+  }
+  return parsed.data;
+}
+
+/**
+ * Validates, then writes atomically: a sibling temp file is written and
+ * fsync-free renamed over the target, which is atomic on both POSIX and NTFS.
+ */
+export async function writeVariant(
+  profileId: string,
+  variantId: string,
+  variant: Variant,
+): Promise<void> {
+  const parsed = variantSchema.safeParse(variant);
+  if (!parsed.success) {
+    throw new InvalidDataError(`Refusing to write invalid variant: ${parsed.error.message}`);
+  }
+
+  const target = variantPath(profileId, variantId);
+  const temp = `${target}.${randomUUID()}.tmp`;
+  await mkdir(variantsDir(profileId), { recursive: true });
+  try {
+    await writeFile(temp, `${JSON.stringify(parsed.data, null, 2)}\n`, "utf8");
+    await rename(temp, target);
+  } catch (error) {
+    await rm(temp, { force: true });
+    throw error;
+  }
+}
+
+export async function deleteVariant(profileId: string, variantId: string): Promise<void> {
+  const path = variantPath(profileId, variantId);
+  try {
+    await unlink(path);
+  } catch (error) {
+    if (isMissing(error)) throw new NotFoundError(`No variant at ${path}`);
+    throw error;
+  }
+}
