@@ -97,7 +97,7 @@ and completion state.
     a `/render/...` page shows all four in DevTools → Network with status 200 and
     no fallback substitution.
 
-- [ ] Task 1.4: Encode every §4 measurement as named constants in one metrics module
+- [x] Task 1.4: Encode every §4 measurement as named constants in one metrics module
   - Verification: `lib/render/metrics.ts` exports page setup (612×792, 55pt
     margins), per-section `spaceBefore` (§4.2) and `headingToContent` (§4.3) maps
     keyed by section type, entry/bullet metrics (§4.4), leading values including
