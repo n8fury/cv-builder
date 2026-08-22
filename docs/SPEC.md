@@ -431,13 +431,15 @@ schema reference; §5/§6 are updated with pointers into it but keep this
 section for the actual shapes.
 
 ### 12.1 Canonical spec file
-This file must be named `SPEC.md` at repo root (matching what this
-document has called itself since §12.1 was first written) — if the repo
-currently has it as lowercase `spec.md`, rename it (`git mv --force
-spec.md SPEC.md` if on a case-insensitive filesystem) rather than
-editing this document to match the wrong casing. Any other `spec.md` in
-the repo (e.g. an earlier A4/style-panel/no-persistence draft) must be
-**deleted**, not archived — confirmed done as of this round.
+This file must be named `SPEC.md` (matching what this document has
+called itself since §12.1 was first written) and live at `docs/SPEC.md`,
+alongside `docs/plan.md` — an amendment to this section's original "repo
+root" placement, decided when the plan was written. If the repo has it
+as lowercase `spec.md`, rename it (`git mv --force spec.md docs/SPEC.md`
+if on a case-insensitive filesystem) rather than editing this document
+to match the wrong casing. Any other `spec.md` in the repo (e.g. an
+earlier A4/style-panel/no-persistence draft) must be **deleted**, not
+archived — confirmed done as of this round.
 
 ### 12.2 Per-section `options` object
 Every entry in a variant's section list gets an `options` object for

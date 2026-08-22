@@ -19,9 +19,11 @@ and completion state.
 
 ## Phase 0 — Repo scaffold and data layer
 
-- [ ] Task 0.1: Rename `spec.md` → `SPEC.md` per §12.1
-  - Verification: `git mv --force spec.md SPEC.md` completed; `git ls-files`
-    lists `SPEC.md` and no lowercase `spec.md` is tracked.
+- [x] Task 0.1: Rename `spec.md` → `docs/SPEC.md` per §12.1
+  - Verification: `git mv --force spec.md docs/SPEC.md` completed;
+    `git ls-files` lists `docs/SPEC.md` and no lowercase `spec.md` is tracked.
+  - Note: §12.1 originally placed the file at repo root; amended there and
+    here to `docs/SPEC.md`, beside this plan.
 
 - [ ] Task 0.2: Initialize Next.js (App Router) + TypeScript project at repo root
   - Verification: `package.json`, `tsconfig.json`, `next.config.ts`, and
