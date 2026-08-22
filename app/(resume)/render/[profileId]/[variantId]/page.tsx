@@ -9,6 +9,7 @@ import { notFound } from "next/navigation";
 
 import { ResumeAboutMe } from "@/components/resume/ResumeAboutMe";
 import { ResumeCompetencies } from "@/components/resume/ResumeCompetencies";
+import { ResumeCustomSection } from "@/components/resume/ResumeCustomSection";
 import { ResumeEducation } from "@/components/resume/ResumeEducation";
 import { ResumeCertifications } from "@/components/resume/ResumeCertifications";
 import { ResumeLanguages } from "@/components/resume/ResumeLanguages";
@@ -17,6 +18,7 @@ import { ResumeExperience } from "@/components/resume/ResumeExperience";
 import { ResumeHeader } from "@/components/resume/ResumeHeader";
 import { ResumePage } from "@/components/resume/ResumePage";
 import { ResumeProjects } from "@/components/resume/ResumeProjects";
+import { ResumeRecommendations } from "@/components/resume/ResumeRecommendations";
 import { ResumeSection } from "@/components/resume/ResumeSection";
 import { SECTION_TITLE } from "@/lib/render/section-titles";
 import { NotFoundError } from "@/lib/data/store";
@@ -75,6 +77,12 @@ export default async function RenderPage({
             ) : null}
             {section.type === "languages" ? (
               <ResumeLanguages entries={section.entries} />
+            ) : null}
+            {section.type === "recommendations" ? (
+              <ResumeRecommendations mode={section.mode} entries={section.entries} />
+            ) : null}
+            {section.type === "custom" ? (
+              <ResumeCustomSection section={section.section} />
             ) : null}
           </ResumeSection>
         );

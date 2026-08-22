@@ -479,6 +479,16 @@ export const ENTRY_GAP_MARGIN_PT: Record<EntryKind, number> = Object.fromEntries
 ) as Record<EntryKind, number>;
 
 /**
+ * Recommendation entry → next entry, as a CSS margin.
+ *
+ * Not a measurement and never will be: neither source document has a
+ * Recommendations section, so Phase 3 has nothing to read it from either. It
+ * borrows Experience's gap — the closest stacked-entry shape in the document
+ * — rather than introducing a number of its own (§5.9).
+ */
+export const RECOMMENDATION_GAP_MARGIN_PT = ENTRY_GAP_MARGIN_PT.experience;
+
+/**
  * Charter's left side bearing on body text: the ink starts 1.18pt right of
  * the box (§4.5). The bullet marker's box is placed so its own ink lands on
  * the measured marker x.

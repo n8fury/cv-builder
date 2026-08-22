@@ -35,6 +35,7 @@ import {
   PAGE_HEIGHT_PT,
   PAGE_MARGIN_PT,
   PAGE_WIDTH_PT,
+  RECOMMENDATION_GAP_MARGIN_PT,
   RIGHT_BLOCK_LIFT_PT,
   SPACE_BEFORE_MARGIN_PT,
   SPACE_BEFORE_PT,
@@ -132,6 +133,7 @@ function declarations(): string[] {
   add("entry-gap-margin-experience", ENTRY_GAP_MARGIN_PT.experience);
   add("entry-gap-margin-projects", ENTRY_GAP_MARGIN_PT.projects);
   add("entry-gap-margin-education", ENTRY_GAP_MARGIN_PT.education);
+  add("recommendation-gap-margin", RECOMMENDATION_GAP_MARGIN_PT);
 
   group("Bullets and rules (§4.4, §4.5)");
   add("bullet-marker-offset", BULLET_MARKER_OFFSET_PT);

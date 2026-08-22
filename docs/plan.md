@@ -173,7 +173,7 @@ and completion state.
     label bold; certifications render fully bold with right-aligned dates;
     measured line-to-line spacing in all three sections is 13.00pt, not 12.00pt.
 
-- [ ] Task 2.10: Render Recommendations (collapsed and expanded) and Custom
+- [x] Task 2.10: Render Recommendations (collapsed and expanded) and Custom
       Sections (§5.9, §5.11, §12.4)
   - Verification: a scratch variant with `mode: "collapsed"` renders the single
     "References available upon request" line; `mode: "expanded"` renders per-entry
