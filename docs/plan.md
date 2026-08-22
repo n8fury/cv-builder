@@ -180,7 +180,7 @@ and completion state.
     name/role/location/email; two `type: "custom"` section entries render as two
     distinct sections in array order.
 
-- [ ] Task 2.11: Apply `break-inside: avoid` per entry and page-boundary guides in
+- [x] Task 2.11: Apply `break-inside: avoid` per entry and page-boundary guides in
       preview mode (§11.5)
   - Verification: computed style on every entry wrapper shows
     `break-inside: avoid`; the preview shows page-boundary guides and the PDF

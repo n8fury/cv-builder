@@ -137,6 +137,7 @@ body {
 }
 
 .resume-page {
+  position: relative;
   width: var(--page-width);
   min-height: var(--page-height);
   padding: var(--page-margin);
@@ -145,6 +146,38 @@ body {
   font-family: "Charter BT", serif;
   font-size: var(--font-size-body);
   line-height: var(--leading-body);
+}
+
+/* Page-boundary guides (§11.5). Informational chrome, not part of the
+   document: a repeating hairline every --page-height down the page, so a CV
+   that runs long shows where each break will fall. Absolutely positioned and
+   pointer-transparent, so it contributes nothing to layout, and confined to
+   screen media — Puppeteer renders under print media (§15.10), which is what
+   keeps the guides out of every exported PDF.
+
+   The line weight is in pixels on purpose: this is a screen hairline, not a
+   §4 measurement, and it has no business in metrics.ts. */
+.resume-page-guides {
+  /* Chrome, so it lives here rather than in the generated block: no §4
+     measurement is a colour. */
+  --page-guide-color: #b3b3b3;
+  display: none;
+}
+
+@media screen {
+  .resume-page-guides {
+    display: block;
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(var(--page-height) - 1px),
+      var(--page-guide-color) calc(var(--page-height) - 1px),
+      var(--page-guide-color) var(--page-height)
+    );
+  }
 }
 
 /* Header (§5.1, §15.9). The name block sits flush against the top padding
@@ -267,6 +300,10 @@ body {
 /* Recommendations (§5.9). Expanded mode stacks name, role, location and
    email as plain body lines; the name is the only styled field. Nothing here
    is measured — see RECOMMENDATION_GAP_MARGIN_PT in metrics.ts. */
+.resume-recommendation {
+  break-inside: avoid;
+}
+
 .resume-recommendation + .resume-recommendation {
   margin-top: var(--recommendation-gap-margin);
 }

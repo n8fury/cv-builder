@@ -10,5 +10,10 @@
 import type { ReactNode } from "react";
 
 export function ResumePage({ children }: { children: ReactNode }) {
-  return <div className="resume-page">{children}</div>;
+  return (
+    <div className="resume-page">
+      {children}
+      <div className="resume-page-guides" aria-hidden="true" />
+    </div>
+  );
 }
