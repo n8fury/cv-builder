@@ -92,7 +92,7 @@ and completion state.
     build-fonts step, and the Charter BT commercial-license caveat;
     `public/fonts/` is confirmed gitignored.
 
-- [ ] Task 1.3: Declare `@font-face` rules with `font-display: block` (§8)
+- [x] Task 1.3: Declare `@font-face` rules with `font-display: block` (§8)
   - Verification: `components/resume/fonts.css` declares all four faces; loading
     a `/render/...` page shows all four in DevTools → Network with status 200 and
     no fallback substitution.
