@@ -1,5 +1,5 @@
 /**
- * An entry with a two-column head and a bullet list (SPEC §4.4, §5.4, §5.5).
+ * An entry with a two-column head and a bullet list (SPEC §4.4, §5.4-§5.6).
  *
  * The head is a flex row: title and company on the left, dates and location
  * flush to the right edge of the content box. The right column is lifted
@@ -9,6 +9,10 @@
  * `aside` fills the right column's second line for entry kinds that have no
  * location to put there — Projects' repo/demo links (§5.5).
  *
+ * Education is the same shape with different words in it: institution for
+ * title, degree for subtitle, and its one `description` field rendered as a
+ * single bullet (§16.2, §16.4).
+ *
  * `break-inside: avoid` keeps an entry's head and bullets together across a
  * page break (§11.5).
  */
@@ -17,6 +21,7 @@ import type { ReactNode } from "react";
 import { ResumeBullets } from "./ResumeBullets";
 
 import type { ResolvedBullet } from "@/lib/data/resolve";
+import type { EntryKind } from "@/lib/render/metrics";
 
 export function ResumeEntry({
   kind,
@@ -28,7 +33,7 @@ export function ResumeEntry({
   bullets,
   children,
 }: {
-  kind: "experience" | "projects";
+  kind: EntryKind;
   title: string;
   subtitle: ReactNode;
   dates: string;

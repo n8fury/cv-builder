@@ -123,12 +123,15 @@ function declarations(): string[] {
   add("subtitle-to-first-bullet", SUBTITLE_TO_FIRST_BULLET_PT);
   add("entry-gap-experience", ENTRY_TO_NEXT_ENTRY_PT.experience);
   add("entry-gap-projects", ENTRY_TO_NEXT_ENTRY_PT.projects);
+  add("entry-gap-education", ENTRY_TO_NEXT_ENTRY_PT.education);
   add("right-block-lift", RIGHT_BLOCK_LIFT_PT);
   add("title-to-subtitle-margin", TITLE_TO_SUBTITLE_MARGIN_PT);
   add("subtitle-to-bullets-margin-experience", SUBTITLE_TO_BULLETS_MARGIN_PT.experience);
   add("subtitle-to-bullets-margin-projects", SUBTITLE_TO_BULLETS_MARGIN_PT.projects);
+  add("subtitle-to-bullets-margin-education", SUBTITLE_TO_BULLETS_MARGIN_PT.education);
   add("entry-gap-margin-experience", ENTRY_GAP_MARGIN_PT.experience);
   add("entry-gap-margin-projects", ENTRY_GAP_MARGIN_PT.projects);
+  add("entry-gap-margin-education", ENTRY_GAP_MARGIN_PT.education);
 
   group("Bullets and rules (§4.4, §4.5)");
   add("bullet-marker-offset", BULLET_MARKER_OFFSET_PT);

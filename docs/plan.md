@@ -162,7 +162,7 @@ and completion state.
     below the title and 22.19pt from subtitle to first bullet; adding a `repoUrl`
     to a library item makes an underlined black link appear with no toggle.
 
-- [ ] Task 2.8: Render Education — institution bold on top, degree in Charis SIL
+- [x] Task 2.8: Render Education — institution bold on top, degree in Charis SIL
       Italic, description as a single bullet (§5.6, §16.2, §16.4)
   - Verification: the education entry renders `• Coursework: …` as a bullet, not
     a paragraph, with institution above degree.

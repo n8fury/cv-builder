@@ -161,12 +161,25 @@ export const COMPANY_TO_FIRST_BULLET_PT = 19.29;
 /** Subtitle → first bullet (Projects). */
 export const SUBTITLE_TO_FIRST_BULLET_PT = 22.19;
 
-/** Last baseline of one entry → title baseline of the next. */
-export const ENTRY_TO_NEXT_ENTRY_PT: Record<"experience" | "projects", number> =
-  {
-    experience: 28.17,
-    projects: 25.41,
-  };
+/** The three section types built from title/subtitle/dates entries (§5.4-§5.6). */
+export type EntryKind = "experience" | "projects" | "education";
+
+/**
+ * Last baseline of one entry → title baseline of the next.
+ *
+ * §4.4 measures Experience and Projects only: the source has a single
+ * Education entry, so it offers no Education gap to read. Experience's value
+ * stands in — the two are the same shape, title over subtitle over one
+ * bullet — until Phase 3 has a second entry to measure (plan Task 3.4).
+ */
+export const ENTRY_TO_NEXT_ENTRY_PT: Record<EntryKind, number> = {
+  experience: 28.17,
+  projects: 25.41,
+  education: 28.17,
+};
+
+/** Entry kinds whose entry-to-entry gap is still a stand-in. */
+export const PROVISIONAL_ENTRY_GAP: ReadonlySet<EntryKind> = new Set(["education"]);
 
 /* ── Bullets and rules (§4.4, §4.5) ────────────────────────────────── */
 
@@ -432,11 +445,11 @@ export const TITLE_TO_SUBTITLE_MARGIN_PT = baselineGap(
   },
 );
 
-/** Company (Charis) → first bullet (Charter), as a CSS margin. */
-export const SUBTITLE_TO_BULLETS_MARGIN_PT: Record<
-  "experience" | "projects",
-  number
-> = {
+/**
+ * Company (Charis) → first bullet (Charter), as a CSS margin. Education
+ * shares Experience's measured 19.29 — §4.4 gives the two one row.
+ */
+export const SUBTITLE_TO_BULLETS_MARGIN_PT: Record<EntryKind, number> = {
   experience: baselineGap(
     COMPANY_TO_FIRST_BULLET_PT,
     BODY_FONT_SIZE_PT,
@@ -449,21 +462,21 @@ export const SUBTITLE_TO_BULLETS_MARGIN_PT: Record<
     BODY_LEADING_PT,
     { previous: { fontSizePt: BODY_FONT_SIZE_PT, lineHeightPt: BODY_LEADING_PT, face: "charisItalic" } },
   ),
+  education: baselineGap(
+    COMPANY_TO_FIRST_BULLET_PT,
+    BODY_FONT_SIZE_PT,
+    BODY_LEADING_PT,
+    { previous: { fontSizePt: BODY_FONT_SIZE_PT, lineHeightPt: BODY_LEADING_PT, face: "charisItalic" } },
+  ),
 };
 
 /** Entry → next entry, as a CSS margin. Both ends are body-face bullets. */
-export const ENTRY_GAP_MARGIN_PT: Record<"experience" | "projects", number> = {
-  experience: baselineGap(
-    ENTRY_TO_NEXT_ENTRY_PT.experience,
-    BODY_FONT_SIZE_PT,
-    BODY_LEADING_PT,
-  ),
-  projects: baselineGap(
-    ENTRY_TO_NEXT_ENTRY_PT.projects,
-    BODY_FONT_SIZE_PT,
-    BODY_LEADING_PT,
-  ),
-};
+export const ENTRY_GAP_MARGIN_PT: Record<EntryKind, number> = Object.fromEntries(
+  Object.entries(ENTRY_TO_NEXT_ENTRY_PT).map(([kind, target]) => [
+    kind,
+    baselineGap(target, BODY_FONT_SIZE_PT, BODY_LEADING_PT),
+  ]),
+) as Record<EntryKind, number>;
 
 /**
  * Charter's left side bearing on body text: the ink starts 1.18pt right of

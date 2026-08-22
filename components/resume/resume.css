@@ -97,12 +97,15 @@
   --subtitle-to-first-bullet: 22.19pt;
   --entry-gap-experience: 28.17pt;
   --entry-gap-projects: 25.41pt;
+  --entry-gap-education: 28.17pt;
   --right-block-lift: 2.31pt;
   --title-to-subtitle-margin: -0.149pt;
   --subtitle-to-bullets-margin-experience: 7.439pt;
   --subtitle-to-bullets-margin-projects: 10.339pt;
+  --subtitle-to-bullets-margin-education: 7.439pt;
   --entry-gap-margin-experience: 16.17pt;
   --entry-gap-margin-projects: 13.41pt;
+  --entry-gap-margin-education: 16.17pt;
 
   /* Bullets and rules (§4.4, §4.5) */
   --bullet-marker-offset: 11.18pt;
@@ -276,6 +279,10 @@ body {
   margin-top: var(--entry-gap-margin-projects);
 }
 
+.resume-entry[data-entry="education"] + .resume-entry {
+  margin-top: var(--entry-gap-margin-education);
+}
+
 .resume-entry-head {
   display: flex;
   justify-content: space-between;
@@ -338,6 +345,10 @@ body {
 
 .resume-entry[data-entry="projects"] .resume-bullets {
   margin-top: var(--subtitle-to-bullets-margin-projects);
+}
+
+.resume-entry[data-entry="education"] .resume-bullets {
+  margin-top: var(--subtitle-to-bullets-margin-education);
 }
 
 .resume-bullet {
