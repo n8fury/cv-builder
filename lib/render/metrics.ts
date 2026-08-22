@@ -199,3 +199,100 @@ export const RIGHT_BLOCK_LIFT_PT = 2.31;
  * omission (§4.5).
  */
 export const BULLET_TO_BULLET_EXTRA_PT = 0;
+
+/* ── Baseline → CSS margin conversion ──────────────────────────────── */
+
+/**
+ * Ascent as a fraction of the em, read from each TTF's `hhea` table — the
+ * metrics Chrome uses for line-box layout on Windows (each face's
+ * `usWinAscent` is identical, and only Charis SIL sets USE_TYPO_METRICS,
+ * where its typo and hhea values agree anyway).
+ *
+ * Charter's roman and bold faces share an ascent, so a bold heading and
+ * roman body text sit identically within their line boxes.
+ */
+export const ASCENT_RATIO = {
+  charter: 1972 / 2048,
+  charterItalic: 2007 / 2048,
+  charisItalic: 2450 / 2048,
+} as const;
+
+/** Descent (positive, below the baseline) as a fraction of the em. */
+export const DESCENT_RATIO = {
+  charter: 483 / 2048,
+  charterItalic: 483 / 2048,
+  charisItalic: 900 / 2048,
+} as const;
+
+/** Which face a piece of text is set in, for line-box purposes. */
+export type Face = keyof typeof ASCENT_RATIO;
+
+/**
+ * Distance from a block's top border edge down to its first baseline.
+ *
+ * CSS centers the font's content area (ascent + descent) inside the line
+ * box, so the leftover leading is split evenly above and below — a
+ * line-height *tighter* than the content area yields a negative half, which
+ * is exactly the case here (Charter's content area is 1.199em against our
+ * 1.2 ratio at 10pt, and tighter still for the 12pt headings).
+ */
+export function boxTopToBaseline(
+  fontSizePt: number,
+  lineHeightPt: number,
+  face: Face = "charter",
+): number {
+  const contentHeight =
+    (ASCENT_RATIO[face] + DESCENT_RATIO[face]) * fontSizePt;
+  const halfLeading = (lineHeightPt - contentHeight) / 2;
+  return halfLeading + ASCENT_RATIO[face] * fontSizePt;
+}
+
+/** Line-box metrics of a block of text. */
+export type BlockMetrics = {
+  fontSizePt: number;
+  lineHeightPt: number;
+  face?: Face;
+};
+
+/**
+ * Convert a §4 baseline-to-baseline target into the CSS top margin that
+ * produces it.
+ *
+ * Every §4 measurement is baseline-to-baseline, but CSS margins run
+ * border-edge to border-edge. The two differ by how far each block's
+ * baseline sits from its own edge:
+ *
+ *     margin = target
+ *            − (previous block's last baseline → its bottom edge)
+ *            − (this block's top edge → its first baseline)
+ *
+ * When both blocks share a font size and leading those two terms sum to
+ * exactly one line height and the ascent cancels out — so a 12.00pt target
+ * between 12pt-leaded blocks needs no margin at all, which is why §4.4's
+ * entry title → company gap is invisible in the stylesheet. Pass `previous`
+ * when the blocks differ (body text into a 12pt heading, say); there the
+ * ascent does not cancel and must be accounted for.
+ *
+ * A negative result is meaningful, not an error: it is how §4.4's 2.31pt
+ * right-block lift and any tighter-than-one-line target get expressed.
+ */
+export function baselineGap(
+  targetPt: number,
+  fontSizePt: number,
+  lineHeightPt: number,
+  options: { face?: Face; previous?: BlockMetrics } = {},
+): number {
+  const face = options.face ?? "charter";
+  const previous = options.previous ?? { fontSizePt, lineHeightPt, face };
+
+  const previousBaselineToBottom =
+    previous.lineHeightPt -
+    boxTopToBaseline(
+      previous.fontSizePt,
+      previous.lineHeightPt,
+      previous.face ?? "charter",
+    );
+  const topToThisBaseline = boxTopToBaseline(fontSizePt, lineHeightPt, face);
+
+  return targetPt - previousBaselineToBottom - topToThisBaseline;
+}

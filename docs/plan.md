@@ -106,7 +106,7 @@ and completion state.
     right-block baseline lift. Every number appears exactly once in the codebase:
     `grep -rn "27.44" --include=*.ts --include=*.css` matches only this file.
 
-- [ ] Task 1.5: Implement `baselineGap()` — convert a target baseline delta into a
+- [x] Task 1.5: Implement `baselineGap()` — convert a target baseline delta into a
       CSS margin using font ascent
   - Verification: `lib/render/metrics.ts` exports
     `baselineGap(targetPt, fontSizePt, lineHeightPt)`; vitest asserts a 12.00pt
