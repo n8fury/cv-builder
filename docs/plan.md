@@ -124,39 +124,39 @@ and completion state.
 
 ## Phase 2 — The `/render` route (§11.1)
 
-- [ ] Task 2.1: Create the server route `/render/[profileId]/[variantId]` reading
+- [x] Task 2.1: Create the server route `/render/[profileId]/[variantId]` reading
       library and variant off disk
   - Verification: requesting `/render/jordan-rivera/detailed` returns HTTP 200; an
     unknown profile or variant returns 404, not a blank page (§13).
 
-- [ ] Task 2.2: Build the page shell — Letter size, 55pt padding, `@page` size and
+- [x] Task 2.2: Build the page shell — Letter size, 55pt padding, `@page` size and
       zero margin (§2, §8)
   - Verification: the page wrapper measures 612×792pt with 55pt padding on all
     four sides; the content box spans x 55 → 557 (§4.1).
 
-- [ ] Task 2.3: Render the Header section, full and minimal modes (§5.1, §15.9)
+- [x] Task 2.3: Render the Header section, full and minimal modes (§5.1, §15.9)
   - Verification: `/render/jordan-rivera/detailed` shows the centered 24.9pt name
     with a single pipe-separated contact line (minimal mode); a scratch variant
     set to `mode: "full"` produces two contact lines 17.07pt apart.
 
-- [ ] Task 2.4: Render section headings — Title Case, 12pt bold, 0.4pt full-width
+- [x] Task 2.4: Render section headings — Title Case, 12pt bold, 0.4pt full-width
       rule, `break-after: avoid` (§4.5, §15.9, §15.11)
   - Verification: all seven headings render Title Case with a rule spanning
     x 55 → 557; computed style shows `break-after: avoid`.
 
-- [ ] Task 2.5: Render About Me and Core Competencies (§5.2, §5.3)
+- [x] Task 2.5: Render About Me and Core Competencies (§5.2, §5.3)
   - Verification: About Me renders one paragraph at 10pt/12pt; competencies
     render as a single pipe-separated run beginning
     `Full Stack Development (MERN) | RESTful API Design`.
 
-- [ ] Task 2.6: Render Experience entries — flex header, 2.31pt right-block lift,
+- [x] Task 2.6: Render Experience entries — flex header, 2.31pt right-block lift,
       hanging-indent bullets (§4.4, §5.4)
   - Verification: title/company left-aligned and dates/location right-aligned to
     x 557; the right block's baseline sits 2.31pt above the left; wrapped bullet
     lines indent +20.0pt; consecutive bullets sit exactly 12pt apart with no
     extra gap.
 
-- [ ] Task 2.7: Render Projects entries including `repoUrl` / `demoUrl` when
+- [x] Task 2.7: Render Projects entries including `repoUrl` / `demoUrl` when
       present (§5.5, §6.4)
   - Verification: both seed projects render a Charis SIL Italic subtitle 12.00pt
     below the title and 22.19pt from subtitle to first bullet; adding a `repoUrl`
