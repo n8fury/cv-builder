@@ -177,6 +177,13 @@ body {
    css-variables.test.ts fails if any type is missing a rule. */
 .resume-section {
   margin-top: var(--section-space-before);
+  line-height: var(--section-leading);
+}
+
+/* Every section but the three below runs at body leading. Headings set their
+   own line height explicitly, so they are unaffected either way. */
+.resume-section {
+  --section-leading: var(--leading-body);
 }
 
 .resume-section[data-section="header"] {
@@ -210,16 +217,19 @@ body {
 }
 
 .resume-section[data-section="skills"] {
+  --section-leading: var(--leading-wide);
   --section-space-before: var(--space-before-margin-skills);
   --section-heading-to-content: var(--heading-to-content-margin-skills);
 }
 
 .resume-section[data-section="certifications"] {
+  --section-leading: var(--leading-wide);
   --section-space-before: var(--space-before-margin-certifications);
   --section-heading-to-content: var(--heading-to-content-margin-certifications);
 }
 
 .resume-section[data-section="languages"] {
+  --section-leading: var(--leading-wide);
   --section-space-before: var(--space-before-margin-languages);
   --section-heading-to-content: var(--heading-to-content-margin-languages);
 }
@@ -313,6 +323,35 @@ body {
 
 .resume-entry-location {
   font-style: italic;
+}
+
+/* Technical Skills and Languages (§5.7, §5.10). A bold label ending in a
+   colon, then a roman value — the two halves are set in different faces, so
+   they cannot be one string. Both sections run at 13pt, carried by
+   --section-leading above. */
+.resume-label {
+  font-weight: 700;
+}
+
+/* Certifications (§5.8). One bold line each, dates flush right on the same
+   line. Baseline alignment rather than the entry head's measured lift: these
+   are one line, not a two-column block, so §4.4's measured lift does not
+   apply. */
+.resume-certification {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-weight: 700;
+}
+
+.resume-certification-dates {
+  white-space: nowrap;
+}
+
+/* A credential URL is a reference, not part of the title, so it is not bold
+   even on an otherwise-bold line (§5.8). */
+.resume-credential {
+  font-weight: 400;
 }
 
 /* Repo/demo links (§5.5, §6.4). Body colour and an underline — a printed CV

@@ -167,7 +167,7 @@ and completion state.
   - Verification: the education entry renders `• Coursework: …` as a bullet, not
     a paragraph, with institution above degree.
 
-- [ ] Task 2.9: Render Technical Skills, Certifications, and Languages at 13pt
+- [x] Task 2.9: Render Technical Skills, Certifications, and Languages at 13pt
       leading (§4.5, §5.7, §5.8, §5.10)
   - Verification: all seven skill groups render as `Group: skill, skill` with the
     label bold; certifications render fully bold with right-aligned dates;

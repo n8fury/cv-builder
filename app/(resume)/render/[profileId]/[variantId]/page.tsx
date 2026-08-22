@@ -10,6 +10,9 @@ import { notFound } from "next/navigation";
 import { ResumeAboutMe } from "@/components/resume/ResumeAboutMe";
 import { ResumeCompetencies } from "@/components/resume/ResumeCompetencies";
 import { ResumeEducation } from "@/components/resume/ResumeEducation";
+import { ResumeCertifications } from "@/components/resume/ResumeCertifications";
+import { ResumeLanguages } from "@/components/resume/ResumeLanguages";
+import { ResumeSkills } from "@/components/resume/ResumeSkills";
 import { ResumeExperience } from "@/components/resume/ResumeExperience";
 import { ResumeHeader } from "@/components/resume/ResumeHeader";
 import { ResumePage } from "@/components/resume/ResumePage";
@@ -65,6 +68,13 @@ export default async function RenderPage({
             ) : null}
             {section.type === "education" ? (
               <ResumeEducation entries={section.entries} />
+            ) : null}
+            {section.type === "skills" ? <ResumeSkills groups={section.groups} /> : null}
+            {section.type === "certifications" ? (
+              <ResumeCertifications entries={section.entries} />
+            ) : null}
+            {section.type === "languages" ? (
+              <ResumeLanguages entries={section.entries} />
             ) : null}
           </ResumeSection>
         );
