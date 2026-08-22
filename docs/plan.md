@@ -80,7 +80,7 @@ and completion state.
 
 ## Phase 1 — Font pipeline and CSS metric system
 
-- [ ] Task 1.1: Write `scripts/build-fonts.mjs` converting local TTFs → woff2
+- [x] Task 1.1: Write `scripts/build-fonts.mjs` converting local TTFs → woff2
   - Verification: `node scripts/build-fonts.mjs` produces
     `public/fonts/charter-roman.woff2`, `charter-bold.woff2`,
     `charter-italic.woff2`, and `charis-italic.woff2` from the four faces in the
