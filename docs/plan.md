@@ -25,18 +25,22 @@ and completion state.
   - Note: §12.1 originally placed the file at repo root; amended there and
     here to `docs/SPEC.md`, beside this plan.
 
-- [ ] Task 0.2: Initialize Next.js (App Router) + TypeScript project at repo root
+- [x] Task 0.2: Initialize Next.js (App Router) + TypeScript project at repo root
   - Verification: `package.json`, `tsconfig.json`, `next.config.ts`, and
     `app/layout.tsx` exist; `npm run dev` serves `http://localhost:3000` with a
     200 response; `npx tsc --noEmit` passes.
 
-- [ ] Task 0.3: Configure Tailwind for editor chrome only, scoped away from the
+- [x] Task 0.3: Configure Tailwind for editor chrome only, scoped away from the
       resume template
-  - Verification: `tailwind.config.ts` content globs cover `app/**` and
-    `components/editor/**` but exclude `components/resume/**`; a Tailwind class
-    used inside a `components/resume/**` file produces no generated CSS (§7).
+  - Verification: `app/globals.css` registers `app` and `components/editor` as
+    sources and leaves `components/resume` unregistered; a Tailwind class used
+    inside a `components/resume/**` file produces no generated CSS (§7) —
+    `npm run check:tailwind-scope` exits 0.
+  - Note: Tailwind v4 replaced `tailwind.config.ts` content globs with
+    `@import "tailwindcss" source(none)` plus `@source` directives in CSS;
+    the verification above is the v4 equivalent of the original.
 
-- [ ] Task 0.4: Extend `.gitignore` for build output and generated fonts
+- [x] Task 0.4: Extend `.gitignore` for build output and generated fonts
   - Verification: `.gitignore` contains `node_modules/`, `.next/`,
     `public/fonts/`, `out/`, and retains `data/reference/`; `git status --short`
     is clean after `npm install`.

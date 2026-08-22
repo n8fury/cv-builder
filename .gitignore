@@ -1,2 +1,34 @@
+# dependencies
+node_modules/
+
+# next.js build output
+.next/
+out/
+build/
+
+# generated web fonts — built by scripts/build-fonts.mjs from local TTFs
+public/fonts/
+
+# typescript
+next-env.d.ts
+*.tsbuildinfo
+
+# testing
+coverage/
+
+# env files
+.env*
+
+# logs
+npm-debug.log*
+yarn-error.log*
+
+# misc
+.DS_Store
+*.pem
+
+# source reference PDFs — never committed (SPEC §12.6)
 data/reference/
+
+# local, personal working agreement — not shared
 claude.md

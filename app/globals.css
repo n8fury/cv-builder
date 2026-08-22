@@ -1,0 +1,8 @@
+/* Editor chrome only (SPEC §7). Automatic source detection is disabled so
+   Tailwind can never generate CSS for components/resume/**, which stays
+   plain CSS/CSS-variables — it is shared verbatim with the PDF export path
+   (SPEC §8). */
+@import "tailwindcss" source(none);
+
+@source "../app";
+@source "../components/editor";
