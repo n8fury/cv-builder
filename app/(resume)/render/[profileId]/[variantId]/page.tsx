@@ -7,6 +7,8 @@
  */
 import { notFound } from "next/navigation";
 
+import { ResumeAboutMe } from "@/components/resume/ResumeAboutMe";
+import { ResumeCompetencies } from "@/components/resume/ResumeCompetencies";
 import { ResumeHeader } from "@/components/resume/ResumeHeader";
 import { ResumePage } from "@/components/resume/ResumePage";
 import { ResumeSection } from "@/components/resume/ResumeSection";
@@ -46,7 +48,14 @@ export default async function RenderPage({
         }
         const title =
           section.type === "custom" ? section.section.title : SECTION_TITLE[section.type];
-        return <ResumeSection key={key} type={section.type} title={title} />;
+        return (
+          <ResumeSection key={key} type={section.type} title={title}>
+            {section.type === "aboutMe" ? <ResumeAboutMe text={section.text} /> : null}
+            {section.type === "competencies" ? (
+              <ResumeCompetencies items={section.items} />
+            ) : null}
+          </ResumeSection>
+        );
       })}
     </ResumePage>
   );

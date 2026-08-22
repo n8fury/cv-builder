@@ -384,3 +384,33 @@ export const SPACE_BEFORE_MARGIN_PT: Record<SectionType, number> =
           }),
     ]),
   ) as Record<SectionType, number>;
+
+/**
+ * A heading's baseline → the bottom edge of its box, rule included. What
+ * follows a heading is positioned from here, not from the baseline.
+ */
+export const HEADING_BASELINE_TO_BOX_BOTTOM_PT =
+  HEADING_LINE_HEIGHT_PT -
+  boxTopToBaseline(HEADING_FONT_SIZE_PT, HEADING_LINE_HEIGHT_PT) +
+  HEADING_RULE_PADDING_PT +
+  HEADING_RULE_WEIGHT_PT;
+
+/**
+ * §4.3's heading → first content baseline targets, as CSS top margins on the
+ * section body. The leading below varies (§4.5's 13pt sections), so each
+ * section converts against its own.
+ */
+export const HEADING_TO_CONTENT_MARGIN_PT: Record<SectionType, number> =
+  Object.fromEntries(
+    Object.entries(HEADING_TO_CONTENT_PT).map(([section, target]) => [
+      section,
+      section === "header"
+        ? 0
+        : target -
+          HEADING_BASELINE_TO_BOX_BOTTOM_PT -
+          boxTopToBaseline(
+            BODY_FONT_SIZE_PT,
+            leadingFor(section as SectionType),
+          ),
+    ]),
+  ) as Record<SectionType, number>;

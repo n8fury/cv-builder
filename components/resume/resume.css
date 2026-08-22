@@ -65,7 +65,7 @@
   --space-before-margin-recommendations: 14.473pt;
   --space-before-margin-custom: 14.473pt;
 
-  /* Per-section heading → first content baseline (§4.3) */
+  /* Per-section heading → first content baseline (§4.3) — target … */
   --heading-to-content-header: 0;
   --heading-to-content-about-me: 17.28pt;
   --heading-to-content-competencies: 20.1pt;
@@ -77,6 +77,19 @@
   --heading-to-content-languages: 16.93pt;
   --heading-to-content-recommendations: 18.17pt;
   --heading-to-content-custom: 18.17pt;
+
+  /* … and the same target as a CSS top margin on the section body */
+  --heading-to-content-margin-header: 0;
+  --heading-to-content-margin-about-me: 2.095pt;
+  --heading-to-content-margin-competencies: 4.915pt;
+  --heading-to-content-margin-experience: 2.985pt;
+  --heading-to-content-margin-projects: 0.095pt;
+  --heading-to-content-margin-education: 2.985pt;
+  --heading-to-content-margin-skills: 1.245pt;
+  --heading-to-content-margin-certifications: 1.235pt;
+  --heading-to-content-margin-languages: 1.245pt;
+  --heading-to-content-margin-recommendations: 2.985pt;
+  --heading-to-content-margin-custom: 2.985pt;
 
   /* Within and between entries (§4.4) */
   --title-to-subtitle: 12pt;
@@ -159,57 +172,83 @@ body {
 
 .resume-section[data-section="header"] {
   --section-space-before: var(--space-before-margin-header);
-  --section-heading-to-content: var(--heading-to-content-header);
+  --section-heading-to-content: var(--heading-to-content-margin-header);
 }
 
 .resume-section[data-section="about-me"] {
   --section-space-before: var(--space-before-margin-about-me);
-  --section-heading-to-content: var(--heading-to-content-about-me);
+  --section-heading-to-content: var(--heading-to-content-margin-about-me);
 }
 
 .resume-section[data-section="competencies"] {
   --section-space-before: var(--space-before-margin-competencies);
-  --section-heading-to-content: var(--heading-to-content-competencies);
+  --section-heading-to-content: var(--heading-to-content-margin-competencies);
 }
 
 .resume-section[data-section="experience"] {
   --section-space-before: var(--space-before-margin-experience);
-  --section-heading-to-content: var(--heading-to-content-experience);
+  --section-heading-to-content: var(--heading-to-content-margin-experience);
 }
 
 .resume-section[data-section="projects"] {
   --section-space-before: var(--space-before-margin-projects);
-  --section-heading-to-content: var(--heading-to-content-projects);
+  --section-heading-to-content: var(--heading-to-content-margin-projects);
 }
 
 .resume-section[data-section="education"] {
   --section-space-before: var(--space-before-margin-education);
-  --section-heading-to-content: var(--heading-to-content-education);
+  --section-heading-to-content: var(--heading-to-content-margin-education);
 }
 
 .resume-section[data-section="skills"] {
   --section-space-before: var(--space-before-margin-skills);
-  --section-heading-to-content: var(--heading-to-content-skills);
+  --section-heading-to-content: var(--heading-to-content-margin-skills);
 }
 
 .resume-section[data-section="certifications"] {
   --section-space-before: var(--space-before-margin-certifications);
-  --section-heading-to-content: var(--heading-to-content-certifications);
+  --section-heading-to-content: var(--heading-to-content-margin-certifications);
 }
 
 .resume-section[data-section="languages"] {
   --section-space-before: var(--space-before-margin-languages);
-  --section-heading-to-content: var(--heading-to-content-languages);
+  --section-heading-to-content: var(--heading-to-content-margin-languages);
 }
 
 .resume-section[data-section="recommendations"] {
   --section-space-before: var(--space-before-margin-recommendations);
-  --section-heading-to-content: var(--heading-to-content-recommendations);
+  --section-heading-to-content: var(--heading-to-content-margin-recommendations);
 }
 
 .resume-section[data-section="custom"] {
   --section-space-before: var(--space-before-margin-custom);
-  --section-heading-to-content: var(--heading-to-content-custom);
+  --section-heading-to-content: var(--heading-to-content-margin-custom);
+}
+
+/* Section bodies (§4.3). The gap below a heading is measured to the first
+   content baseline, so the margin accounts for the heading's rule as well as
+   its line box — see metrics.ts. */
+.resume-body {
+  margin: 0;
+}
+
+.resume-section-heading + .resume-body {
+  margin-top: var(--section-heading-to-content);
+}
+
+/* One justified paragraph (§5.2). */
+.resume-paragraph {
+  text-align: justify;
+}
+
+/* One bold, pipe-separated run that wraps like prose (§5.3). */
+.resume-competencies {
+  font-weight: 700;
+}
+
+/* Inline emphasis inside body text is Charter's italic, never Charis (§16.5). */
+.resume-italic {
+  font-style: italic;
 }
 
 /* Title Case, bold, with a hairline rule spanning the full content width

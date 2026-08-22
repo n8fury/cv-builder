@@ -24,6 +24,7 @@ import {
   HEADING_LINE_HEIGHT_PT,
   HEADING_RULE_PADDING_PT,
   HEADING_RULE_WEIGHT_PT,
+  HEADING_TO_CONTENT_MARGIN_PT,
   HEADING_TO_CONTENT_PT,
   NAME_FONT_SIZE_PT,
   NAME_LINE_HEIGHT_PT,
@@ -99,9 +100,17 @@ function declarations(): string[] {
     add(`space-before-margin-${kebab(section)}`, SPACE_BEFORE_MARGIN_PT[section]);
   }
 
-  group("Per-section heading → first content baseline (§4.3)");
+  group("Per-section heading → first content baseline (§4.3) — target …");
   for (const section of SECTION_TYPES) {
     add(`heading-to-content-${kebab(section)}`, HEADING_TO_CONTENT_PT[section]);
+  }
+
+  group("… and the same target as a CSS top margin on the section body");
+  for (const section of SECTION_TYPES) {
+    add(
+      `heading-to-content-margin-${kebab(section)}`,
+      HEADING_TO_CONTENT_MARGIN_PT[section],
+    );
   }
 
   group("Within and between entries (§4.4)");
