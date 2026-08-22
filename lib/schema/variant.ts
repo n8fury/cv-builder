@@ -141,6 +141,15 @@ export const sectionSchema = z.discriminatedUnion("type", [
   customSectionRefSchema,
 ]);
 
+/**
+ * Every section type, in the union's declaration order. Derived from the
+ * schema so a new section type cannot be added here and forgotten there
+ * (or vice versa) — the render metrics iterate this list.
+ */
+export const SECTION_TYPES = sectionSchema.options.map(
+  (option) => option.shape.type.value,
+);
+
 /** Current on-disk schema version for variant files (§15.13). */
 export const VARIANT_SCHEMA_VERSION = 1;
 

@@ -1,0 +1,101 @@
+/* Resume template stylesheet (SPEC §4).
+   Plain CSS on purpose: Tailwind is scoped away from components/resume/**
+   (§7) because this file is shared verbatim by the live preview and the
+   Puppeteer export path (§8).
+
+   The :root block below is generated from lib/render/metrics.ts by
+   `npm run build:resume-css` — never edit those values here, edit the
+   metrics module and re-run it.
+
+   Spacing note: every --space-before-* / --heading-to-content-* value is a
+   baseline-to-baseline target from §4, not a CSS margin. Where both blocks
+   share a font size and leading the conversion is exactly
+   `target - leading` (see baselineGap() in metrics.ts), which is what the
+   calc() expressions below do. */
+
+/* generated from lib/render/metrics.ts — do not edit by hand */
+:root {
+  /* Page setup (§2, §4.1) */
+  --page-width: 612pt;
+  --page-height: 792pt;
+  --page-margin: 55pt;
+  --content-width: 502pt;
+
+  /* Type sizes (§3) */
+  --font-size-name: 24.9pt;
+  --font-size-heading: 12pt;
+  --font-size-body: 10pt;
+
+  /* Leading (§4.5) — 13pt for skills, certifications, languages */
+  --leading-body: 12pt;
+  --leading-wide: 13pt;
+
+  /* Header (§4.1, §5.1) */
+  --top-margin-to-heading-baseline: 11.77pt;
+  --name-to-contact-minimal: 23.45pt;
+  --name-to-contact-full: 23.58pt;
+  --contact-line-gap: 17.07pt;
+
+  /* Per-section space-before (§4.2, §16.1) */
+  --space-before-header: 0;
+  --space-before-about-me: 27.2pt;
+  --space-before-competencies: 25.03pt;
+  --space-before-experience: 27.44pt;
+  --space-before-projects: 27.2pt;
+  --space-before-education: 26.97pt;
+  --space-before-skills: 27.24pt;
+  --space-before-certifications: 27.14pt;
+  --space-before-languages: 27.2pt;
+  --space-before-recommendations: 27.2pt;
+  --space-before-custom: 27.2pt;
+
+  /* Per-section heading → first content baseline (§4.3) */
+  --heading-to-content-header: 0;
+  --heading-to-content-about-me: 17.28pt;
+  --heading-to-content-competencies: 20.1pt;
+  --heading-to-content-experience: 18.17pt;
+  --heading-to-content-projects: 15.28pt;
+  --heading-to-content-education: 18.17pt;
+  --heading-to-content-skills: 16.93pt;
+  --heading-to-content-certifications: 16.92pt;
+  --heading-to-content-languages: 16.93pt;
+  --heading-to-content-recommendations: 18.17pt;
+  --heading-to-content-custom: 18.17pt;
+
+  /* Within and between entries (§4.4) */
+  --title-to-subtitle: 12pt;
+  --company-to-first-bullet: 19.29pt;
+  --subtitle-to-first-bullet: 22.19pt;
+  --entry-gap-experience: 28.17pt;
+  --entry-gap-projects: 25.41pt;
+  --right-block-lift: 2.31pt;
+
+  /* Bullets and rules (§4.4, §4.5) */
+  --bullet-marker-offset: 11.18pt;
+  --hanging-indent: 20pt;
+  --bullet-extra-gap: 0;
+  --heading-rule-weight: 0.4pt;
+}
+/* end generated */
+
+.resume-page {
+  width: var(--page-width);
+  min-height: var(--page-height);
+  padding: var(--page-margin);
+  box-sizing: border-box;
+  color: #000;
+  font-family: "Charter BT", serif;
+  font-size: var(--font-size-body);
+  line-height: var(--leading-body);
+}
+
+.resume-section {
+  margin-top: calc(var(--space-before-experience) - var(--leading-body));
+}
+
+.resume-section-heading {
+  font-weight: 700;
+  font-size: var(--font-size-heading);
+  border-bottom: var(--heading-rule-weight) solid #000;
+  break-after: avoid;
+}

@@ -11,7 +11,8 @@
     "check:tailwind-scope": "node scripts/check-tailwind-scope.mjs",
     "validate:data": "tsx scripts/validate-data.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "build:resume-css": "tsx scripts/build-resume-css.ts"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.3",

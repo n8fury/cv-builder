@@ -113,7 +113,7 @@ and completion state.
     entry-title→company target at 10pt/12pt leading yields a 0pt margin, and the
     27.44pt Experience space-before yields the expected positive margin.
 
-- [ ] Task 1.6: Emit the metrics module as CSS custom properties for the template
+- [x] Task 1.6: Emit the metrics module as CSS custom properties for the template
       stylesheet
   - Verification: `components/resume/resume.css` consumes
     `var(--space-before-experience)` and siblings; the `:root` block is generated
