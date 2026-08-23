@@ -301,10 +301,19 @@ and completion state.
 
 ## Phase 4 — PDF export (§8, §15.10)
 
-- [ ] Task 4.1: Add Puppeteer and implement `/api/generate-pdf`
+- [x] Task 4.1: Add Puppeteer and implement `/api/generate-pdf`
   - Verification: requesting
     `/api/generate-pdf?profileId=jordan-rivera&variantId=detailed` returns 200 and
     the saved response opens as a valid Letter-size PDF.
+  - Result: 200 with `Content-Type: application/pdf`, 128,461 bytes; the saved
+    file parses as a 2-page PDF measuring 612x792 on both pages, with
+    `CharterBT-Roman` embedded (no fallback). Unknown ids return 404 and a
+    missing query parameter returns 400, both before Chromium is launched.
+  - The handler lives at `app/api/generate-pdf/route.ts`, prints the `/render`
+    route rather than re-implementing layout, and awaits `document.fonts.ready`
+    before `page.pdf()` (SPEC 8). It already passes 15.10's exact options and
+    closes the browser in a `finally` block, so Tasks 4.3 and 4.4 are code-
+    complete pending their own verification.
 
 - [ ] Task 4.2: Await `document.fonts.ready` and hard-fail on any failed
       `document.fonts.check()` (§8, §13, §15.14)
