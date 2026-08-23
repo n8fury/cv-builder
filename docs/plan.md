@@ -399,28 +399,92 @@ and completion state.
 
 ## Phase 5 — Dashboard (§7, §15.12)
 
-- [ ] Task 5.1: Build the home page listing profiles and their variants
+- [x] Task 5.1: Build the home page listing profiles and their variants
   - Verification: `/` lists profile `jordan-rivera` with variant `detailed`
     showing its `label`, `tag`, and `updatedAt`.
+  - Result: `/` returns 200 listing `jordan-rivera` ("Jordan A. Rivera") with
+    `Detailed — reference reproduction`, tag `detailed`, `Updated 22 Aug 2026`.
+  - `lib/data/dashboard.ts` isolates every read: an unreadable variant lands in
+    a `broken[]` row with its reason and an unreadable library sets `error` on
+    the profile, so one hand-edited or n8n-written file cannot blank the whole
+    screen (§13). Both are shown, not swallowed.
+  - Dates format through a fixed `en-GB`/UTC formatter, so the rendered value
+    does not depend on the server's locale or timezone.
 
-- [ ] Task 5.2: Wire the View and Download PDF actions
+- [x] Task 5.2: Wire the View and Download PDF actions
   - Verification: View navigates to `/render/jordan-rivera/detailed`; Download
     streams a PDF with a `Content-Disposition` filename derived from the variant
     id.
+  - Result: the View link resolves to `/render/jordan-rivera/detailed` (200);
+    the export returns 200, `application/pdf`, 128,461 bytes, body `%PDF-1.4`,
+    `content-disposition: attachment; filename="jordan-rivera-detailed.pdf"`.
+  - `lib/routes.ts` is the one definition of both paths and the filename — the
+    dashboard, the export route and its Puppeteer target all read from it, so a
+    path change cannot leave a dead button behind.
+  - The endpoint gained a `download=1` flag: with it the response is an
+    attachment, without it the existing inline behaviour (browser PDF viewer,
+    `harness --export`) is untouched.
 
-- [ ] Task 5.3: Add Delete and Rename for variants and profiles (§15.12)
+- [x] Task 5.3: Add Delete and Rename for variants and profiles (§15.12)
   - Verification: renaming a scratch variant moves its JSON file and updates the
     dashboard entry; deleting removes the file and the row, behind a confirmation
     prompt.
+  - Result: driven through the page with Puppeteer — rename moved
+    `scratch.json` → `scratch-renamed.json` and the row followed; delete fired
+    `Delete variant "scratch-renamed"? This cannot be undone.` and removed both
+    file and row. Profile rename/delete verified the same way on a scratch
+    profile, including the conflict path.
+  - Renames check the target first and raise `ConflictError`, because `rename`
+    overwrites silently on both POSIX and NTFS — renaming onto a sibling would
+    otherwise destroy real curation work without a word.
+  - A variant rename moves the file and nothing else: the slug *is* the id
+    (§12.5), so `tag`, `label` and `updatedAt` describe the curation, not its
+    name.
+  - `ActionState`/`IDLE` live outside `actions.ts` — a `"use server"` module may
+    only export async functions, which the first page load caught as a 500.
 
-- [ ] Task 5.4: Add the "New Profile" form (§9, §12.7)
+- [x] Task 5.4: Add the "New Profile" form (§9, §12.7)
   - Verification: submitting name plus slug creates
     `data/profiles/<slug>/content-library.json` (empty, `schemaVersion: 1`) and a
     `variants/` directory, and the new profile appears on the dashboard.
+  - Result: submitting `Zz Scratch Person` / `zz-scratch` wrote a library
+    opening `"schemaVersion": 1` with every content array empty, created
+    `variants/`, and added the card. Scratch profile removed afterwards.
+  - The library write uses flag `wx`. Checking for the directory first would be
+    a race and would happily flatten an existing library; an exclusive create
+    fails outright, so a repeated submission cannot destroy real content.
+  - The name goes into `header.name` because that is where the resume renders
+    it — there is nowhere else for it to live, and dropping it would mean asking
+    for it twice.
+  - The id is suggested from the name as it is typed and stops auto-updating
+    once edited by hand; it becomes both the URL and the folder name.
 
-- [ ] Task 5.5: Disable the download button with a spinner during export (§13)
+- [x] Task 5.5: Disable the download button with a spinner during export (§13)
   - Verification: the button is disabled and shows a spinner for the request's
     duration; a failed export raises an error toast rather than failing silently.
+  - Result: idle → `{ disabled: false, aria-busy: false, spinner: false }`,
+    in-flight → `{ text: "Generating…", disabled: true, aria-busy: true,
+    spinner: true }`, then back. With `charis-italic.woff2` renamed away the
+    toast read `PDF generation aborted — font faces unavailable: CV Charis
+    italic 400 failed to load (status: error)` and nothing was saved.
+  - The link became a `fetch`: an export launches Chromium per request (§8) and
+    takes ~1.7s, so a plain link gave no sign of progress and invited a second
+    click — a second browser. Fetching also puts the API's own `{ error }`
+    message in front of the user instead of a blank tab.
+  - Toasts live at the layout level (`Toaster.tsx`): a button that has returned
+    to its resting state has nowhere to put a message. Later phases reuse it.
+  - Two defects found while verifying: the object URL is now revoked on a timer
+    rather than inline (the browser reads the blob asynchronously after the
+    click), and a 2xx response carrying zero bytes is now a toast rather than a
+    silently saved empty file.
+  - **Not verified here, needs a re-check on a normal machine**: the file
+    actually landing on disk. This sandbox rewrites every `application/pdf`
+    response to a 204 for Chrome — confirmed against a *static* PDF served from
+    `public/`, while a woff2 through the same server returns 200 — and cancels
+    every browser download, a plain static file included. The endpoint itself is
+    covered: `curl` gets 200 / 128,461 bytes / `%PDF`, `npm run harness:export`
+    exits 0 against those bytes, and the in-page instrumentation showed the
+    click asking to save `jordan-rivera-detailed.pdf`.
 
 ---
 
