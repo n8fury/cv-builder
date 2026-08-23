@@ -186,7 +186,7 @@ and completion state.
     `break-inside: avoid`; the preview shows page-boundary guides and the PDF
     output does not.
 
-- [ ] Task 2.12: Handle a visible section with no resolved items (§13)
+- [x] Task 2.12: Handle a visible section with no resolved items (§13)
   - Verification: a scratch variant with `competencies` visible but an empty
     `items` array renders the heading with an empty body and returns 200 — no
     crash.

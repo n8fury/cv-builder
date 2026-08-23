@@ -248,6 +248,38 @@ function resolveSection(library: ContentLibrary, section: VariantSection): Resol
 }
 
 /**
+ * Whether a resolved section has anything to render beneath its heading.
+ *
+ * A visible section curated down to nothing is a legitimate state, not an
+ * error (§13): the heading and its rule still render, and only the body is
+ * dropped — wrapper included, so an empty section cannot leave a stray
+ * heading-to-content margin behind. Collapsed Recommendations always has
+ * content, because its one line is fixed text rather than a curated entry.
+ */
+export function sectionHasContent(section: ResolvedSection): boolean {
+  switch (section.type) {
+    case "header":
+      return true;
+    case "aboutMe":
+      return section.text.trim().length > 0;
+    case "competencies":
+      return section.items.length > 0;
+    case "experience":
+    case "projects":
+    case "education":
+    case "certifications":
+    case "languages":
+      return section.entries.length > 0;
+    case "skills":
+      return section.groups.length > 0;
+    case "recommendations":
+      return section.mode === "collapsed" || section.entries.length > 0;
+    case "custom":
+      return section.section.paragraph !== null || section.section.bullets.length > 0;
+  }
+}
+
+/**
  * Flattens a variant against its library. Hidden sections are dropped; a
  * visible section with nothing in it is kept, so §13's "heading renders with an
  * empty body" case reaches the renderer instead of disappearing here.
