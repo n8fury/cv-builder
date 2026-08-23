@@ -2,10 +2,24 @@
    font-display: block everywhere — a fallback face must never paint, since
    the same stylesheet drives both the live preview and the PDF export and
    any substitution breaks pixel fidelity.
-   Built from local TTFs by `npm run build:fonts`; see README.md. */
+   Built from local TTFs by `npm run build:fonts`; see README.md.
+
+   The family names are deliberately *not* "Charter BT" and "Charis SIL".
+   Both fonts are commonly installed system-wide — they have to be, to build
+   the woff2 files in the first place — and under their real names a failed
+   @font-face silently resolves to the machine's own copy instead. That makes
+   the render depend on what happens to be installed, which §8 exists to
+   prevent, and it hides the failure from §11.2's harness: with the woff2
+   deleted, output stayed byte-identical. Under a name no system font can
+   claim, only these files can satisfy the stack, and a missing one falls
+   through to `serif` where both the harness and §13 will catch it.
+
+   The embedded faces keep their own internal names (CharterBT-Roman and
+   friends), which is what the golden file is keyed on — so this renaming is
+   invisible to the harness's font-identity check. */
 
 @font-face {
-  font-family: "Charter BT";
+  font-family: "CV Charter";
   font-style: normal;
   font-weight: 400;
   font-display: block;
@@ -13,7 +27,7 @@
 }
 
 @font-face {
-  font-family: "Charter BT";
+  font-family: "CV Charter";
   font-style: normal;
   font-weight: 700;
   font-display: block;
@@ -21,7 +35,7 @@
 }
 
 @font-face {
-  font-family: "Charter BT";
+  font-family: "CV Charter";
   font-style: italic;
   font-weight: 400;
   font-display: block;
@@ -29,7 +43,7 @@
 }
 
 @font-face {
-  font-family: "Charis SIL";
+  font-family: "CV Charis";
   font-style: italic;
   font-weight: 400;
   font-display: block;

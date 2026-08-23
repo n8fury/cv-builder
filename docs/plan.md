@@ -273,10 +273,29 @@ and completion state.
     golden (coordinates only, per Task 3.1's rule), since the full-header and
     Projects readings both come from the second document.
 
-- [ ] Task 3.5: Assert font identity, not just position
+- [x] Task 3.5: Assert font identity, not just position
   - Verification: the harness compares each item's `fontName` against golden and
     fails on any Charter/Charis face substitution — confirmed by temporarily
     removing one woff2 and observing a non-zero exit.
+  - Result: with `charis-italic.woff2` removed the harness exits 1, reporting
+    `font CharisSIL-Italic rendered as TimesNewRomanPS-ItalicMT` on five lines
+    plus two document-level face failures. Restored, it exits 0 with
+    `faces identical`.
+  - Why it was needed: those five lines drifted only 0.87–1.40pt in y and
+    under 1.8pt in x — all inside ±2pt. The substitution would have passed a
+    geometry-only harness clean.
+  - Also asserts font size (±0.5pt — the source rounds 24.9 to 24.91 and 12 to
+    11.96), and requires every face to carry identical copy document-wide, so
+    a substitution part-way along a line cannot hide behind a matching leading
+    item. Covered by `scripts/text-identity.test.ts`.
+  - Prerequisite fixed on the way: `fonts.css` declared the faces as
+    `"Charter BT"` / `"Charis SIL"`, the same names as the system-installed
+    originals, so a deleted woff2 silently resolved to the machine's own copy
+    and output stayed byte-identical — the negative test could not fail. They
+    are now `"CV Charter"` / `"CV Charis"`, names no system font can claim.
+    This also removes a real dependency on what happens to be installed, which
+    §8 exists to prevent. The embedded faces keep their internal names, so the
+    golden file is unaffected.
 
 ---
 

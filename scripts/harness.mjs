@@ -38,7 +38,7 @@ import { fileURLToPath } from "node:url";
 
 import { connect, openPage, withBrowser } from "./lib/chrome.mjs";
 import { extractTextItems, round } from "./lib/pdf-text-items.mjs";
-import { assertSameText } from "./lib/text-identity.mjs";
+import { assertSameFaces, assertSameText } from "./lib/text-identity.mjs";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -50,6 +50,13 @@ const DEFAULT_TOLERANCE_PT = 2;
 
 /** Two items belong to the same rendered line if their baselines are this close. */
 const LINE_CLUSTER_PT = 0.6;
+
+/**
+ * Font sizes are compared this loosely (§3). The source rounds — its 24.9pt
+ * name reads back as 24.91 and its 12pt headings as 11.96 — so an exact match
+ * is not available, but this is far tighter than any real size mistake.
+ */
+const FONT_SIZE_TOLERANCE_PT = 0.5;
 
 const POINTS_PER_INCH = 72;
 
@@ -294,6 +301,16 @@ function evaluateRow(row, tolerance, strictWrap) {
   if (actual.page !== expected.page) reasons.push(`page ${expected.page} to ${actual.page}`);
   if (Math.abs(dx) > tolerance) reasons.push(`x off by ${dx}`);
   if (Math.abs(dy) > tolerance) reasons.push(`baseline off by ${dy}`);
+  // Position alone cannot tell Charter from a fallback serif at the same
+  // size, and §8 treats a substituted face as a hard failure — so identity is
+  // asserted, not inferred. This sees the line's leading item;
+  // assertSameFaces() covers substitutions further along a line.
+  if (actual.fontName !== expected.fontName) {
+    reasons.push(`font ${expected.fontName} rendered as ${actual.fontName}`);
+  }
+  if (Math.abs(actual.fontSize - expected.fontSize) > FONT_SIZE_TOLERANCE_PT) {
+    reasons.push(`font size ${expected.fontSize} rendered as ${actual.fontSize}`);
+  }
 
   // Geometry decides pass or fail. A different wrap point is reported but not
   // counted against the run: the copy is guaranteed identical document-wide by
@@ -396,17 +413,22 @@ async function main() {
   const results = rows.map((row) => evaluateRow(row, args.tolerance, args.strictWrap));
 
   const textMismatch = assertSameText(golden.items, actual.items);
+  const faceMismatches = assertSameFaces(golden.items, actual.items);
 
   const passed = results.filter((row) => row.status === "PASS").length;
   const reflowed = results.filter(
     (row) => row.status === "WRAP" || row.status === "REFLOW",
   ).length;
   const failed = results.filter((row) => row.status === "FAIL").length;
-  const failures = failed + extra.length + (textMismatch ? 1 : 0);
+  const failures = failed + extra.length + (textMismatch ? 1 : 0) + faceMismatches.length;
 
   if (args.json) {
     console.log(
-      JSON.stringify({ tolerance: args.tolerance, results, extra, textMismatch }, null, 2),
+      JSON.stringify(
+        { tolerance: args.tolerance, results, extra, textMismatch, faceMismatches },
+        null,
+        2,
+      ),
     );
   } else {
     console.log(
@@ -421,6 +443,8 @@ async function main() {
     console.log("");
     if (textMismatch) console.log(`harness: FAIL ${textMismatch}
 `);
+    for (const problem of faceMismatches) console.log(`harness: FAIL ${problem}`);
+    if (faceMismatches.length > 0) console.log("");
     // Position and text flow are separate concerns, so the summary names them
     // apart rather than folding both into one pass rate.
     const placed = results.filter((row) => row.dx !== undefined);
@@ -433,7 +457,8 @@ async function main() {
             })`
           : "") +
         (extra.length > 0 ? `, ${extra.length} unpaired` : "") +
-        `; document text ${textMismatch ? "DIFFERS" : "identical"}`,
+        `; document text ${textMismatch ? "DIFFERS" : "identical"}` +
+        `, faces ${faceMismatches.length > 0 ? "SUBSTITUTED" : "identical"}`,
     );
   }
 

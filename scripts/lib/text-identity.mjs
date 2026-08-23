@@ -26,6 +26,53 @@ export function documentKey(items) {
 }
 
 /**
+ * The same key, split by the face each character is set in.
+ *
+ * Per-line font checks only ever see a line's leading item, so a face
+ * substitution part-way along a line — an italic project subtitle falling
+ * back to roman, say — would pass unnoticed. Keying the copy by face catches
+ * it wherever it happens, and is immune to reflow: which face a word is set
+ * in does not depend on where the line breaks.
+ */
+export function documentKeyByFace(items) {
+  const byFace = new Map();
+  for (const item of items) {
+    byFace.set(item.fontName, (byFace.get(item.fontName) ?? "") + item.text);
+  }
+  return new Map(
+    [...byFace].map(([face, text]) => [face, text.replace(/[\s-]+/g, "").toLowerCase()]),
+  );
+}
+
+/**
+ * Every face must carry exactly the copy it carries in the golden — no face
+ * missing, none added, none holding text that belongs to another (SPEC §8:
+ * a fallback serif is a hard failure, never a silent degradation).
+ *
+ * Returns a list of descriptions, empty when the two agree.
+ */
+export function assertSameFaces(goldenItems, actualItems) {
+  const expected = documentKeyByFace(goldenItems);
+  const actual = documentKeyByFace(actualItems);
+  const problems = [];
+
+  for (const [face, text] of expected) {
+    if (!actual.has(face)) {
+      problems.push(`face ${face} is absent from the generated PDF — substituted or failed to load`);
+    } else if (actual.get(face) !== text) {
+      problems.push(
+        `face ${face} sets different text (${text.length} golden chars, ` +
+          `${actual.get(face).length} generated)`,
+      );
+    }
+  }
+  for (const face of actual.keys()) {
+    if (!expected.has(face)) problems.push(`face ${face} is not used in the golden`);
+  }
+  return problems;
+}
+
+/**
  * Compare two documents' copy. Returns a description of the first divergence,
  * or null when they agree.
  */

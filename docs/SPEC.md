@@ -451,6 +451,25 @@ point would gate on something the renderer cannot do.
 are reported as `REFLOW` and are not fatal. `--strict-wrap` makes them
 fatal again, for anyone attacking the composition problem itself.
 
+**Font identity is asserted, not inferred.** Position cannot tell Charter
+from a fallback serif at the same size: with `charis-italic.woff2`
+deleted, the five affected lines drifted only 0.87–1.40pt in y and under
+1.8pt in x — inside ±2pt, and so a clean pass on geometry alone. The
+harness therefore compares each line's face and size against the golden,
+and additionally requires every face to carry identical copy
+document-wide, which catches a substitution part-way along a line that a
+leading-item check would miss.
+
+For that check to mean anything, `fonts.css` declares the faces under
+private family names (`CV Charter`, `CV Charis`) rather than their real
+ones. Charter BT and Charis SIL are normally installed system-wide — they
+must be, to build the woff2 files — and under their real names a failed
+`@font-face` silently resolves to the machine's own copy, leaving output
+byte-identical and the failure invisible. Under a name no system font can
+claim, only the self-hosted files can satisfy the stack. The embedded
+faces keep their internal names (`CharterBT-Roman` and friends), which is
+what the golden is keyed on, so the renaming is invisible to the diff.
+
 This is only safe because of a second, stronger assertion the harness
 gained at the same time: **the two documents' copy must be identical
 character-for-character**, whitespace and line-break hyphens normalised

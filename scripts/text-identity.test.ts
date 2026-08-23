@@ -6,11 +6,15 @@
  * the only thing standing between "the break moved" and "the copy changed".
  * It gets its own tests for that reason.
  */
-import { assertSameText, documentKey } from "./lib/text-identity.mjs";
+import { assertSameFaces, assertSameText, documentKey } from "./lib/text-identity.mjs";
 
 import { describe, expect, it } from "vitest";
 
 const items = (...texts: string[]) => texts.map((text) => ({ text }));
+
+/** Items carrying a face, for the font-identity checks. */
+const faced = (...pairs: [string, string][]) =>
+  pairs.map(([fontName, text]) => ({ fontName, text }));
 
 describe("documentKey", () => {
   it("ignores whitespace, hyphenation and case", () => {
@@ -44,5 +48,46 @@ describe("assertSameText", () => {
 
   it("reports where the divergence starts", () => {
     expect(assertSameText(items("abcdef"), items("abcXef"))).toContain("character 3");
+  });
+});
+
+describe("assertSameFaces", () => {
+  const golden = faced(
+    ["CharterBT-Roman", "Architected full-stack"],
+    ["CharisSIL-Italic", "Northwind Energy Ltd."],
+  );
+
+  it("passes when every face carries the same copy", () => {
+    expect(assertSameFaces(golden, [...golden])).toEqual([]);
+  });
+
+  it("catches a face substituted for a fallback serif", () => {
+    const substituted = faced(
+      ["CharterBT-Roman", "Architected full-stack"],
+      ["TimesNewRomanPS-ItalicMT", "Northwind Energy Ltd."],
+    );
+    const problems = assertSameFaces(golden, substituted);
+    expect(problems.join(" ")).toContain("CharisSIL-Italic is absent");
+    expect(problems.join(" ")).toContain("TimesNewRomanPS-ItalicMT is not used in the golden");
+  });
+
+  it("catches a word moving between faces even when both faces are present", () => {
+    // The italic subtitle falling back to roman mid-line: no face is missing,
+    // the positions can still be within tolerance, but the copy has shifted.
+    const shifted = faced(
+      ["CharterBT-Roman", "Architected full-stackNorthwind Energy"],
+      ["CharisSIL-Italic", "Limited"],
+    );
+    expect(assertSameFaces(golden, shifted).join(" ")).toContain("sets different text");
+  });
+
+  it("is unaffected by where lines break", () => {
+    const reflowed = faced(
+      ["CharterBT-Roman", "Architected"],
+      ["CharterBT-Roman", "full-stack"],
+      ["CharisSIL-Italic", "Northwind Energy"],
+      ["CharisSIL-Italic", "Limited"],
+    );
+    expect(assertSameFaces(golden, reflowed)).toEqual([]);
   });
 });

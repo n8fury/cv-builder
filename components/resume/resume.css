@@ -152,7 +152,7 @@ body {
   padding: var(--page-margin);
   box-sizing: border-box;
   color: #000;
-  font-family: "Charter BT", serif;
+  font-family: "CV Charter", serif;
   font-size: var(--font-size-body);
   line-height: var(--leading-body);
 }
@@ -396,7 +396,7 @@ body {
 /* Company, project subtitle, and degree are Charis SIL Italic; locations and
    inline emphasis are Charter's italic (§16.5). */
 .resume-entry-subtitle {
-  font-family: "Charis SIL", serif;
+  font-family: "CV Charis", serif;
   font-style: italic;
   margin-top: var(--title-to-subtitle-margin);
 }
