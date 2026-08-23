@@ -195,7 +195,7 @@ and completion state.
 
 ## Phase 3 — Pixel-fidelity harness (§11.2) — gates all later phases
 
-- [ ] Task 3.1: Extract text-item positions from the source PDF into a committed
+- [x] Task 3.1: Extract text-item positions from the source PDF into a committed
       golden file
   - Verification: `node scripts/extract-golden.mjs` reads
     `data/reference/resume-reference-detailed.pdf` via `pdfjs-dist` and
