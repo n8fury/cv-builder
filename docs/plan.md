@@ -355,10 +355,25 @@ and completion state.
     pages get margins at all; Puppeteer margins on top would inset the page
     box a second time.
 
-- [ ] Task 4.4: Launch and close Chromium per request, no cache (§8)
+- [x] Task 4.4: Launch and close Chromium per request, no cache (§8)
   - Verification: the handler closes the browser in a `finally` block; two
     successive requests each produce a fresh PDF, and no Chromium process
     survives after the response.
+  - Result: Puppeteer-owned browser processes counted 0 before the first
+    request, 0 after a 200, 0 after a font-failure 500, and 0 at the end —
+    the `finally` runs on the early-return error paths too, which is where a
+    leak would otherwise accumulate one process per failed download.
+  - Freshness was tested against disk rather than by byte size: a scratch
+    variant exported (231 text items, Core Competencies present), had its
+    competencies section deleted on disk, and re-exported in the next request
+    (212 items, section gone). Nothing was carried over from the first run.
+  - Each launch already gets its own throwaway user-data-dir, so no profile
+    or HTTP cache survives a request; `page.setCacheEnabled(false)` is set on
+    top so the resume, its CSS and its woff2 files cannot be served from one
+    within a request either.
+  - `browser.close()` is guarded: a teardown failure must not turn a good PDF
+    into a 500 for the caller.
+  - Scratch variant removed afterwards; `data/profiles/` is unchanged.
 
 - [ ] Task 4.5: Run the Phase 3 harness against the Puppeteer output, not just the
       render route

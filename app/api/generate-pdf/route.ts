@@ -8,7 +8,7 @@
  * of staleness bug, so nothing is cached and nothing is reused.
  */
 import { NextResponse } from "next/server";
-import puppeteer, { type Page } from "puppeteer";
+import puppeteer, { type Browser, type Page } from "puppeteer";
 
 import { NotFoundError } from "@/lib/data/store";
 import { REQUIRED_FONT_FACES, faceLabel, faceShorthand } from "@/lib/render/fonts";
@@ -99,10 +99,18 @@ export async function GET(request: Request) {
     request.url,
   );
 
-  let browser: Awaited<ReturnType<typeof puppeteer.launch>> | null = null;
+  let browser: Browser | null = null;
   try {
+    // §8: a fresh instance per request. Puppeteer gives each launch its own
+    // throwaway user-data-dir, so nothing — profile, HTTP cache, service
+    // worker — carries over from the last export.
     browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
+    // Belt and braces on top of that: this page must never serve the resume,
+    // its CSS or its woff2 files from a cache. Regenerating from scratch every
+    // time costs a couple of seconds and rules out a whole class of stale-PDF
+    // bug (§8: no caching).
+    await page.setCacheEnabled(false);
     await page.goto(target.href, { waitUntil: "networkidle0" });
 
     // The commonest silent-fallback bug: printing before the faces resolve
@@ -140,8 +148,10 @@ export async function GET(request: Request) {
       `PDF generation failed: ${error instanceof Error ? error.message : String(error)}`,
     );
   } finally {
-    // §8: one browser per request, closed even when printing threw — an
-    // orphaned Chromium would outlive the dev server.
-    await browser?.close();
+    // §8: one browser per request, torn down on every exit path — the 500s
+    // above return from inside the `try`, and an orphaned Chromium would
+    // outlive the request that spawned it and leak a process per download.
+    // A failure to close must not turn a good PDF into an error response.
+    await browser?.close().catch(() => undefined);
   }
 }
