@@ -13,14 +13,12 @@ import puppeteer, { type Page } from "puppeteer";
 import { NotFoundError } from "@/lib/data/store";
 import { REQUIRED_FONT_FACES, faceLabel, faceShorthand } from "@/lib/render/fonts";
 import { loadRenderModel } from "@/lib/render/load";
+import { PDF_PAGE_OPTIONS } from "@/lib/render/pdf-options";
 
 /** Chromium and the filesystem reads make this a Node runtime route. */
 export const runtime = "nodejs";
 /** The variant on disk is the source of truth on every request (§8: no cache). */
 export const dynamic = "force-dynamic";
-
-/** SPEC §2: Letter, and the CSS `@page` size the render route declares. */
-const PAGE_FORMAT = "Letter" as const;
 
 function errorResponse(status: number, message: string) {
   return NextResponse.json({ error: message }, { status });
@@ -122,16 +120,8 @@ export async function GET(request: Request) {
       );
     }
 
-    const pdf = await page.pdf({
-      format: PAGE_FORMAT,
-      // Both agree by design (§15.10) — either alone risks a silent mismatch
-      // if the other is edited later.
-      preferCSSPageSize: true,
-      printBackground: true,
-      // All real margins are 55pt of padding on the page wrapper (§8);
-      // Puppeteer's own margins would fight `preferCSSPageSize`.
-      margin: { top: 0, right: 0, bottom: 0, left: 0 },
-    });
+    // §15.10's four settings, pinned and unit-tested in lib/render/pdf-options.
+    const pdf = await page.pdf(PDF_PAGE_OPTIONS);
 
     return new NextResponse(Buffer.from(pdf) as unknown as BodyInit, {
       status: 200,

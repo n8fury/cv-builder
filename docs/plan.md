@@ -338,10 +338,22 @@ and completion state.
     `font-display: block`) — a face added to the stylesheet alone, which the
     export would then never verify, fails `npm test`.
 
-- [ ] Task 4.3: Use the exact `page.pdf()` options from §15.10
+- [x] Task 4.3: Use the exact `page.pdf()` options from §15.10
   - Verification: the call passes `format: 'Letter'`, `preferCSSPageSize: true`,
     `printBackground: true`, and zero margins on all sides; the generated PDF's
     MediaBox reads 612×792.
+  - Result: the exported PDF carries `/MediaBox [0 0 612 792]` on both pages,
+    read straight out of the raw bytes, with no page rotation. The harness
+    still reports 84/84 within +/-2pt.
+  - The options moved out of the route into `lib/render/pdf-options.ts` and
+    are asserted by `pdf-options.test.ts`, which also requires the
+    stylesheet's `@page { size: 612pt 792pt }` to agree with `format:
+    'Letter'` — §15.10's belt-and-suspenders, mechanised. Getting this wrong
+    yields a PDF that still opens cleanly and is silently A4.
+  - The zero margins are Puppeteer's only. The real 55pt inset is the
+    stylesheet's `@page` margin, which Task 3.3 moved there so continuation
+    pages get margins at all; Puppeteer margins on top would inset the page
+    box a second time.
 
 - [ ] Task 4.4: Launch and close Chromium per request, no cache (§8)
   - Verification: the handler closes the browser in a `finally` block; two
