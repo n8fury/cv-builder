@@ -9,6 +9,13 @@ import Link from "next/link";
 
 import { listDashboard, type ProfileSummary, type VariantSummary } from "@/lib/data/dashboard";
 import { exportPath, pdfFilename, renderPath } from "@/lib/routes";
+import {
+  deleteProfileAction,
+  deleteVariantAction,
+  renameProfileAction,
+  renameVariantAction,
+} from "./actions";
+import { DeleteButton, RenameForm } from "./RowActions";
 
 /** Profiles and variants are files on disk that change between requests. */
 export const dynamic = "force-dynamic";
@@ -56,6 +63,17 @@ function VariantRow({ profileId, variant }: { profileId: string; variant: Varian
         >
           Download PDF
         </a>
+        <RenameForm
+          action={renameVariantAction}
+          currentId={variant.id}
+          fields={{ profileId, variantId: variant.id }}
+          label="New variant name"
+        />
+        <DeleteButton
+          action={deleteVariantAction}
+          confirmMessage={`Delete variant "${variant.id}"? This cannot be undone.`}
+          fields={{ profileId, variantId: variant.id }}
+        />
       </div>
     </li>
   );
@@ -70,6 +88,17 @@ function ProfileCard({ profile }: { profile: ProfileSummary }) {
         <span className="ml-auto text-xs text-gray-500">
           {profile.variants.length} variant{profile.variants.length === 1 ? "" : "s"}
         </span>
+        <RenameForm
+          action={renameProfileAction}
+          currentId={profile.id}
+          fields={{ profileId: profile.id }}
+          label="New profile name"
+        />
+        <DeleteButton
+          action={deleteProfileAction}
+          confirmMessage={`Delete profile "${profile.id}" and all ${profile.variants.length} of its variants, including its content library? This cannot be undone.`}
+          fields={{ profileId: profile.id }}
+        />
       </header>
 
       {profile.error ? (

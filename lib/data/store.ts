@@ -11,7 +11,7 @@
  * place, and losing one to a partial write would lose real curation work.
  */
 import { randomUUID } from "node:crypto";
-import { mkdir, readdir, readFile, rename, rm, unlink, writeFile } from "node:fs/promises";
+import { access, mkdir, readdir, readFile, rename, rm, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { contentLibrarySchema, type ContentLibrary } from "../schema/library";
@@ -27,7 +27,21 @@ export class InvalidDataError extends Error {
   override readonly name = "InvalidDataError";
 }
 
+/** A rename whose target name is already taken. §13 maps this to a 409. */
+export class ConflictError extends Error {
+  override readonly name = "ConflictError";
+}
+
 const SLUG = /^[a-z0-9][a-z0-9_-]*$/i;
+
+/**
+ * The shape every profile and variant id must have. Exported so the UI can
+ * reject a bad name with a sentence rather than let it surface as a 404 from
+ * `assertSlug` two layers down.
+ */
+export function isValidSlug(value: string): boolean {
+  return SLUG.test(value);
+}
 
 /**
  * Profile and variant ids come from URLs and form input; keeping them to a
@@ -153,6 +167,61 @@ export async function writeVariant(
     await rm(temp, { force: true });
     throw error;
   }
+}
+
+async function exists(path: string): Promise<boolean> {
+  try {
+    await access(path);
+    return true;
+  } catch (error) {
+    if (isMissing(error)) return false;
+    throw error;
+  }
+}
+
+/**
+ * Renames the file, and nothing else: the slug *is* the variant's id (§12.5),
+ * so moving the file is the whole operation — `tag`, `label` and `updatedAt`
+ * describe the curation, not its name, and a rename does not touch the
+ * content the timestamps refer to.
+ *
+ * The target is checked first because `rename` silently overwrites on both
+ * POSIX and NTFS, and renaming onto an existing variant would destroy it
+ * without a word.
+ */
+export async function renameVariant(
+  profileId: string,
+  fromId: string,
+  toId: string,
+): Promise<void> {
+  const from = variantPath(profileId, fromId);
+  const to = variantPath(profileId, toId);
+  if (from === to) return;
+
+  if (!(await exists(from))) throw new NotFoundError(`No variant at ${from}`);
+  if (await exists(to)) throw new ConflictError(`A variant named ${toId} already exists`);
+  await rename(from, to);
+}
+
+/** Renames the profile directory, carrying its library and every variant. */
+export async function renameProfile(fromId: string, toId: string): Promise<void> {
+  const from = profileDir(fromId);
+  const to = profileDir(toId);
+  if (from === to) return;
+
+  if (!(await exists(from))) throw new NotFoundError(`No profile at ${from}`);
+  if (await exists(to)) throw new ConflictError(`A profile named ${toId} already exists`);
+  await rename(from, to);
+}
+
+/**
+ * Deletes the whole profile — library, variants and all. Irreversible and
+ * unrecoverable (there is no trash), so every caller must confirm first (§15.12).
+ */
+export async function deleteProfile(profileId: string): Promise<void> {
+  const dir = profileDir(profileId);
+  if (!(await exists(dir))) throw new NotFoundError(`No profile at ${dir}`);
+  await rm(dir, { recursive: true, force: true });
 }
 
 export async function deleteVariant(profileId: string, variantId: string): Promise<void> {

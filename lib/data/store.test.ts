@@ -7,9 +7,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { contentLibrarySchema } from "../schema/library";
 import type { Variant } from "../schema/variant";
 import {
+  ConflictError,
   InvalidDataError,
   NotFoundError,
+  deleteProfile,
   deleteVariant,
+  isValidSlug,
+  renameProfile,
+  renameVariant,
   listProfiles,
   listVariants,
   readLibrary,
@@ -140,5 +145,75 @@ describe("guards", () => {
   it("returns empty lists rather than throwing for a store with nothing in it", async () => {
     await expect(listVariants("temp-profile")).resolves.toEqual([]);
     await expect(readLibrary("missing-profile")).rejects.toBeInstanceOf(NotFoundError);
+  });
+});
+
+describe("rename and delete", () => {
+  it("moves the variant file and leaves its contents untouched", async () => {
+    await writeVariant("temp-profile", "scratch", variant);
+
+    await renameVariant("temp-profile", "scratch", "renamed");
+
+    expect(await listVariants("temp-profile")).toEqual(["renamed"]);
+    expect(await readVariant("temp-profile", "renamed")).toEqual(variant);
+    await expect(readVariant("temp-profile", "scratch")).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  // `rename` overwrites silently on both POSIX and NTFS; renaming onto a
+  // sibling would destroy real curation work without a word.
+  it("refuses to rename a variant onto an existing one", async () => {
+    await writeVariant("temp-profile", "scratch", variant);
+    await writeVariant("temp-profile", "taken", { ...variant, tag: "taken" });
+
+    await expect(renameVariant("temp-profile", "scratch", "taken")).rejects.toBeInstanceOf(
+      ConflictError,
+    );
+    expect((await readVariant("temp-profile", "taken")).tag).toBe("taken");
+  });
+
+  it("rejects a rename of a variant that is not there", async () => {
+    await expect(renameVariant("temp-profile", "ghost", "renamed")).rejects.toBeInstanceOf(
+      NotFoundError,
+    );
+  });
+
+  it("renames a profile, carrying its library and variants", async () => {
+    await writeVariant("temp-profile", "scratch", variant);
+
+    await renameProfile("temp-profile", "moved-profile");
+
+    expect(await listProfiles()).toEqual(["moved-profile"]);
+    expect(await listVariants("moved-profile")).toEqual(["scratch"]);
+    expect((await readLibrary("moved-profile")).schemaVersion).toBe(1);
+  });
+
+  it("refuses to rename a profile onto an existing one", async () => {
+    await writeVariant("temp-profile", "scratch", variant);
+    await writeVariant("other-profile", "scratch", variant);
+
+    await expect(renameProfile("temp-profile", "other-profile")).rejects.toBeInstanceOf(
+      ConflictError,
+    );
+    expect(await listVariants("temp-profile")).toEqual(["scratch"]);
+  });
+
+  it("deletes a profile with everything in it", async () => {
+    await writeVariant("temp-profile", "scratch", variant);
+
+    await deleteProfile("temp-profile");
+
+    expect(await listProfiles()).toEqual([]);
+    await expect(readLibrary("temp-profile")).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it("rejects deleting a profile that is not there", async () => {
+    await expect(deleteProfile("ghost-profile")).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it("accepts slugs and rejects anything that could escape the store", () => {
+    expect(isValidSlug("google-swe_2026-08-22")).toBe(true);
+    expect(isValidSlug("../escape")).toBe(false);
+    expect(isValidSlug("with space")).toBe(false);
+    expect(isValidSlug("")).toBe(false);
   });
 });
