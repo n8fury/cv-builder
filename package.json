@@ -15,6 +15,7 @@
     "build:resume-css": "tsx scripts/build-resume-css.ts",
     "measure:page": "node scripts/measure-render.mjs",
     "extract:golden": "node scripts/extract-golden.mjs",
+    "extract:golden:basic": "node scripts/extract-golden.mjs --pdf \"data/reference/resume-reference-basic.pdf\" --out harness/golden-basic.json",
     "harness": "node scripts/harness.mjs"
   },
   "dependencies": {

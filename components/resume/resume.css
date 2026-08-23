@@ -51,6 +51,7 @@
   --space-before-languages: 27.2pt;
   --space-before-recommendations: 27.2pt;
   --space-before-custom: 27.2pt;
+  --space-before-about-me-full-header: 20.32pt;
 
   /* … and the same target as a CSS top margin on the section */
   --space-before-margin-header: 0;
@@ -64,6 +65,7 @@
   --space-before-margin-languages: 13.065pt;
   --space-before-margin-recommendations: 13.065pt;
   --space-before-margin-custom: 13.065pt;
+  --space-before-margin-about-me-full-header: 6.185pt;
 
   /* Per-section heading → first content baseline (§4.3) — target … */
   --heading-to-content-header: 0;
@@ -243,6 +245,13 @@ body {
 .resume-section[data-section="about-me"] {
   --section-space-before: var(--space-before-margin-about-me);
   --section-heading-to-content: var(--heading-to-content-margin-about-me);
+}
+
+/* A full header draws a second contact line, and About Me's gap is measured
+   from the name baseline rather than from the last contact line (§4.2) — so
+   the extra line eats into the gap instead of pushing About Me down. */
+.resume-header[data-mode="full"] + .resume-section[data-section="about-me"] {
+  --section-space-before: var(--space-before-margin-about-me-full-header);
 }
 
 .resume-section[data-section="competencies"] {

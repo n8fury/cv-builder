@@ -13,7 +13,7 @@
  * custom properties from here rather than restating them, so a measurement
  * changes in exactly one place.
  */
-import type { SectionType } from "@/lib/schema/variant";
+import type { HeaderMode, SectionType } from "@/lib/schema/variant";
 
 /* ── Page setup (§2, §4.1) ─────────────────────────────────────────── */
 
@@ -84,22 +84,70 @@ export function leadingFor(section: SectionType): number {
 /* ── Per-section space-before (§4.2, §16.1) ────────────────────────── */
 
 /**
- * §4.2's interpolated stand-in, used where the detailed PDF offers no
- * measurable gap — Projects falls after a page break there, and the other
- * three section types do not appear in it at all.
+ * §4.2's stand-in, used where neither source PDF offers a measurable gap —
+ * these three section types do not appear in the detailed document at all.
  */
 const PROVISIONAL_SPACE_BEFORE_PT = 27.2;
 
 /**
- * About Me's space-before, absent from §4.2 and measured off the golden file
- * in Phase 3: the contact line's baseline sits at y=692.92 and the About Me
- * heading's at y=655.40.
+ * Projects' space-before.
  *
- * Half again the other sections' ~27pt, because this gap carries the visual
- * break between the header block and the body — it is not a section-to-section
- * gap at all, which is why interpolating one put the whole page 10.32pt high.
+ * Not measured, and — unlike the other stand-ins — not measurable from
+ * either source. In the canonical detailed PDF the Projects heading opens
+ * page 2 (`harness/golden.json`: y=725.23, the continuation-page position of
+ * §4.1), so there is no preceding baseline to measure from. The basic PDF
+ * (`harness/golden-basic.json`) does place it mid-page, at 34.72 below the
+ * last Experience bullet — but that document's space-befores are not
+ * interchangeable with the canonical one's:
+ *
+ *   Experience       27.44 / 27.44   identical
+ *   Technical Skills 27.24 / 26.76   −0.48
+ *   Core Competencies 25.03 / 29.02  +3.99
+ *   Certifications   27.14 / 40.15   +13.01 — one 13pt line, an emptied
+ *                                     Technical Skills group left in place
+ *
+ * A source that varies by ~4pt from the canonical on a gap both documents
+ * measure cannot settle one only it measures, and 34.72 is 7.5pt clear of
+ * every gap the canonical does give — outside §11.2's ±2pt either way.
+ *
+ * So the value stays at the stand-in, but it is now a *bounded* one rather
+ * than an interpolation: Projects always follows a bullet list, and the two
+ * canonical gaps that also follow a bullet list are Education's 26.97 and
+ * Technical Skills' 27.24. 27.2 sits within 0.24 of both, so any value the
+ * canonical document would have shown is inside tolerance of it.
  */
-const ABOUT_ME_SPACE_BEFORE_PT = 37.52;
+const PROJECTS_SPACE_BEFORE_PT = 27.2;
+
+/**
+ * Name baseline → About Me heading baseline, measured — the gap §4.2 leaves
+ * out entirely.
+ *
+ * Measured to the *name*, not to the last contact line, because that is what
+ * holds across both sources: the header block occupies a fixed slot and the
+ * contact lines fill it, rather than pushing About Me down.
+ *
+ *   detailed (minimal, one contact line)   716.37 → 655.40 = 60.97
+ *   basic    (full, two contact lines)     715.63 → 654.89 = 60.74
+ *
+ * The canonical figure is taken; the second document agrees to 0.23pt.
+ */
+export const NAME_BASELINE_TO_ABOUT_ME_PT = 60.97;
+
+/**
+ * About Me's space-before, derived per header mode from the measurement
+ * above by subtracting the contact lines the mode draws (§5.1).
+ *
+ *   minimal  60.97 − 23.45          = 37.52  (exactly golden.json's 692.92 → 655.40)
+ *   full     60.97 − 23.58 − 17.07  = 20.32  (golden-basic.json reads 20.09)
+ *
+ * Deriving rather than tabulating is what makes the two agree: a single
+ * §4.2-style figure would be right for one mode and ~17pt wrong for the
+ * other, since it is the header slot that is fixed, not the gap below it.
+ */
+export const ABOUT_ME_SPACE_BEFORE_PT: Record<HeaderMode, number> = {
+  minimal: NAME_BASELINE_TO_ABOUT_ME_PT - NAME_TO_CONTACT_PT.minimal,
+  full: NAME_BASELINE_TO_ABOUT_ME_PT - NAME_TO_CONTACT_PT.full - CONTACT_LINE_GAP_PT,
+};
 
 /**
  * Previous section's last baseline → this heading's baseline.
@@ -111,10 +159,12 @@ const ABOUT_ME_SPACE_BEFORE_PT = 37.52;
 export const SPACE_BEFORE_PT: Record<SectionType, number> = {
   // The header opens the page; its position comes from §4.1, not a gap.
   header: 0,
-  aboutMe: ABOUT_ME_SPACE_BEFORE_PT,
+  // The minimal header is what the canonical document uses; a full header
+  // overrides this in resume.css, off ABOUT_ME_SPACE_BEFORE_MARGIN_PT.full.
+  aboutMe: ABOUT_ME_SPACE_BEFORE_PT.minimal,
   competencies: 25.03,
   experience: 27.44,
-  projects: PROVISIONAL_SPACE_BEFORE_PT,
+  projects: PROJECTS_SPACE_BEFORE_PT,
   education: 26.97,
   skills: 27.24,
   certifications: 27.14,
@@ -123,7 +173,13 @@ export const SPACE_BEFORE_PT: Record<SectionType, number> = {
   custom: PROVISIONAL_SPACE_BEFORE_PT,
 };
 
-/** Section types whose space-before is still the interpolated stand-in. */
+/**
+ * Section types whose space-before is not a measurement.
+ *
+ * Projects stays listed: it is bounded by two canonical gaps rather than
+ * interpolated between them, but neither source document measures it (see
+ * PROJECTS_SPACE_BEFORE_PT).
+ */
 export const PROVISIONAL_SPACE_BEFORE: ReadonlySet<SectionType> = new Set([
   "projects",
   "languages",
@@ -437,6 +493,24 @@ export const SPACE_BEFORE_MARGIN_PT: Record<SectionType, number> =
           }),
     ]),
   ) as Record<SectionType, number>;
+
+/**
+ * About Me's space-before as a CSS top margin, per header mode.
+ *
+ * `SPACE_BEFORE_MARGIN_PT.aboutMe` carries the minimal-header case, since
+ * that is what the canonical document sets and what §11.2 gates on; this is
+ * the pair, so the stylesheet can override it when the header ahead of About
+ * Me is in full mode and draws a second contact line.
+ */
+export const ABOUT_ME_SPACE_BEFORE_MARGIN_PT: Record<HeaderMode, number> =
+  Object.fromEntries(
+    Object.entries(ABOUT_ME_SPACE_BEFORE_PT).map(([mode, target]) => [
+      mode,
+      baselineGap(target, HEADING_FONT_SIZE_PT, HEADING_LINE_HEIGHT_PT, {
+        previous: { fontSizePt: BODY_FONT_SIZE_PT, lineHeightPt: BODY_LEADING_PT },
+      }),
+    ]),
+  ) as Record<HeaderMode, number>;
 
 /**
  * A heading's baseline → the bottom edge of its box, rule included. What

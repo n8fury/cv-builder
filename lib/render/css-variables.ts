@@ -11,6 +11,8 @@
 import { SECTION_TYPES, type SectionType } from "../schema/variant";
 
 import {
+  ABOUT_ME_SPACE_BEFORE_MARGIN_PT,
+  ABOUT_ME_SPACE_BEFORE_PT,
   BODY_FONT_SIZE_PT,
   BODY_LEADING_PT,
   BULLET_MARKER_BOX_X_PT,
@@ -99,11 +101,19 @@ function declarations(): string[] {
   for (const section of SECTION_TYPES) {
     add(`space-before-${kebab(section)}`, SPACE_BEFORE_PT[section]);
   }
+  // About Me's gap is measured to the name baseline, so it shrinks by the
+  // second contact line a full header draws (§4.2). The section-keyed value
+  // above is the minimal-header case.
+  add("space-before-about-me-full-header", ABOUT_ME_SPACE_BEFORE_PT.full);
 
   group("… and the same target as a CSS top margin on the section");
   for (const section of SECTION_TYPES) {
     add(`space-before-margin-${kebab(section)}`, SPACE_BEFORE_MARGIN_PT[section]);
   }
+  add(
+    "space-before-margin-about-me-full-header",
+    ABOUT_ME_SPACE_BEFORE_MARGIN_PT.full,
+  );
 
   group("Per-section heading → first content baseline (§4.3) — target …");
   for (const section of SECTION_TYPES) {

@@ -63,8 +63,12 @@ confirmed exact from the source.
 All values below are **baseline-to-baseline, in points**, extracted from
 `data/reference/resume-reference-detailed.pdf` via pdfjs. Baselines
 are unambiguous; where these disagree with §11.3's box-edge assumption,
-these win. Values verified identical in the second (basic) PDF except
-where noted.
+these win. The second (basic) PDF is a corroborating source, not an equal
+one: its per-section space-befores drift from these by up to 4pt, and its
+Certifications gap carries a stray blank 13pt line where a Technical
+Skills group was emptied. Where the two disagree, the detailed PDF wins;
+`harness/golden-basic.json` records the basic PDF's coordinates so the
+comparison is reproducible (`npm run extract:golden:basic`).
 
 ### 4.1 Page and header
 | Relationship | Value |
@@ -80,12 +84,42 @@ Per §16.1, encoded per section type — **not** averaged into one constant.
 
 | Section | Value |
 |---|---|
+| About Me | derived per header mode — see below |
 | Core Competencies | 25.03 |
 | Experience | 27.44 |
 | Education | 26.97 |
 | Technical Skills | 27.24 |
 | Certifications | 27.14 |
-| Projects | falls after a page break in the source — no measurable value; use 27.2 |
+| Projects | not measurable in either source — bounded at 27.2, see below |
+
+**About Me.** Measured from the **name baseline**, not from the last
+contact line: the header occupies a fixed slot and its contact lines fill
+it rather than pushing About Me down. Name → About Me heading is 60.97 in
+the detailed PDF (716.37 → 655.40) and 60.74 in the basic (715.63 →
+654.89) — one measurement, agreeing to 0.23pt across a one-line and a
+two-line header. The space-before follows from it by subtracting the
+contact lines the mode draws (§5.1):
+
+| Header mode | Space-before | Check |
+|---|---|---|
+| minimal (one contact line) | 60.97 − 23.45 = **37.52** | exactly the detailed PDF's 692.92 → 655.40 |
+| full (two contact lines) | 60.97 − 23.58 − 17.07 = **20.32** | basic PDF reads 20.09 |
+
+A single figure here would be right for one mode and ~17pt wrong for the
+other, so this gap is the one §4.2 entry that is derived rather than
+tabulated.
+
+**Projects.** Neither source measures it. In the detailed PDF the
+Projects heading opens page 2, so it is placed by §4.1's continuation-page
+geometry and has no preceding baseline. The basic PDF does place it
+mid-page, at 34.72 — but that document is 4pt off the detailed on Core
+Competencies, a gap both measure, so it cannot settle one only it
+measures; and 34.72 is 7.5pt clear of every gap the detailed PDF does
+give, well outside §11.2's ±2pt. **27.2 stands, now as a bound rather
+than an interpolation**: Projects always follows a bullet list, and the
+two detailed-PDF gaps that also follow a bullet list are Education's
+26.97 and Technical Skills' 27.24. 27.2 is within 0.24 of both, so
+whatever the detailed PDF would have shown is inside tolerance of it.
 
 ### 4.3 Per-section heading → first content baseline
 Also varies by section type; the old single "6.3pt underline → content"
@@ -396,6 +430,36 @@ proves the render pipeline is actually pixel-accurate rather than
   risks missing real spacing bugs.
 - Run this once early, before building the full editor UI, to de-risk
   the font/spacing/CSS approach before more is built on top of it.
+
+**What the harness asserts — and what it deliberately does not.**
+Settled in Phase 3 once every measurement was reconciled and only line
+breaking remained.
+
+The harness gates **geometry**: every golden line must have a generated
+line within ±2pt in both x and baseline y, on the same page. It does
+**not** gate where a justified line breaks. The source is composed by
+Illustrator, whose Paragraph Composer optimises breaks across a whole
+paragraph and compresses word spaces to fit — measured at up to 5.89pt
+on one line, roughly 80% of normal word spacing. CSS justification only
+ever stretches, and Chromium breaks greedily; `text-wrap: pretty` and
+`stable` change nothing, and a uniform negative `word-spacing` is a
+fitted constant, not a measured one (it reached 70/84 exact lines and
+never 84). No CSS expresses per-line compression, so gating on the break
+point would gate on something the renderer cannot do.
+
+25 of 84 lines therefore carry a different share of the same words. They
+are reported as `REFLOW` and are not fatal. `--strict-wrap` makes them
+fatal again, for anyone attacking the composition problem itself.
+
+This is only safe because of a second, stronger assertion the harness
+gained at the same time: **the two documents' copy must be identical
+character-for-character**, whitespace and line-break hyphens normalised
+away (the source hyphenates `Agile Development` as `Agile -` /
+`Development`). A line may hold a different share of the text; no word
+may appear, vanish, or change. Line counts must match too — 84 golden
+lines, 84 generated. Together these are a tighter guarantee than the
+original text-keyed diff gave, which let a reflowed line disappear into
+`MISSING`/`EXTRA` and never checked the document's copy at all.
 
 ### 11.3 Spacing measurement model (default assumption, verify via 11.2)
 All spacing values in §4 were read off Illustrator's gap/measure

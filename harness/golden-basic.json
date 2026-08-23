@@ -1,0 +1,748 @@
+{
+  "schemaVersion": 1,
+  "source": "data/reference/resume-reference-basic.pdf",
+  "units": "pt",
+  "origin": "bottom-left",
+  "pages": [
+    {
+      "page": 1,
+      "width": 612,
+      "height": 792
+    },
+    {
+      "page": 2,
+      "width": 612,
+      "height": 792
+    }
+  ],
+  "items": [
+    {
+      "page": 1,
+      "text": "Jordan A. Rivera",
+      "x": 192.51,
+      "baselineY": 715.63,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 24.91
+    },
+    {
+      "page": 1,
+      "text": "Northside, Springfield, SP-1010 |",
+      "x": 129.21,
+      "baselineY": 692.05,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "jordan.rivera@example.com | +1-555-0142",
+      "x": 290.43,
+      "baselineY": 692.05,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "linkedin.com/in/jordan-rivera |",
+      "x": 187.02,
+      "baselineY": 674.98,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "github.com/jordan-rivera-demo",
+      "x": 340.38,
+      "baselineY": 674.98,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "About Me",
+      "x": 56.18,
+      "baselineY": 654.89,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 11.96
+    },
+    {
+      "page": 1,
+      "text": "Backend-focused Software Engineer with 2+ years of experience specializing in the MERN stack and IoT-integrated",
+      "x": 56.18,
+      "baselineY": 637.61,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "web applications. Proven track record of independently architecting and delivering production-ready systems",
+      "x": 56.18,
+      "baselineY": 625.61,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "including real-time vehicle tracking platforms, telemetry backend infrastructure, and enterprise management dashboards.",
+      "x": 56.18,
+      "baselineY": 613.61,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "Passionate about creating efficient, well-documented solutions that drive business value.",
+      "x": 56.18,
+      "baselineY": 601.61,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "Core Competencies",
+      "x": 56.06,
+      "baselineY": 572.59,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 11.96
+    },
+    {
+      "page": 1,
+      "text": "Full Stack Development (MERN) | RESTful API Design | IoT Backend Systems |Database Design &",
+      "x": 56.05,
+      "baselineY": 552.48,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "Optimization | Authentication & Security | Performance Optimization | Agile -",
+      "x": 56.05,
+      "baselineY": 540.48,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "Development | Technical Documentation",
+      "x": 56.05,
+      "baselineY": 528.48,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "Experience",
+      "x": 56.05,
+      "baselineY": 501.04,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 11.96
+    },
+    {
+      "page": 1,
+      "text": "February 2024 – Present",
+      "x": 443.17,
+      "baselineY": 485.19,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 9.96
+    },
+    {
+      "page": 1,
+      "text": "Software Engineer",
+      "x": 56.47,
+      "baselineY": 482.87,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "Downtown, Springfield,the region",
+      "x": 411.79,
+      "baselineY": 473.19,
+      "fontName": "CharterBT-Italic",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "Northwind Energy Ltd.",
+      "x": 56.47,
+      "baselineY": 470.87,
+      "fontName": "CharisSIL-Italic",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "• Architected full-stack depot management system with real-time vehicle tracking, automated invoicing, and",
+      "x": 66.18,
+      "baselineY": 451.58,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "role-based access control",
+      "x": 76.18,
+      "baselineY": 439.58,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "• Developed enterprise investor portal with live vehicle analytics and dynamic ROI calculations, supporting",
+      "x": 66.18,
+      "baselineY": 427.58,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "multi-role authentication for 100+ fleet operators",
+      "x": 76.18,
+      "baselineY": 415.58,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "• Built production-ready telemetry backend infrastructure serving daily transactions with Swagger/OpenAPI documen-",
+      "x": 66.18,
+      "baselineY": 403.58,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "tation across 50+ endpoints",
+      "x": 76.18,
+      "baselineY": 391.58,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "• Led frontend modernization with dynamic product catalogs, blog CMS (Payload integration), and internation-",
+      "x": 66.18,
+      "baselineY": 379.58,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "alization (Spanish/English)—reducing load times by 40% via Cloudinary CDN optimization",
+      "x": 76.18,
+      "baselineY": 367.58,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "• Engineered ML-driven drive cycle analysis system processing location telemetry through clustering algorithms,",
+      "x": 66.18,
+      "baselineY": 355.58,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "generating validated driving patterns (2.7-5.8km range) with velocity-acceleration matrix analysis",
+      "x": 76.18,
+      "baselineY": 343.58,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "• Established corporate web presence using Next.js with GSAP animations and SEO optimization, achieving 90+",
+      "x": 66.18,
+      "baselineY": 331.58,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "PageSpeed scores",
+      "x": 76.18,
+      "baselineY": 319.58,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "Projects",
+      "x": 55.9,
+      "baselineY": 284.86,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 11.96
+    },
+    {
+      "page": 1,
+      "text": "Fleet Drive-Cycle Analysis Toolkit",
+      "x": 56.32,
+      "baselineY": 269.59,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "February 2025 – March 2025",
+      "x": 422.12,
+      "baselineY": 262.11,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 9.96
+    },
+    {
+      "page": 1,
+      "text": "Data Science Pipeline | Python, TensorFlow, Jupyter, MCMC",
+      "x": 56.32,
+      "baselineY": 257.59,
+      "fontName": "CharisSIL-Italic",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "• Achieved 98%+ accuracy in driving pattern classification by implementing ML-based behavior segmentation",
+      "x": 66.03,
+      "baselineY": 235.4,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "on 40MB+ vehicular datasets using supervised learning algorithms",
+      "x": 76.03,
+      "baselineY": 223.4,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "• Generated",
+      "x": 66.03,
+      "baselineY": 211.4,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "validated",
+      "x": 127.59,
+      "baselineY": 211.4,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "automotive",
+      "x": 174.17,
+      "baselineY": 211.4,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "testing",
+      "x": 229.8,
+      "baselineY": 211.4,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "cycles",
+      "x": 265.43,
+      "baselineY": 211.4,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "compliant",
+      "x": 297.36,
+      "baselineY": 211.4,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "with",
+      "x": 347.19,
+      "baselineY": 211.4,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "WLTP/FUDS",
+      "x": 373.01,
+      "baselineY": 211.4,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "international",
+      "x": 434.17,
+      "baselineY": 211.4,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "standards",
+      "x": 496.89,
+      "baselineY": 211.4,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "by",
+      "x": 545.49,
+      "baselineY": 211.4,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "engineering data science pipeline with statistical VA matrix correlation analysis",
+      "x": 76.03,
+      "baselineY": 199.4,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "ML-Based Symptom Triage Application",
+      "x": 56.32,
+      "baselineY": 149.99,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "September 2021 – November 2021",
+      "x": 395.63,
+      "baselineY": 142.51,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 9.96
+    },
+    {
+      "page": 1,
+      "text": "Desktop Application | Python, NumPy, Pandas, Tkinter, Scikit-learn",
+      "x": 56.32,
+      "baselineY": 137.99,
+      "fontName": "CharisSIL-Italic",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "• Enabled real-time medical diagnosis for practitioners by developing intelligent disease prediction system",
+      "x": 66.03,
+      "baselineY": 115.8,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "analyzing 132 symptom inputs using supervised learning models",
+      "x": 76.03,
+      "baselineY": 103.8,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "• Processed 1.3MB clinical training dataset with 90%+ prediction accuracy by implementing rigorous validation",
+      "x": 66.03,
+      "baselineY": 91.8,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "protocols and feature engineering techniques",
+      "x": 76.03,
+      "baselineY": 79.8,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "• Improved diagnostic accessibility by creating user-friendly desktop GUI with intuitive symptom selection inter-",
+      "x": 66.03,
+      "baselineY": 67.8,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 1,
+      "text": "face for medical practitioners",
+      "x": 76.03,
+      "baselineY": 55.8,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 2,
+      "text": "Education",
+      "x": 56.14,
+      "baselineY": 725.9,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 11.96
+    },
+    {
+      "page": 2,
+      "text": "BSc in Computer Science and Engineering",
+      "x": 56.57,
+      "baselineY": 707.73,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 10
+    },
+    {
+      "page": 2,
+      "text": "2018 - 2022",
+      "x": 500.38,
+      "baselineY": 700.25,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 9.96
+    },
+    {
+      "page": 2,
+      "text": "Springfield Institute of Technology",
+      "x": 56.57,
+      "baselineY": 695.73,
+      "fontName": "CharisSIL-Italic",
+      "fontSize": 10
+    },
+    {
+      "page": 2,
+      "text": "• Coursework: Data Structures & Algorithms, Database Systems, Operating Systems, Software Engineering,",
+      "x": 66.28,
+      "baselineY": 676.44,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 2,
+      "text": "Design & Analysis of Algorithms, Probability & Statistics",
+      "x": 76.28,
+      "baselineY": 664.44,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 2,
+      "text": "Technical Skills",
+      "x": 56.68,
+      "baselineY": 637.2,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 11.96
+    },
+    {
+      "page": 2,
+      "text": "Languages:",
+      "x": 56.16,
+      "baselineY": 620.28,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 10
+    },
+    {
+      "page": 2,
+      "text": "JavaScript (ES6+), TypeScript, Python",
+      "x": 111.74,
+      "baselineY": 620.28,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 2,
+      "text": "Frontend:",
+      "x": 56.16,
+      "baselineY": 607.28,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 10
+    },
+    {
+      "page": 2,
+      "text": "React.js, Next.js, Tailwind CSS",
+      "x": 104.5,
+      "baselineY": 607.28,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 2,
+      "text": "Backend:",
+      "x": 56.16,
+      "baselineY": 594.28,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 10
+    },
+    {
+      "page": 2,
+      "text": "Node.js, Express.js, JWT Authentication, Swagger/OpenAPI, Mongoose ODM",
+      "x": 101.73,
+      "baselineY": 594.28,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 2,
+      "text": "Databases:",
+      "x": 56.16,
+      "baselineY": 581.28,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 10
+    },
+    {
+      "page": 2,
+      "text": "MongoDB, Database Schema Design & Optimization",
+      "x": 109.47,
+      "baselineY": 581.28,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 2,
+      "text": "DevOps & Tools:",
+      "x": 56.16,
+      "baselineY": 568.28,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 10
+    },
+    {
+      "page": 2,
+      "text": "Git, GitHub, VS Code, Vercel, Cloudinary, Postman, Linux, Docker",
+      "x": 135.25,
+      "baselineY": 568.28,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 2,
+      "text": "Specialized:",
+      "x": 56.16,
+      "baselineY": 555.28,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 10
+    },
+    {
+      "page": 2,
+      "text": "IoT Integration (ESP32), Machine Learning (TensorFlow, Scikit-learn)",
+      "x": 114.79,
+      "baselineY": 555.28,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 2,
+      "text": "Certifications",
+      "x": 56.4,
+      "baselineY": 515.13,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 11.96
+    },
+    {
+      "page": 2,
+      "text": "Career Development Program | Northwind Training Center",
+      "x": 55.89,
+      "baselineY": 498.21,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 10
+    },
+    {
+      "page": 2,
+      "text": "Jan 2023 – Apr 2023",
+      "x": 460.26,
+      "baselineY": 498.21,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 10
+    },
+    {
+      "page": 2,
+      "text": "Python Bootcamp 2021: Build 15 Working Applications and Games | Udemy",
+      "x": 55.89,
+      "baselineY": 485.21,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 10
+    },
+    {
+      "page": 2,
+      "text": "2021",
+      "x": 533.73,
+      "baselineY": 485.21,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 10
+    },
+    {
+      "page": 2,
+      "text": "JavaScript for Beginners: Create 27 Projects from Scratch | Udemy",
+      "x": 55.89,
+      "baselineY": 472.21,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 10
+    },
+    {
+      "page": 2,
+      "text": "2021",
+      "x": 534.19,
+      "baselineY": 472.21,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 10
+    },
+    {
+      "page": 2,
+      "text": "JavaScript (Basic) Certification | HackerRank",
+      "x": 55.89,
+      "baselineY": 459.21,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 10
+    },
+    {
+      "page": 2,
+      "text": "2021",
+      "x": 534.74,
+      "baselineY": 459.21,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 10
+    },
+    {
+      "page": 2,
+      "text": "Languages",
+      "x": 56.23,
+      "baselineY": 432.43,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 11.96
+    },
+    {
+      "page": 2,
+      "text": "Spanish:",
+      "x": 55.71,
+      "baselineY": 415.51,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 10
+    },
+    {
+      "page": 2,
+      "text": "Native (Mother Tongue)",
+      "x": 96.63,
+      "baselineY": 415.51,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    },
+    {
+      "page": 2,
+      "text": "English:",
+      "x": 55.71,
+      "baselineY": 402.51,
+      "fontName": "CharterBT-Bold",
+      "fontSize": 10
+    },
+    {
+      "page": 2,
+      "text": "Professional Working Proficiency (Fluent in Reading, Writing, and Speaking)",
+      "x": 96.07,
+      "baselineY": 402.51,
+      "fontName": "CharterBT-Roman",
+      "fontSize": 10
+    }
+  ]
+}
