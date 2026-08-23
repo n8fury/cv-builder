@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import "../globals.css";
+import { ToastProvider } from "./Toaster";
 
 export const metadata: Metadata = {
   title: "CV Builder",
@@ -10,7 +11,10 @@ export const metadata: Metadata = {
 export default function DashboardLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {/* §13: failures surface here as toasts, never silently. */}
+        <ToastProvider>{children}</ToastProvider>
+      </body>
     </html>
   );
 }

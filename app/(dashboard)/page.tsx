@@ -8,13 +8,14 @@
 import Link from "next/link";
 
 import { listDashboard, type ProfileSummary, type VariantSummary } from "@/lib/data/dashboard";
-import { exportPath, pdfFilename, renderPath } from "@/lib/routes";
+import { renderPath } from "@/lib/routes";
 import {
   deleteProfileAction,
   deleteVariantAction,
   renameProfileAction,
   renameVariantAction,
 } from "./actions";
+import { DownloadButton } from "./DownloadButton";
 import { NewProfileForm } from "./NewProfileForm";
 import { DeleteButton, RenameForm } from "./RowActions";
 
@@ -54,16 +55,7 @@ function VariantRow({ profileId, variant }: { profileId: string; variant: Varian
         >
           View
         </Link>
-        {/* A plain link, not fetch(): the browser streams the PDF straight to
-            disk, so a multi-second export never sits in a JS buffer. Task 5.5
-            layers the disabled/spinner state (§13) on top of this. */}
-        <a
-          className="rounded bg-gray-900 px-2 py-1 text-xs font-medium text-white hover:bg-gray-700"
-          download={pdfFilename(profileId, variant.id)}
-          href={exportPath(profileId, variant.id, { download: true })}
-        >
-          Download PDF
-        </a>
+        <DownloadButton profileId={profileId} variantId={variant.id} />
         <RenameForm
           action={renameVariantAction}
           currentId={variant.id}
