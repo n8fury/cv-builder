@@ -204,7 +204,7 @@ and completion state.
     (coordinates only, not the PDF) and the harness runs without the gitignored
     PDF present.
 
-- [ ] Task 3.2: Build the diff harness comparing a generated PDF against the
+- [x] Task 3.2: Build the diff harness comparing a generated PDF against the
       golden file at ±2pt
   - Verification: `npm run harness` prints a per-element pass/fail table and
     exits non-zero when any element exceeds ±2pt in x or baseline y.
