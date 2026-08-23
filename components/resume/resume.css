@@ -41,7 +41,7 @@
 
   /* Per-section space-before (§4.2, §16.1) — measured target … */
   --space-before-header: 0;
-  --space-before-about-me: 27.2pt;
+  --space-before-about-me: 37.52pt;
   --space-before-competencies: 25.03pt;
   --space-before-experience: 27.44pt;
   --space-before-projects: 27.2pt;
@@ -54,16 +54,16 @@
 
   /* … and the same target as a CSS top margin on the section */
   --space-before-margin-header: 0;
-  --space-before-margin-about-me: 14.473pt;
-  --space-before-margin-competencies: 12.303pt;
-  --space-before-margin-experience: 14.713pt;
-  --space-before-margin-projects: 14.473pt;
-  --space-before-margin-education: 14.243pt;
-  --space-before-margin-skills: 14.513pt;
-  --space-before-margin-certifications: 14.413pt;
-  --space-before-margin-languages: 14.473pt;
-  --space-before-margin-recommendations: 14.473pt;
-  --space-before-margin-custom: 14.473pt;
+  --space-before-margin-about-me: 23.385pt;
+  --space-before-margin-competencies: 10.895pt;
+  --space-before-margin-experience: 13.305pt;
+  --space-before-margin-projects: 13.065pt;
+  --space-before-margin-education: 12.835pt;
+  --space-before-margin-skills: 13.105pt;
+  --space-before-margin-certifications: 13.005pt;
+  --space-before-margin-languages: 13.065pt;
+  --space-before-margin-recommendations: 13.065pt;
+  --space-before-margin-custom: 13.065pt;
 
   /* Per-section heading → first content baseline (§4.3) — target … */
   --heading-to-content-header: 0;
@@ -98,7 +98,8 @@
   --entry-gap-experience: 28.17pt;
   --entry-gap-projects: 25.41pt;
   --entry-gap-education: 28.17pt;
-  --right-block-lift: 2.31pt;
+  --right-block-offset-one-line: 7.47pt;
+  --right-block-offset-two-line: -2.31pt;
   --title-to-subtitle-margin: -0.149pt;
   --subtitle-to-bullets-margin-experience: 7.439pt;
   --subtitle-to-bullets-margin-projects: 10.339pt;
@@ -113,20 +114,16 @@
   --bullet-marker-box-x: 10pt;
   --hanging-indent: 20pt;
   --bullet-extra-gap: 0;
-  --heading-line-height: 12pt;
+  --heading-line-height: 14.815pt;
   --heading-rule-weight: 0.4pt;
-  --heading-rule-padding: 3.512pt;
+  --heading-rule-padding: 2.105pt;
+}
+
+@page {
+  size: 612pt 792pt;
+  margin: 55pt;
 }
 /* end generated */
-
-/* Page box (§2, §8). @page carries the size so `preferCSSPageSize: true`
-   has an authoritative value to read, and zero margin so the only margins in
-   play are the 55pt of padding on .resume-page below. Letter is stated in
-   inches to match the Puppeteer `format: 'Letter'` the export passes (§15.10). */
-@page {
-  size: 8.5in 11in;
-  margin: 0;
-}
 
 /* The resume document has its own root layout, so nothing has reset these. */
 html,
@@ -136,6 +133,16 @@ body {
   background: #fff;
 }
 
+/* Page box (§2, §8).
+
+   On screen this is a literal sheet: 612×792pt with the 55pt margins drawn as
+   padding, so the preview and its page-boundary guides show the real thing.
+
+   In print the margins come from @page instead — see pageRule() in
+   css-variables.ts. Keeping the padding here as well would double them on
+   page one and still leave page two with none, and a 612pt-wide box inside a
+   502pt content area would overflow, so both are dropped for print and the
+   text simply flows through the page box @page defines. */
 .resume-page {
   position: relative;
   width: var(--page-width);
@@ -146,6 +153,14 @@ body {
   font-family: "Charter BT", serif;
   font-size: var(--font-size-body);
   line-height: var(--leading-body);
+}
+
+@media print {
+  .resume-page {
+    width: auto;
+    min-height: 0;
+    padding: 0;
+  }
 }
 
 /* Page-boundary guides (§11.5). Informational chrome, not part of the
@@ -351,10 +366,18 @@ body {
   align-items: flex-start;
 }
 
+/* The right column does not share the left's baseline (§4.4). Which way it
+   moves depends on how many lines it has, so the selector counts them rather
+   than keying on section type: a lone dates line sits below the title, a
+   dates-over-location pair sits above it. See RIGHT_BLOCK_OFFSET_PT. */
 .resume-entry-right {
   text-align: right;
-  margin-top: calc(-1 * var(--right-block-lift));
+  margin-top: var(--right-block-offset-one-line);
   white-space: nowrap;
+}
+
+.resume-entry-right:has(> :nth-child(2)) {
+  margin-top: var(--right-block-offset-two-line);
 }
 
 .resume-entry-title {
@@ -456,14 +479,20 @@ body {
 
 /* Title Case, bold, with a hairline rule spanning the full content width
    (§4.5, §15.9). The padding carries the border down to its measured offset
-   below the baseline; the line box alone stops well short of it. break-after
-   keeps a heading from being stranded at the foot of a page (§15.11). */
+   below the baseline; the line box alone stops well short of it.
+
+   break-after keeps a heading from being stranded at the foot of a page
+   (§15.11) — but only in company with break-inside. The ::after rule makes
+   the heading two fragments deep, and Chromium will happily break inside it,
+   which satisfies break-after without moving anything; pinning the text and
+   its rule together is what forces the whole heading onto the next page. */
 .resume-section-heading {
   margin: 0;
   font-weight: 700;
   font-size: var(--font-size-heading);
   line-height: var(--heading-line-height);
   break-after: avoid;
+  break-inside: avoid;
 }
 
 /* A filled block, not a border: Chromium rounds any non-zero border width up

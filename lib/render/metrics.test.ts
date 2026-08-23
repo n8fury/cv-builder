@@ -8,7 +8,7 @@ import {
   DESCENT_RATIO,
   CONTENT_RIGHT_PT,
   HEADING_FONT_SIZE_PT,
-  RIGHT_BLOCK_LIFT_PT,
+  RIGHT_BLOCK_OFFSET_PT,
   SPACE_BEFORE_PT,
   TITLE_TO_SUBTITLE_PT,
   WIDE_LEADING_PT,
@@ -100,8 +100,15 @@ describe("baselineGap", () => {
   });
 
   it("expresses the 2.31pt right-block lift as a negative margin", () => {
-    expect(
-      baselineGap(-RIGHT_BLOCK_LIFT_PT, BODY_FONT_SIZE_PT, BODY_LEADING_PT),
-    ).toBeCloseTo(-RIGHT_BLOCK_LIFT_PT - BODY_LEADING_PT, 10);
+    const lift = RIGHT_BLOCK_OFFSET_PT.twoLine;
+    expect(baselineGap(lift, BODY_FONT_SIZE_PT, BODY_LEADING_PT)).toBeCloseTo(
+      lift - BODY_LEADING_PT,
+      10,
+    );
+  });
+
+  it("offsets a one-line right block the opposite way from a two-line one", () => {
+    expect(RIGHT_BLOCK_OFFSET_PT.twoLine).toBeLessThan(0);
+    expect(RIGHT_BLOCK_OFFSET_PT.oneLine).toBeGreaterThan(0);
   });
 });

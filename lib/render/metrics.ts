@@ -86,10 +86,20 @@ export function leadingFor(section: SectionType): number {
 /**
  * §4.2's interpolated stand-in, used where the detailed PDF offers no
  * measurable gap — Projects falls after a page break there, and the other
- * four section types do not appear in it at all. Every use of it is replaced
- * with a real measurement in Phase 3 (plan Task 3.4).
+ * three section types do not appear in it at all.
  */
 const PROVISIONAL_SPACE_BEFORE_PT = 27.2;
+
+/**
+ * About Me's space-before, absent from §4.2 and measured off the golden file
+ * in Phase 3: the contact line's baseline sits at y=692.92 and the About Me
+ * heading's at y=655.40.
+ *
+ * Half again the other sections' ~27pt, because this gap carries the visual
+ * break between the header block and the body — it is not a section-to-section
+ * gap at all, which is why interpolating one put the whole page 10.32pt high.
+ */
+const ABOUT_ME_SPACE_BEFORE_PT = 37.52;
 
 /**
  * Previous section's last baseline → this heading's baseline.
@@ -101,7 +111,7 @@ const PROVISIONAL_SPACE_BEFORE_PT = 27.2;
 export const SPACE_BEFORE_PT: Record<SectionType, number> = {
   // The header opens the page; its position comes from §4.1, not a gap.
   header: 0,
-  aboutMe: PROVISIONAL_SPACE_BEFORE_PT,
+  aboutMe: ABOUT_ME_SPACE_BEFORE_PT,
   competencies: 25.03,
   experience: 27.44,
   projects: PROVISIONAL_SPACE_BEFORE_PT,
@@ -115,7 +125,6 @@ export const SPACE_BEFORE_PT: Record<SectionType, number> = {
 
 /** Section types whose space-before is still the interpolated stand-in. */
 export const PROVISIONAL_SPACE_BEFORE: ReadonlySet<SectionType> = new Set([
-  "aboutMe",
   "projects",
   "languages",
   "recommendations",
@@ -209,11 +218,26 @@ export const HEADING_BASELINE_TO_RULE_PT = 5.15;
 
 /**
  * The dates/location block does **not** share a baseline with the
- * title/company block — it sits consistently 2.31pt higher, in both source
- * documents. That exceeds §11.2's ±2pt tolerance, so it is implemented
- * rather than ignored. Applies to Experience, Projects, and Education (§4.4).
+ * title/company block. §4.4 records the two-line case: it sits consistently
+ * 2.31pt higher, in both source documents, which exceeds §11.2's ±2pt
+ * tolerance and so is implemented rather than ignored.
+ *
+ * A one-line right block is offset the other way — measured in Phase 3, where
+ * the two-line value alone left every Projects and Education date ~9.8pt high:
+ *
+ *   Experience (dates over location, two lines)  −2.31, −2.31
+ *   Projects   (dates alone, one line)           +7.47, +7.47
+ *   Education  (dates alone, one line)           +7.48
+ *
+ * Keyed on the right block's own line count rather than on section type: what
+ * moves the block is how tall it is against the two-line left column, so a
+ * Projects entry carrying repo/demo links (§5.5) belongs with Experience.
+ * Positive is below the title's baseline, negative above.
  */
-export const RIGHT_BLOCK_LIFT_PT = 2.31;
+export const RIGHT_BLOCK_OFFSET_PT = {
+  oneLine: 7.47,
+  twoLine: -2.31,
+} as const;
 
 /**
  * Bullets are consecutive leading-height lines with no extra gap between
@@ -365,8 +389,24 @@ export const NAME_TO_CONTACT_MARGIN_PT: Record<"full" | "minimal", number> = {
 
 /* ── Section heading geometry (§4.2, §4.5), derived ────────────────── */
 
-/** Headings run at one body line height; nothing in §4 asks for more. */
-export const HEADING_LINE_HEIGHT_PT = BODY_LEADING_PT;
+/**
+ * The heading's line height, solved rather than chosen — the same technique
+ * the name block uses, and for the same reason.
+ *
+ * Everywhere on a page, a heading is placed by a baseline target and its own
+ * box height cancels out. At a page break it does not: §4.1 measures the
+ * continuation page's first heading with "its box top lands exactly on the
+ * 55pt margin" and its baseline 11.77 below. Chromium puts that baseline
+ * 9.75pt down for a 12pt heading at one body leading — it rounds font ascent
+ * and descent to whole pixels — which stranded page two 2.02pt high, past
+ * §11.2's tolerance. Solving the line height for the measured 11.77 fixes the
+ * continuation page and leaves page one untouched, since every gap there is
+ * derived from this value rather than assuming it.
+ */
+export const HEADING_LINE_HEIGHT_PT = lineHeightForBaseline(
+  HEADING_FONT_SIZE_PT,
+  TOP_MARGIN_TO_HEADING_BASELINE_PT,
+);
 
 /**
  * Padding under the heading text that carries its border down to the measured

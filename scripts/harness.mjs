@@ -350,9 +350,16 @@ async function main() {
     console.log("");
     printTable(results, extra, args);
     console.log("");
+    // Position and text flow are separate concerns, and a run that has
+    // reconciled every measurement can still carry wrap divergence, so the
+    // summary names them apart rather than reporting one pass rate.
+    const placed = results.filter((row) => row.dx !== undefined);
+    const outOfTolerance = placed.filter((row) => row.status === "FAIL").length;
+    const reflowed = results.length - placed.length + extra.length;
     console.log(
-      `harness: ${passed}/${results.length} elements within +/-${args.tolerance}pt` +
-        (extra.length > 0 ? `, ${extra.length} unexpected line(s)` : ""),
+      `harness: ${passed}/${results.length} elements match; ` +
+        `${placed.length - outOfTolerance}/${placed.length} placed within +/-${args.tolerance}pt` +
+        (reflowed > 0 ? `, ${reflowed} line(s) wrap differently` : ""),
     );
   }
 

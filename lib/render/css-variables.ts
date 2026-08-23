@@ -36,7 +36,7 @@ import {
   PAGE_MARGIN_PT,
   PAGE_WIDTH_PT,
   RECOMMENDATION_GAP_MARGIN_PT,
-  RIGHT_BLOCK_LIFT_PT,
+  RIGHT_BLOCK_OFFSET_PT,
   SPACE_BEFORE_MARGIN_PT,
   SPACE_BEFORE_PT,
   SUBTITLE_TO_BULLETS_MARGIN_PT,
@@ -125,7 +125,8 @@ function declarations(): string[] {
   add("entry-gap-experience", ENTRY_TO_NEXT_ENTRY_PT.experience);
   add("entry-gap-projects", ENTRY_TO_NEXT_ENTRY_PT.projects);
   add("entry-gap-education", ENTRY_TO_NEXT_ENTRY_PT.education);
-  add("right-block-lift", RIGHT_BLOCK_LIFT_PT);
+  add("right-block-offset-one-line", RIGHT_BLOCK_OFFSET_PT.oneLine);
+  add("right-block-offset-two-line", RIGHT_BLOCK_OFFSET_PT.twoLine);
   add("title-to-subtitle-margin", TITLE_TO_SUBTITLE_MARGIN_PT);
   add("subtitle-to-bullets-margin-experience", SUBTITLE_TO_BULLETS_MARGIN_PT.experience);
   add("subtitle-to-bullets-margin-projects", SUBTITLE_TO_BULLETS_MARGIN_PT.projects);
@@ -147,11 +148,40 @@ function declarations(): string[] {
   return lines;
 }
 
-/** The full `:root { … }` block, framed by the generated markers. */
+/**
+ * The `@page` rule (§2, §8).
+ *
+ * Generated rather than hand-written because it carries two §4 measurements,
+ * and those live in `metrics.ts` alone. Custom properties do not resolve
+ * inside the page context in Chromium, so the values are emitted literally
+ * here instead of referenced through `var()`.
+ *
+ * The margin belongs on `@page`, not on the page wrapper's padding: padding
+ * applies once, at the top and bottom of a single box, so a CV that runs onto
+ * a second sheet gets no top margin there at all. Puppeteer still passes zero
+ * margins per §15.10 — with `preferCSSPageSize: true` this rule is what it
+ * defers to.
+ */
+function pageRule(): string {
+  return [
+    "@page {",
+    `  size: ${PAGE_WIDTH_PT}pt ${PAGE_HEIGHT_PT}pt;`,
+    `  margin: ${pt(PAGE_MARGIN_PT)};`,
+    "}",
+  ].join("\n");
+}
+
+/** The full generated block: the custom properties, then the `@page` rule. */
 export function resumeRootBlock(): string {
-  return [GENERATED_START, ":root {", ...declarations(), "}", GENERATED_END].join(
-    "\n",
-  );
+  return [
+    GENERATED_START,
+    ":root {",
+    ...declarations(),
+    "}",
+    "",
+    pageRule(),
+    GENERATED_END,
+  ].join("\n");
 }
 
 /** Replace the generated block in a stylesheet, leaving hand-written rules alone. */

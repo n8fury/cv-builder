@@ -213,6 +213,26 @@ and completion state.
   - Verification: `npm run harness` exits 0 for every element of `detailed.json`;
     any value changed in `metrics.ts` carries a comment recording its measured
     justification.
+  - **Status: positional drift fully reconciled; blocked on line breaking.**
+    Every element present on both sides is placed within tolerance — 69/69, worst
+    |dx| 1.84pt, worst |dy| 1.16pt, zero geometry failures. `golden.json` was not
+    touched. Reconciled: About Me's space-before (measured 37.52, was the
+    interpolated 27.2); the `@page` margin model, so continuation pages get
+    margins at all; the heading's solved line height, for §4.1's 11.77pt
+    continuation-page baseline; `break-inside` on the heading, so Chromium stops
+    breaking between a heading and its rule and honours `break-after: avoid`; the
+    one-line right-block offset (+7.47, against §4.4's two-line −2.31); and the
+    seed data's date en dashes.
+  - Blocker: 15 of 84 lines wrap one word differently, so they have no
+    counterpart to place. The source is justified by Illustrator, which
+    compresses word spaces per line as needed (measured: up to 5.89pt on one
+    line, ≈80% minimum word spacing) and breaks with the Adobe Paragraph
+    Composer's whole-paragraph optimiser. CSS justification only ever stretches,
+    and Chromium breaks greedily; `text-wrap: pretty` and `stable` change
+    nothing. A uniform negative `word-spacing` raises exact-line matches from
+    59/84 to 70/84 but never reaches 84, and is a fitted constant rather than a
+    measured one, so it was not adopted. Reaching a clean exit needs a decision
+    on scope, not more reconciliation.
 
 - [ ] Task 3.4: Measure and encode the two §4 gaps the spec left unresolved
   - Verification: About Me's space-before (absent from §4.2) and Projects'
