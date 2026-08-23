@@ -23,11 +23,14 @@
  *
  * By default it prints the `/render` route to PDF itself through headless
  * Chrome, so the harness can gate the Puppeteer export path (SPEC §8) rather
- * than depend on it. Once that path exists, `--pdf out.pdf` points the same
- * comparison at its output.
+ * than depend on it. `--export` instead downloads the PDF from
+ * `/api/generate-pdf`, pointing the same comparison at what a user actually
+ * receives — the route, the font pre-flight and §15.10's page options
+ * included. `--pdf out.pdf` measures a PDF already on disk.
  *
  * Usage:
  *   node scripts/harness.mjs [--url <url>] [--pdf <path>] [--golden <path>]
+ *                            [--export] [--export-url <url>]
  *                            [--tolerance <pt>] [--save-pdf <path>]
  *                            [--only-fail] [--json] [--strict-wrap]
  */
@@ -43,6 +46,8 @@ import { assertSameFaces, assertSameText } from "./lib/text-identity.mjs";
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 const DEFAULT_URL = "http://localhost:3000/render/jordan-rivera/detailed";
+const DEFAULT_EXPORT_URL =
+  "http://localhost:3000/api/generate-pdf?profileId=jordan-rivera&variantId=detailed";
 const DEFAULT_GOLDEN = "harness/golden.json";
 
 /** SPEC §11.2: tighter than this isn't meaningful against Illustrator's output. */
@@ -68,6 +73,7 @@ function fail(message) {
 function parseArgs(argv) {
   const args = {
     url: DEFAULT_URL,
+    exportUrl: null,
     pdf: null,
     golden: DEFAULT_GOLDEN,
     tolerance: DEFAULT_TOLERANCE_PT,
@@ -78,6 +84,7 @@ function parseArgs(argv) {
   };
   const valued = {
     "--url": "url",
+    "--export-url": "exportUrl",
     "--pdf": "pdf",
     "--golden": "golden",
     "--tolerance": "tolerance",
@@ -86,6 +93,7 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i += 1) {
     const flag = argv[i];
     if (flag === "--only-fail") args.onlyFail = true;
+    else if (flag === "--export") args.exportUrl ??= DEFAULT_EXPORT_URL;
     else if (flag === "--json") args.json = true;
     else if (flag === "--strict-wrap") args.strictWrap = true;
     else if (valued[flag]) {
@@ -95,11 +103,42 @@ function parseArgs(argv) {
       i += 1;
     } else fail(`unknown argument: ${flag}`);
   }
+  if (args.pdf && args.exportUrl) {
+    fail("--pdf and --export name two different PDFs; pass one");
+  }
   args.tolerance = Number(args.tolerance);
   if (!Number.isFinite(args.tolerance) || args.tolerance <= 0) {
     fail("--tolerance must be a positive number of points");
   }
   return args;
+}
+
+/**
+ * Download the PDF from the export endpoint (SPEC §8).
+ *
+ * The point of measuring this rather than the harness's own print is that it
+ * exercises everything between the route and the reader: the font pre-flight,
+ * §15.10's page options, and the response itself. A non-200 carries the API's
+ * JSON error, which is worth surfacing verbatim — a failed font check reads
+ * as a harness failure here, exactly as it should.
+ */
+async function fetchExportedPdf(url) {
+  const response = await fetch(url);
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (!response.ok) {
+    let detail = bytes.toString("utf8").slice(0, 500);
+    try {
+      detail = JSON.parse(detail).error ?? detail;
+    } catch {
+      /* not JSON: report the body as-is */
+    }
+    throw new Error(`HTTP ${response.status}: ${detail}`);
+  }
+  const type = response.headers.get("content-type") ?? "";
+  if (!type.includes("application/pdf")) {
+    throw new Error(`expected application/pdf, got ${type || "no content-type"}`);
+  }
+  return bytes;
 }
 
 /**
@@ -388,6 +427,15 @@ async function main() {
     const pdfPath = resolve(repoRoot, args.pdf);
     if (!existsSync(pdfPath)) fail(`PDF not found at ${args.pdf}`);
     pdfBytes = readFileSync(pdfPath);
+  } else if (args.exportUrl) {
+    try {
+      pdfBytes = await fetchExportedPdf(args.exportUrl);
+    } catch (error) {
+      fail(
+        `could not export from ${args.exportUrl}: ${error.message}\n` +
+          "  Start the dev server first (`npm run dev`), or pass --pdf <path>.",
+      );
+    }
   } else {
     try {
       pdfBytes = await renderToPdf(args.url, pageSetup);
@@ -432,7 +480,7 @@ async function main() {
     );
   } else {
     console.log(
-      `harness: ${args.pdf ?? args.url} vs ${args.golden} at +/-${args.tolerance}pt ` +
+      `harness: ${args.pdf ?? args.exportUrl ?? args.url} vs ${args.golden} at +/-${args.tolerance}pt ` +
         `(${goldenLines.length} golden lines, ${actualLines.length} generated)`,
     );
     if (actual.pages.length !== golden.pages.length) {

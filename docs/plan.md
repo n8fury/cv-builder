@@ -375,10 +375,25 @@ and completion state.
     into a 500 for the caller.
   - Scratch variant removed afterwards; `data/profiles/` is unchanged.
 
-- [ ] Task 4.5: Run the Phase 3 harness against the Puppeteer output, not just the
+- [x] Task 4.5: Run the Phase 3 harness against the Puppeteer output, not just the
       render route
   - Verification: `npm run harness -- --pdf out.pdf` exits 0, confirming the
     export path matches the verified render route.
+  - Result: against the exported PDF the harness exits 0 — 84/84 lines within
+    +/-2pt, 59 exact, document text and faces identical, the same figures the
+    render route posts. Item-for-item, the two PDFs are the same document:
+    231 text items each, matching page, text, x, baseline and font
+    throughout.
+  - `--export` was added to the harness so it can download from
+    `/api/generate-pdf` rather than only print `/render` over CDP, and
+    `npm run harness:export` runs it. Measuring the response, not a
+    re-print, is what puts the font pre-flight, §15.10's page options and the
+    HTTP response itself inside the gate.
+  - Failure paths checked: with `charter-italic.woff2` removed the export
+    mode exits 1 and reports the API's own message
+    (`CV Charter italic 400 failed to load`) rather than a parse error, and
+    `--pdf` together with `--export` exits 1 rather than silently preferring
+    one.
 
 ---
 
