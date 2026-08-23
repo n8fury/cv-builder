@@ -14,6 +14,7 @@ import { NotFoundError } from "@/lib/data/store";
 import { REQUIRED_FONT_FACES, faceLabel, faceShorthand } from "@/lib/render/fonts";
 import { loadRenderModel } from "@/lib/render/load";
 import { PDF_PAGE_OPTIONS } from "@/lib/render/pdf-options";
+import { contentDisposition, renderPath } from "@/lib/routes";
 
 /** Chromium and the filesystem reads make this a Node runtime route. */
 export const runtime = "nodejs";
@@ -80,6 +81,9 @@ export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const profileId = params.get("profileId");
   const variantId = params.get("variantId");
+  // The dashboard's Download button asks for an attachment; without it the
+  // response stays inline so the browser's own PDF viewer can open it (§7).
+  const download = params.get("download") === "1";
 
   if (!profileId || !variantId) {
     return errorResponse(400, "profileId and variantId are both required");
@@ -94,10 +98,7 @@ export async function GET(request: Request) {
     return errorResponse(500, error instanceof Error ? error.message : String(error));
   }
 
-  const target = new URL(
-    `/render/${encodeURIComponent(profileId)}/${encodeURIComponent(variantId)}`,
-    request.url,
-  );
+  const target = new URL(renderPath(profileId, variantId), request.url);
 
   let browser: Browser | null = null;
   try {
@@ -135,7 +136,7 @@ export async function GET(request: Request) {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename="${profileId}-${variantId}.pdf"`,
+        "Content-Disposition": contentDisposition(profileId, variantId, { download }),
         "Content-Length": String(pdf.length),
         "Cache-Control": "no-store",
       },

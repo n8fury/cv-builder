@@ -5,7 +5,10 @@
  * Download PDF, Rename, Delete) hang off these rows in the tasks that follow;
  * this is the inventory they attach to.
  */
+import Link from "next/link";
+
 import { listDashboard, type ProfileSummary, type VariantSummary } from "@/lib/data/dashboard";
+import { exportPath, pdfFilename, renderPath } from "@/lib/routes";
 
 /** Profiles and variants are files on disk that change between requests. */
 export const dynamic = "force-dynamic";
@@ -33,9 +36,27 @@ function VariantRow({ profileId, variant }: { profileId: string; variant: Varian
       <span className="ml-auto text-xs text-gray-500">
         Updated <time dateTime={variant.updatedAt}>{formatDate(variant.updatedAt)}</time>
       </span>
-      <span className="w-full font-mono text-xs text-gray-400">
-        {profileId}/{variant.id}
-      </span>
+      <div className="flex w-full items-baseline gap-3">
+        <span className="font-mono text-xs text-gray-400">
+          {profileId}/{variant.id}
+        </span>
+        <Link
+          className="ml-auto rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+          href={renderPath(profileId, variant.id)}
+        >
+          View
+        </Link>
+        {/* A plain link, not fetch(): the browser streams the PDF straight to
+            disk, so a multi-second export never sits in a JS buffer. Task 5.5
+            layers the disabled/spinner state (§13) on top of this. */}
+        <a
+          className="rounded bg-gray-900 px-2 py-1 text-xs font-medium text-white hover:bg-gray-700"
+          download={pdfFilename(profileId, variant.id)}
+          href={exportPath(profileId, variant.id, { download: true })}
+        >
+          Download PDF
+        </a>
+      </div>
     </li>
   );
 }
