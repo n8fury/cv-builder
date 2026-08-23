@@ -15,6 +15,7 @@
 import { revalidatePath } from "next/cache";
 
 import {
+  createProfile,
   deleteProfile,
   deleteVariant,
   isValidSlug,
@@ -48,6 +49,24 @@ async function run(operation: () => Promise<void>): Promise<ActionState> {
     return fail(error instanceof Error ? error.message : String(error));
   }
   return done();
+}
+
+/**
+ * Scaffolds a profile from the dashboard's New Profile form (§9, §12.7) —
+ * the supported way to add one, in place of hand-made folders.
+ */
+export async function createProfileAction(
+  _state: ActionState,
+  form: FormData,
+): Promise<ActionState> {
+  const name = field(form, "name");
+  const profileId = field(form, "profileId");
+
+  if (!name) return fail("A name is required.");
+  if (!profileId) return fail("A profile id is required.");
+  if (!isValidSlug(profileId)) return fail(BAD_SLUG);
+
+  return run(() => createProfile(profileId, name));
 }
 
 export async function renameVariantAction(

@@ -10,6 +10,7 @@ import {
   ConflictError,
   InvalidDataError,
   NotFoundError,
+  createProfile,
   deleteProfile,
   deleteVariant,
   isValidSlug,
@@ -215,5 +216,41 @@ describe("rename and delete", () => {
     expect(isValidSlug("../escape")).toBe(false);
     expect(isValidSlug("with space")).toBe(false);
     expect(isValidSlug("")).toBe(false);
+  });
+});
+
+describe("createProfile", () => {
+  it("scaffolds an empty library and a variants directory", async () => {
+    await createProfile("new-profile", "Ada Lovelace");
+
+    const library = await readLibrary("new-profile");
+    expect(library.schemaVersion).toBe(1);
+    expect(library.header.name).toBe("Ada Lovelace");
+    // Empty in every other respect — content arrives through the editor.
+    expect(library.experience).toEqual([]);
+    expect(library.competencies).toEqual([]);
+
+    expect(await listProfiles()).toContain("new-profile");
+    expect(await listVariants("new-profile")).toEqual([]);
+    await expect(readFile(join(root, "new-profile", "variants"))).rejects.toThrow();
+  });
+
+  it("writes a variant into the scaffolded profile without further setup", async () => {
+    await createProfile("new-profile", "Ada Lovelace");
+    await writeVariant("new-profile", "scratch", variant);
+
+    expect(await listVariants("new-profile")).toEqual(["scratch"]);
+  });
+
+  // An exclusive create, so a double submission cannot flatten a real library.
+  it("refuses to overwrite an existing profile", async () => {
+    await expect(createProfile("temp-profile", "Someone Else")).rejects.toBeInstanceOf(
+      ConflictError,
+    );
+    expect((await readLibrary("temp-profile")).header.name).toBe("");
+  });
+
+  it("rejects an id that is not a slug", async () => {
+    await expect(createProfile("../escape", "Escape")).rejects.toBeInstanceOf(NotFoundError);
   });
 });

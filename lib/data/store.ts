@@ -14,7 +14,11 @@ import { randomUUID } from "node:crypto";
 import { access, mkdir, readdir, readFile, rename, rm, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { contentLibrarySchema, type ContentLibrary } from "../schema/library";
+import {
+  LIBRARY_SCHEMA_VERSION,
+  contentLibrarySchema,
+  type ContentLibrary,
+} from "../schema/library";
 import { variantSchema, type Variant } from "../schema/variant";
 
 /** A profile, library, or variant that does not exist on disk. §13 maps this to a 404. */
@@ -165,6 +169,41 @@ export async function writeVariant(
     await rename(temp, target);
   } catch (error) {
     await rm(temp, { force: true });
+    throw error;
+  }
+}
+
+/**
+ * Scaffolds a new profile: the directory, an empty `content-library.json`
+ * and the `variants/` directory the editor will write into (SPEC §9, §12.7).
+ *
+ * The library is empty apart from the person's name, which goes into the
+ * header because that is where the resume renders it — there is nowhere else
+ * for it to live, and dropping it would mean asking for it twice.
+ *
+ * `wx` on the write is what makes this safe: creating the directory first
+ * then checking would be a race, whereas an exclusive create fails outright
+ * if a library is already there, so an existing profile can never be
+ * flattened by a repeated submission.
+ */
+export async function createProfile(profileId: string, name: string): Promise<void> {
+  const dir = profileDir(profileId);
+  const library = contentLibrarySchema.parse({
+    schemaVersion: LIBRARY_SCHEMA_VERSION,
+    header: { name },
+  });
+
+  await mkdir(join(dir, "variants"), { recursive: true });
+  try {
+    await writeFile(libraryPath(profileId), `${JSON.stringify(library, null, 2)}
+`, {
+      encoding: "utf8",
+      flag: "wx",
+    });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "EEXIST") {
+      throw new ConflictError(`A profile named ${profileId} already exists`);
+    }
     throw error;
   }
 }

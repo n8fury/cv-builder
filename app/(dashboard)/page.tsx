@@ -15,6 +15,7 @@ import {
   renameProfileAction,
   renameVariantAction,
 } from "./actions";
+import { NewProfileForm } from "./NewProfileForm";
 import { DeleteButton, RenameForm } from "./RowActions";
 
 /** Profiles and variants are files on disk that change between requests. */
@@ -139,6 +140,10 @@ export default async function Home() {
       <p className="mt-1 text-sm text-gray-600">
         Profiles and their saved variants, read from <code>data/profiles/</code>.
       </p>
+
+      <div className="mt-6">
+        <NewProfileForm />
+      </div>
 
       {profiles.length === 0 ? (
         <p className="mt-8 rounded-lg border border-dashed border-gray-300 px-4 py-8 text-center text-sm text-gray-500">
