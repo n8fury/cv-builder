@@ -315,11 +315,28 @@ and completion state.
     closes the browser in a `finally` block, so Tasks 4.3 and 4.4 are code-
     complete pending their own verification.
 
-- [ ] Task 4.2: Await `document.fonts.ready` and hard-fail on any failed
+- [x] Task 4.2: Await `document.fonts.ready` and hard-fail on any failed
       `document.fonts.check()` (§8, §13, §15.14)
   - Verification: with a woff2 file removed, the endpoint returns 500 with a
     message naming the missing face and emits no PDF; with fonts present it
     returns 200.
+  - Result: with `charis-italic.woff2` removed the endpoint returns 500,
+    `application/json`, `font faces unavailable: CV Charis italic 400 failed
+    to load (status: error)` — no PDF bytes. Removing `charter-bold.woff2` as
+    well names both faces in one message. Restored, it returns 200 and the
+    harness still reports 84/84 within +/-2pt, faces identical.
+  - `document.fonts.ready` is necessary but not sufficient: it settles once
+    loading has *finished*, success or failure alike, so a missing woff2
+    resolves it and the page simply paints `serif`. The check therefore looks
+    each required face up among the document's CSS-connected faces and
+    demands `status === "loaded"` plus a passing `document.fonts.check()`.
+  - A face the open variant never uses is loaded explicitly rather than
+    skipped, so whether the export is trustworthy does not depend on whether
+    this particular resume happens to render italics.
+  - The required-face list is `lib/render/fonts.ts`, and `fonts.test.ts`
+    asserts it equals what `fonts.css` declares (and that every face carries
+    `font-display: block`) — a face added to the stylesheet alone, which the
+    export would then never verify, fails `npm test`.
 
 - [ ] Task 4.3: Use the exact `page.pdf()` options from §15.10
   - Verification: the call passes `format: 'Letter'`, `preferCSSPageSize: true`,

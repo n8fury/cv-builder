@@ -8,9 +8,10 @@
  * of staleness bug, so nothing is cached and nothing is reused.
  */
 import { NextResponse } from "next/server";
-import puppeteer from "puppeteer";
+import puppeteer, { type Page } from "puppeteer";
 
 import { NotFoundError } from "@/lib/data/store";
+import { REQUIRED_FONT_FACES, faceLabel, faceShorthand } from "@/lib/render/fonts";
 import { loadRenderModel } from "@/lib/render/load";
 
 /** Chromium and the filesystem reads make this a Node runtime route. */
@@ -23,6 +24,58 @@ const PAGE_FORMAT = "Letter" as const;
 
 function errorResponse(status: number, message: string) {
   return NextResponse.json({ error: message }, { status });
+}
+
+/**
+ * Verify every required face actually loaded, in the page that is about to be
+ * printed (SPEC §8, §13, §15.14).
+ *
+ * `document.fonts.ready` alone is not enough: it settles once loading has
+ * *finished*, successfully or not, so a missing woff2 resolves it just the
+ * same and the page paints in `serif`. Each face is therefore looked up among
+ * the document's CSS-connected faces, forced to load if the page never used
+ * it, and checked. Returns one message per unusable face, empty when all four
+ * are good.
+ */
+async function checkFonts(page: Page): Promise<string[]> {
+  const required = REQUIRED_FONT_FACES.map((face) => ({
+    label: faceLabel(face),
+    family: face.family,
+    style: face.style,
+    weight: String(face.weight),
+    shorthand: faceShorthand(face),
+  }));
+
+  return page.evaluate(async (faces) => {
+    const declared: FontFace[] = [];
+    document.fonts.forEach((face) => declared.push(face));
+
+    const problems: string[] = [];
+    for (const wanted of faces) {
+      const face = declared.find(
+        (candidate) =>
+          candidate.family.replace(/^["']|["']$/g, "") === wanted.family &&
+          candidate.style === wanted.style &&
+          candidate.weight === wanted.weight,
+      );
+      if (!face) {
+        problems.push(`${wanted.label} is not declared in the document`);
+        continue;
+      }
+      // A face the resume never uses is still required to exist: whether this
+      // variant happens to render italics must not decide whether the export
+      // is trustworthy.
+      if (face.status === "unloaded") {
+        await face.load().catch(() => undefined);
+      }
+      if (face.status !== "loaded") {
+        problems.push(`${wanted.label} failed to load (status: ${face.status})`);
+      } else if (!document.fonts.check(wanted.shorthand)) {
+        problems.push(`${wanted.label} loaded but document.fonts.check() rejects it`);
+      }
+    }
+    return problems;
+  }, required);
 }
 
 export async function GET(request: Request) {
@@ -55,8 +108,19 @@ export async function GET(request: Request) {
     await page.goto(target.href, { waitUntil: "networkidle0" });
 
     // The commonest silent-fallback bug: printing before the faces resolve
-    // moves every baseline (§8). Task 4.2 turns a failed face into a 500.
+    // moves every baseline (§8).
     await page.evaluateHandle("document.fonts.ready");
+
+    // §13, §15.14: the preview may fall back to `serif`, the export may not.
+    // A plausible-looking PDF in the wrong typeface is worse than an error —
+    // it is the kind of thing you notice after sending it.
+    const fontProblems = await checkFonts(page);
+    if (fontProblems.length > 0) {
+      return errorResponse(
+        500,
+        `PDF generation aborted — font faces unavailable: ${fontProblems.join("; ")}`,
+      );
+    }
 
     const pdf = await page.pdf({
       format: PAGE_FORMAT,
