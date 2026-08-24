@@ -9,12 +9,14 @@
  * to the library, not the variant (§6.2), so those fields edit the library
  * draft — exactly the propagating edit §11.4 describes, staged until Save.
  */
+import { NEW_BULLET, NEW_ENTRY } from "@/lib/data/new-items";
 import { SECTION_TITLE } from "@/lib/render/section-titles";
 import type { ContentLibrary } from "@/lib/schema/library";
 import type { VariantSection } from "@/lib/schema/variant";
 
 import { EntryCuration } from "./EntryCuration";
 import { useEditor } from "./EditorStoreProvider";
+import { NewItemForm } from "./NewItemForm";
 import { DragHandle, useSortableRow } from "./Sortable";
 import { SkillCuration } from "./SkillCuration";
 import { ordered } from "./ordering";
@@ -49,12 +51,15 @@ function SectionBody({
   library: ContentLibrary;
 }) {
   const setBulletText = useEditor((state) => state.setBulletText);
+  const addEntry = useEditor((state) => state.addEntry);
+  const addBullet = useEditor((state) => state.addBullet);
 
   switch (section.type) {
     case "competencies":
       return (
         <EntryCuration
           sectionIndex={index}
+          newEntry={NEW_ENTRY.competencies}
           entries={ordered(library.competencies, section.items).map((item) => ({
             id: item.id,
             heading: item.text,
@@ -71,6 +76,7 @@ function SectionBody({
       return (
         <EntryCuration
           sectionIndex={index}
+          newEntry={NEW_ENTRY.experience}
           entries={ordered(library.experience, includedIds).map((entry) => ({
             id: entry.id,
             heading: entry.title,
@@ -91,6 +97,7 @@ function SectionBody({
       return (
         <EntryCuration
           sectionIndex={index}
+          newEntry={NEW_ENTRY.projects}
           entries={ordered(library.projects, includedIds).map((entry) => ({
             id: entry.id,
             heading: entry.title,
@@ -113,6 +120,7 @@ function SectionBody({
       return (
         <EntryCuration
           sectionIndex={index}
+          newEntry={NEW_ENTRY.education}
           entries={ordered(library.education, includedIds).map((entry) => ({
             id: entry.id,
             heading: entry.institution,
@@ -128,6 +136,7 @@ function SectionBody({
       return (
         <EntryCuration
           sectionIndex={index}
+          newEntry={NEW_ENTRY.certifications}
           entries={ordered(library.certifications, includedIds).map((entry) => ({
             id: entry.id,
             heading: entry.text,
@@ -143,6 +152,7 @@ function SectionBody({
       return (
         <EntryCuration
           sectionIndex={index}
+          newEntry={NEW_ENTRY.recommendations}
           entries={ordered(library.recommendations, includedIds).map((entry) => ({
             id: entry.id,
             heading: entry.name,
@@ -167,12 +177,26 @@ function SectionBody({
       );
     }
 
+    case "aboutMe":
+      return (
+        <NewItemForm
+          className="border-t border-gray-100 px-3 py-2"
+          spec={NEW_ENTRY.aboutMe}
+          onAdd={(values) => addEntry(index, values)}
+        />
+      );
+
     // Not individually curated — whole-section `visible` only (§12.3, §15.6).
+    // A new language still goes to the library; there is simply no per-variant
+    // reference to add it to.
     case "languages":
       return (
-        <p className="border-t border-gray-100 px-3 py-2 text-xs text-gray-500">
-          Every language renders; this section is all-or-nothing.
-        </p>
+        <div className="border-t border-gray-100 px-3 py-2">
+          <p className="text-xs text-gray-500">
+            Every language renders; this section is all-or-nothing.
+          </p>
+          <NewItemForm spec={NEW_ENTRY.languages} onAdd={(values) => addEntry(index, values)} />
+        </div>
       );
 
     case "custom": {
@@ -181,8 +205,9 @@ function SectionBody({
       );
       if (!entry) {
         return (
-          <div className="border-t border-gray-100 px-3 py-2">
+          <div className="space-y-1 border-t border-gray-100 px-3 py-2">
             <MissingRef id={section.options.customSectionId} />
+            <NewItemForm spec={NEW_ENTRY.custom} onAdd={(values) => addEntry(index, values)} />
           </div>
         );
       }
@@ -203,6 +228,11 @@ function SectionBody({
               }
             />
           ))}
+          <NewItemForm
+            spec={NEW_BULLET}
+            onAdd={(values) => addBullet(index, entry.id, values)}
+          />
+          <NewItemForm spec={NEW_ENTRY.custom} onAdd={(values) => addEntry(index, values)} />
         </div>
       );
     }

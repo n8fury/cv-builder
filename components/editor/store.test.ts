@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import type { ContentLibrary } from "@/lib/schema/library";
 import type { Variant } from "@/lib/schema/variant";
 
+import { libraryIds } from "@/lib/data/ids";
+
 import { createEditorStore, isDirty, type EditorSnapshot } from "./store";
 
 const library = {
@@ -306,6 +308,83 @@ describe("editor store", () => {
     // Array position is the sole source of truth; a rank field alongside it is
     // exactly the desync §15.3 removed.
     expect(JSON.stringify(store.getState().draft.variant)).not.toContain('"order"');
+  });
+
+  it("writes a new bullet to the library, then references it (§6.3)", () => {
+    const store = open();
+    store.getState().addBullet(2, "exp-1", { text: "  Shipped the thing  " });
+
+    const entry = store.getState().draft.library.experience[0];
+    const added = entry.bullets.at(-1)!;
+    expect(added.text).toBe("Shipped the thing");
+    expect(added.id).toMatch(/^bullet-[a-z0-9]{6}$/);
+    expect(added.tags).toEqual([]);
+    // The variant carries the reference and no text of its own (§6.2).
+    expect(store.getState().draft.variant.sections[2]).toMatchObject({
+      entries: [{ id: "exp-1", bullets: ["b1", "b2", added.id] }],
+    });
+    expect(store.getState().saved.library.experience[0].bullets).toHaveLength(2);
+  });
+
+  it("writes a new entry to the library, then references it", () => {
+    const store = open();
+    store.getState().addEntry(2, { title: "Engineer", company: "Globex", dates: "2026" });
+
+    const entry = store.getState().draft.library.experience.at(-1)!;
+    expect(entry).toMatchObject({ title: "Engineer", company: "Globex", dates: "2026", bullets: [] });
+    expect(store.getState().draft.variant.sections[2]).toMatchObject({
+      entries: [{ id: "exp-1" }, { id: entry.id, bullets: [] }],
+    });
+  });
+
+  it("adds skill groups and skills through the same two levels (§12.3)", () => {
+    const store = open();
+    store.getState().addEntry(3, { label: "Cloud" });
+    const group = store.getState().draft.library.skillGroups.at(-1)!;
+    expect(group).toMatchObject({ label: "Cloud", skills: [] });
+    expect(store.getState().draft.variant.sections[3]).toMatchObject({
+      groups: [{ id: "skills-backend" }, { id: group.id, skills: [] }],
+    });
+
+    store.getState().addBullet(3, group.id, { text: "AWS" });
+    const skill = store.getState().draft.library.skillGroups.at(-1)!.skills[0];
+    expect(skill.text).toBe("AWS");
+    expect(store.getState().draft.variant.sections[3]).toMatchObject({
+      groups: [{ id: "skills-backend" }, { id: group.id, skills: [skill.id] }],
+    });
+  });
+
+  it("points the About Me section at the version just written for it", () => {
+    const store = open();
+    store.getState().addEntry(1, { key: "tailored", text: "A new paragraph." });
+    const about = store.getState().draft.library.aboutMe.at(-1)!;
+    expect(about).toMatchObject({ key: "tailored", text: "A new paragraph." });
+    expect(store.getState().draft.variant.sections[1]).toMatchObject({
+      options: { aboutMeId: about.id },
+    });
+  });
+
+  it("generates IDs that collide with nothing already in the library", () => {
+    const store = open();
+    const before = libraryIds(store.getState().draft.library);
+    for (let i = 0; i < 25; i += 1) store.getState().addBullet(2, "exp-1", { text: `b${i}` });
+
+    const bullets = store.getState().draft.library.experience[0].bullets;
+    expect(bullets).toHaveLength(27);
+    const fresh = bullets.slice(2).map((bullet) => bullet.id);
+    // Distinct from each other and from everything that was already there —
+    // a repeat would silently repoint an existing item.
+    expect(new Set(fresh).size).toBe(25);
+    for (const id of fresh) expect(before.has(id)).toBe(false);
+  });
+
+  it("ignores an add aimed at a section that cannot hold one", () => {
+    const store = open();
+    // The header is a single record, not a list (§5.1).
+    store.getState().addEntry(0, { title: "x" });
+    // And an owner the library does not have.
+    store.getState().addBullet(2, "no-such-entry", { text: "x" });
+    expect(isDirty(store.getState())).toBe(false);
   });
 
   it("reverts the whole document, library included", () => {

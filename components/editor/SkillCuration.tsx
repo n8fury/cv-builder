@@ -14,9 +14,11 @@
  */
 import type { ReactNode } from "react";
 
+import { NEW_ENTRY, NEW_SKILL } from "@/lib/data/new-items";
 import type { Skill, SkillGroup } from "@/lib/schema/library";
 
 import { useEditor } from "./EditorStoreProvider";
+import { NewItemForm } from "./NewItemForm";
 import { DragHandle, SortableList, useSortableRow } from "./Sortable";
 import { ordered } from "./ordering";
 
@@ -72,6 +74,7 @@ function SortableSkill(props: SkillProps) {
 /** Only the included run has a position in the variant, so only it drags. */
 function SkillList({ sectionIndex, choice }: { sectionIndex: number; choice: SkillGroupChoice }) {
   const moveBullet = useEditor((state) => state.moveBullet);
+  const addBullet = useEditor((state) => state.addBullet);
   const { group, includedSkillIds } = choice;
 
   const all = ordered(group.skills, includedSkillIds);
@@ -104,6 +107,11 @@ function SkillList({ sectionIndex, choice }: { sectionIndex: number; choice: Ski
           included={false}
         />
       ))}
+      <NewItemForm
+        className="basis-full"
+        spec={NEW_SKILL}
+        onAdd={(values) => addBullet(sectionIndex, group.id, values)}
+      />
     </div>
   );
 }
@@ -195,6 +203,7 @@ export function SkillCuration({
   choices: SkillGroupChoice[];
 }) {
   const moveEntry = useEditor((state) => state.moveEntry);
+  const addEntry = useEditor((state) => state.addEntry);
   const included = choices.filter((choice) => choice.included);
   const rest = choices.filter((choice) => !choice.included);
 
@@ -218,6 +227,11 @@ export function SkillCuration({
           ))}
         </div>
       ) : null}
+      <NewItemForm
+        className="border-t border-gray-100 px-3 py-2"
+        spec={NEW_ENTRY.skills}
+        onAdd={(values) => addEntry(sectionIndex, values)}
+      />
     </div>
   );
 }

@@ -15,6 +15,9 @@
  */
 import { createStore } from "zustand/vanilla";
 
+import { generateId, libraryIds } from "@/lib/data/ids";
+import { build, type NewItemValues } from "@/lib/data/new-items";
+
 import { moved, movedById, movedIds } from "./ordering";
 
 import type { Bullet, ContentLibrary } from "@/lib/schema/library";
@@ -87,6 +90,14 @@ export interface EditorState {
   moveSection(from: number, to: number): void;
   moveEntry(index: number, fromId: string, toId: string): void;
   moveBullet(index: number, entryId: string, fromId: string, toId: string): void;
+  /**
+   * New content (§6.3). Both write the *library* first, with a generated ID,
+   * and then reference that ID from the open variant — never the other way
+   * round, and never into the variant alone. There is no path here that
+   * produces variant-local text.
+   */
+  addEntry(index: number, values: NewItemValues): void;
+  addBullet(index: number, ownerId: string, values: NewItemValues): void;
   /** Throw the draft away and go back to the files on disk. */
   revert(): void;
 }
@@ -438,6 +449,228 @@ function moveBulletIn(
   return { ...section, entries };
 }
 
+/**
+ * Adds one entry-level item: to the library, then to this variant's list
+ * (§6.3). Appended at the end — it is new, so there is no earlier position to
+ * restore it to, and the end is where the person was looking when they typed
+ * it.
+ */
+function addEntryTo(document: EditorDocument, index: number, values: NewItemValues): EditorDocument {
+  const { library, variant } = document;
+  const section = variant.sections[index];
+  if (section === undefined) return document;
+
+  // Unique library-wide, not just within the collection: an ID is what the
+  // library manager and every variant address an item by (§6.1).
+  const taken = libraryIds(library);
+  const at = (next: VariantSection): Variant => {
+    const sections = [...variant.sections];
+    sections[index] = next;
+    return { ...variant, sections };
+  };
+
+  switch (section.type) {
+    case "aboutMe": {
+      const id = generateId("aboutMe", taken);
+      return {
+        library: { ...library, aboutMe: [...library.aboutMe, build.aboutMe(id, values)] },
+        // Written here, for this variant, so this variant shows it (§5.2).
+        variant: at({ ...section, options: { aboutMeId: id } }),
+      };
+    }
+
+    case "competencies": {
+      const id = generateId("competency", taken);
+      return {
+        library: {
+          ...library,
+          competencies: [...library.competencies, build.competency(id, values)],
+        },
+        variant: at({ ...section, items: [...section.items, id] }),
+      };
+    }
+
+    case "experience": {
+      const id = generateId("experience", taken);
+      return {
+        library: { ...library, experience: [...library.experience, build.experience(id, values)] },
+        variant: at({ ...section, entries: [...section.entries, { id, bullets: [] }] }),
+      };
+    }
+
+    case "projects": {
+      const id = generateId("project", taken);
+      return {
+        library: { ...library, projects: [...library.projects, build.project(id, values)] },
+        variant: at({ ...section, entries: [...section.entries, { id, bullets: [] }] }),
+      };
+    }
+
+    case "education": {
+      const id = generateId("education", taken);
+      return {
+        library: { ...library, education: [...library.education, build.education(id, values)] },
+        variant: at({ ...section, entries: [...section.entries, { id }] }),
+      };
+    }
+
+    case "skills": {
+      const id = generateId("skillGroup", taken);
+      return {
+        library: {
+          ...library,
+          skillGroups: [...library.skillGroups, build.skillGroup(id, values)],
+        },
+        variant: at({ ...section, groups: [...section.groups, { id, skills: [] }] }),
+      };
+    }
+
+    case "certifications": {
+      const id = generateId("certification", taken);
+      return {
+        library: {
+          ...library,
+          certifications: [...library.certifications, build.certification(id, values)],
+        },
+        variant: at({ ...section, entries: [...section.entries, { id }] }),
+      };
+    }
+
+    case "recommendations": {
+      const id = generateId("recommendation", taken);
+      return {
+        library: {
+          ...library,
+          recommendations: [...library.recommendations, build.recommendation(id, values)],
+        },
+        variant: at({ ...section, entries: [...section.entries, { id }] }),
+      };
+    }
+
+    // Library-only: Languages renders the library's list whole, with no
+    // per-variant selection to add the new ID to (§12.3, §15.6).
+    case "languages":
+      return {
+        library: {
+          ...library,
+          languages: [...library.languages, build.language(generateId("language", taken), values)],
+        },
+        variant,
+      };
+
+    case "custom": {
+      const id = generateId("customSection", taken);
+      return {
+        library: {
+          ...library,
+          customSections: [...library.customSections, build.customSection(id, values)],
+        },
+        // This section instance points at the item just written for it; a
+        // second custom section is a second section, not a second pointer
+        // (§12.4).
+        variant: at({ ...section, options: { customSectionId: id } }),
+      };
+    }
+
+    // The header is one record, not a list — nothing to add to (§5.1).
+    default:
+      return document;
+  }
+}
+
+/** Appends bullets to a library entry, and skills to a library group (§12.3). */
+function addBulletTo(
+  document: EditorDocument,
+  index: number,
+  ownerId: string,
+  values: NewItemValues,
+): EditorDocument {
+  const { library, variant } = document;
+  const section = variant.sections[index];
+  if (section === undefined) return document;
+  const taken = libraryIds(library);
+
+  const at = (next: VariantSection): Variant => {
+    const sections = [...variant.sections];
+    sections[index] = next;
+    return { ...variant, sections };
+  };
+
+  const withBullet = <T extends { id: string; bullets: Bullet[] }>(entries: T[], id: string): T[] =>
+    entries.map((entry) =>
+      entry.id === ownerId
+        ? { ...entry, bullets: [...entry.bullets, build.bullet(id, values)] }
+        : entry,
+    );
+
+  switch (section.type) {
+    case "experience": {
+      if (!library.experience.some((entry) => entry.id === ownerId)) return document;
+      const id = generateId("bullet", taken);
+      return {
+        library: { ...library, experience: withBullet(library.experience, id) },
+        variant: at({
+          ...section,
+          entries: section.entries.map((ref) =>
+            ref.id === ownerId ? { ...ref, bullets: [...ref.bullets, id] } : ref,
+          ),
+        }),
+      };
+    }
+
+    case "projects": {
+      if (!library.projects.some((entry) => entry.id === ownerId)) return document;
+      const id = generateId("bullet", taken);
+      return {
+        library: { ...library, projects: withBullet(library.projects, id) },
+        variant: at({
+          ...section,
+          entries: section.entries.map((ref) =>
+            ref.id === ownerId ? { ...ref, bullets: [...ref.bullets, id] } : ref,
+          ),
+        }),
+      };
+    }
+
+    case "skills": {
+      if (!library.skillGroups.some((group) => group.id === ownerId)) return document;
+      const id = generateId("skill", taken);
+      return {
+        library: {
+          ...library,
+          skillGroups: library.skillGroups.map((group) =>
+            group.id === ownerId
+              ? { ...group, skills: [...group.skills, build.skill(id, values)] }
+              : group,
+          ),
+        },
+        variant: at({
+          ...section,
+          groups: section.groups.map((ref) =>
+            ref.id === ownerId ? { ...ref, skills: [...ref.skills, id] } : ref,
+          ),
+        }),
+      };
+    }
+
+    // A custom section's bullets are not curated per variant — the library
+    // item is the unit (§12.4) — so there is no reference to add.
+    case "custom": {
+      if (!library.customSections.some((item) => item.id === ownerId)) return document;
+      return {
+        library: {
+          ...library,
+          customSections: withBullet(library.customSections, generateId("bullet", taken)),
+        },
+        variant,
+      };
+    }
+
+    default:
+      return document;
+  }
+}
+
 export function createEditorStore({ profileId, variantId, ...document }: EditorSnapshot) {
   return createStore<EditorState>()((set) => ({
     profileId,
@@ -552,6 +785,12 @@ export function createEditorStore({ profileId, variantId, ...document }: EditorS
           ),
         },
       })),
+
+    addEntry: (index, values) =>
+      set(({ draft }) => ({ draft: addEntryTo(draft, index, values) })),
+
+    addBullet: (index, ownerId, values) =>
+      set(({ draft }) => ({ draft: addBulletTo(draft, index, ownerId, values) })),
 
     revert: () => set((state) => ({ draft: state.saved })),
   }));

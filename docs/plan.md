@@ -678,11 +678,44 @@ and completion state.
     same order, so every list hydrated mismatched on this server-rendered
     page. Each `DndContext` now takes a `useId()` value.
 
-- [ ] Task 6.7: Implement the new-content flow — everything typed is written to the
+- [x] Task 6.7: Implement the new-content flow — everything typed is written to the
       library first (§6.3)
   - Verification: typing a new bullet adds an item with a generated ID to
     `content-library.json`, then references that ID in the open variant —
     confirmed by inspecting both files after save.
+  - Result: driven through the page with Puppeteer. A bullet typed under the
+    `northwind` entry took the preview from 17 bullets to 18, the new one being
+    its text. A project entry, a skill group and a skill inside it were added
+    the same way: the preview gained `ZZ New Project` and the line
+    `ZZ Cloud: ZZ AWS`, and the form showed the group's generated ID
+    (`skills-fywkz3`). `data/profiles/` is unchanged — nothing here writes to
+    disk. Only a pre-existing `/favicon.ico` 404 in the console.
+  - **Deferred half**: "after save" waits on Save (Task 6.8), which will close
+    out the disk verification for 6.3, 6.4, 6.5, 6.6 and this task together.
+    The two-file result is asserted now: unit tests check that the *library*
+    gains the item with a generated ID and `tags: []`, and that the variant
+    gains only the ID — no text — at every level.
+  - There is no second kind of editing here. §6.3 admits no "one-off, not
+    saved to the library" path, so this *is* how new text enters the editor:
+    library item first, generated ID, then the reference. A section that has
+    no per-variant list still writes the library item — Languages renders the
+    library's list whole (§15.6), and a custom section's bullets belong to the
+    library item, not the variant (§12.4).
+  - Which fields a new item needs, and the item those fields build, are
+    declared together in `lib/data/new-items.ts`. A test fills every declared
+    field with a marker and requires it to surface in the built item, so a
+    field the form collects but the builder ignores — typed by the user, then
+    silently dropped on save — fails `npm test`.
+  - IDs are random, not slugged from the text: the text is the one thing about
+    an item that is expected to change, while the ID is what every variant
+    addresses it by (§11.4). They are checked for collision against the whole
+    library rather than the one collection, and a generator that stops being
+    random throws rather than returning a duplicate, which would silently
+    repoint an existing item.
+  - Nothing is written until Add is pressed with the required fields filled.
+    An item created by a stray click is exactly the orphaned cruft §7's
+    library manager exists to clean up. Verified: with the field blank the Add
+    button is disabled and clicking it leaves the document clean.
 
 - [ ] Task 6.8: Implement Save and Save As (§7, §12.5)
   - Verification: Save overwrites the open variant and bumps `updatedAt`; Save As

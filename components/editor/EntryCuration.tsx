@@ -20,9 +20,11 @@
  */
 import type { ReactNode } from "react";
 
+import { NEW_BULLET, type NewItemSpec } from "@/lib/data/new-items";
 import type { Bullet } from "@/lib/schema/library";
 
 import { useEditor } from "./EditorStoreProvider";
+import { NewItemForm } from "./NewItemForm";
 import { DragHandle, SortableList, useSortableRow } from "./Sortable";
 import { ordered } from "./ordering";
 import type { BulletOwner } from "./store";
@@ -123,6 +125,7 @@ function BulletList({
   bullets: NonNullable<EntryChoice["bullets"]>;
 }) {
   const moveBullet = useEditor((state) => state.moveBullet);
+  const addBullet = useEditor((state) => state.addBullet);
 
   // Same split as the entries above: the variant's order first, and only that
   // run is draggable.
@@ -159,6 +162,10 @@ function BulletList({
           owner={bullets.owner}
         />
       ))}
+      <NewItemForm
+        spec={NEW_BULLET}
+        onAdd={(values) => addBullet(sectionIndex, entryId, values)}
+      />
     </div>
   );
 }
@@ -227,11 +234,15 @@ function StaticEntryRow({ sectionIndex, entry }: { sectionIndex: number; entry: 
 export function EntryCuration({
   sectionIndex,
   entries,
+  newEntry,
 }: {
   sectionIndex: number;
   entries: EntryChoice[];
+  /** What "add" means for this section, if anything (§6.3). */
+  newEntry?: NewItemSpec;
 }) {
   const moveEntry = useEditor((state) => state.moveEntry);
+  const addEntry = useEditor((state) => state.addEntry);
   const included = entries.filter((entry) => entry.included);
   const rest = entries.filter((entry) => !entry.included);
 
@@ -254,6 +265,13 @@ export function EntryCuration({
             <StaticEntryRow key={entry.id} sectionIndex={sectionIndex} entry={entry} />
           ))}
         </div>
+      ) : null}
+      {newEntry ? (
+        <NewItemForm
+          className="border-t border-gray-100 px-3 py-2"
+          spec={newEntry}
+          onAdd={(values) => addEntry(sectionIndex, values)}
+        />
       ) : null}
     </div>
   );
