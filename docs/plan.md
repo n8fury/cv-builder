@@ -520,9 +520,27 @@ and completion state.
   - A draft that references a missing library item renders the resolver's error
     in place of the page instead of blanking the column (§13).
 
-- [ ] Task 6.2: Live-update the preview on every form change, with no Puppeteer call
+- [x] Task 6.2: Live-update the preview on every form change, with no Puppeteer call
   - Verification: editing a bullet updates the preview within one render tick;
     the Network tab shows no request to `/api/generate-pdf` while editing.
+  - Result: typing `ZZQ` into the first Experience bullet's field put `ZZQ` in
+    the preview inside the next animation frame — the text was absent before
+    the keystroke and present in the frame that followed — while the page made
+    **0 network requests of any kind** during the edit, `/api/generate-pdf`
+    included. The dirty indicator flipped to "Unsaved changes". No page errors.
+  - Bullet text lives in the *library*, not the variant (§6.2), so the store now
+    drafts both files: `saved` and `draft` each hold `{ variant, library }`.
+    That is the propagating edit of §11.4 staged in memory — the preview shows
+    it, and nothing has touched disk until Save.
+  - The preview needs no subscription of its own: it is a component reading the
+    draft, so React's own commit is the "render tick". No debounce, no polling,
+    no effect — a debounce would be the only thing capable of making it late.
+  - `setBulletText` is addressed by owner *and* entry: bullet IDs are unique
+    only within their entry, and the seed data already repeats one across two
+    entries. A unit test pins that — editing `exp-1/b1` must leave `exp-2/b1`
+    alone.
+  - The form lists each entry's *curated* bullets, the same subset the preview
+    renders, so the two columns cannot disagree about what is in the CV.
 
 - [ ] Task 6.3: Implement section-level curation — visibility and per-section
       `options` (§12.2)

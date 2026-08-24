@@ -6,7 +6,9 @@
  * Form on the left, the live page on the right. The preview is not a picture
  * of the variant — it is `ResumeDocument`, the same component the print route
  * renders, fed from the draft in the store, so what the column shows is what
- * `/api/generate-pdf` would produce.
+ * `/api/generate-pdf` would produce. Every keystroke re-resolves the draft and
+ * re-renders that tree in place; nothing here launches Chromium, which §7
+ * reserves for the explicit export action.
  */
 import Link from "next/link";
 import { useMemo } from "react";
@@ -20,7 +22,6 @@ import { VariantForm } from "./VariantForm";
 import { isDirty, type EditorSnapshot } from "./store";
 
 function Preview({ css }: { css: string }) {
-  const library = useEditor((state) => state.library);
   const draft = useEditor((state) => state.draft);
 
   // A draft can reference a library item that is gone — a hand-edited or
@@ -28,11 +29,14 @@ function Preview({ css }: { css: string }) {
   // in place of the page rather than blanking the column.
   const resolved = useMemo(() => {
     try {
-      return { model: resolveVariant(library, draft), error: null as string | null };
+      return {
+        model: resolveVariant(draft.library, draft.variant),
+        error: null as string | null,
+      };
     } catch (error) {
       return { model: null, error: error instanceof Error ? error.message : String(error) };
     }
-  }, [library, draft]);
+  }, [draft]);
 
   if (resolved.error) {
     return (
