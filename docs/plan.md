@@ -490,10 +490,35 @@ and completion state.
 
 ## Phase 6 — Variant editor (§7)
 
-- [ ] Task 6.1: Build the two-column editor shell with Zustand state
+- [x] Task 6.1: Build the two-column editor shell with Zustand state
   - Verification: `/edit/jordan-rivera/detailed` shows the form on the left and
     the live preview on the right, rendered by the same `components/resume`
     component the export path uses.
+  - Result: the route returns 200; driven with Puppeteer, the form's right edge
+    sits left of the preview's left edge (x=41 vs x=574), the fields read
+    `tag=detailed` / `label=Detailed — reference reproduction`, and the preview
+    holds a `.resume-page` 816px wide with 73.33px padding (612pt / 55pt),
+    `Jordan A. Rivera` in `CV Charter` at 33.2px, all seven section headings,
+    and all four woff2 faces `loaded`. No page errors.
+  - The section mapping moved out of the render route into
+    `components/resume/ResumeDocument.tsx`, which both the print route and the
+    preview now render — the preview is only trustworthy if it is the same
+    component, not a second implementation of it. The harness confirms the
+    move changed nothing: 84/84 lines within ±2pt, text and faces identical,
+    against both the Chrome path and the Puppeteer export.
+  - The preview lives in an iframe with `resume.css` injected as text and the
+    React subtree portalled into its body. Tailwind's preflight is scoped away
+    from `components/resume/**` (§7) and the print route has its own root
+    layout for the same reason; an iframe is what lets editor chrome and an
+    untouched resume document share one page while the resume stays live React
+    rather than a reloaded snapshot.
+  - The store keeps `saved` and `draft` side by side, so "unsaved changes" is a
+    comparison rather than a flag — editing the label raised the indicator and
+    Revert cleared it, both verified in the browser.
+  - One store per mount behind a context provider: a module-level store would
+    outlive the route and hand the next variant the previous one's draft.
+  - A draft that references a missing library item renders the resolver's error
+    in place of the page instead of blanking the column (§13).
 
 - [ ] Task 6.2: Live-update the preview on every form change, with no Puppeteer call
   - Verification: editing a bullet updates the preview within one render tick;

@@ -11,6 +11,11 @@ export function renderPath(profileId: string, variantId: string): string {
   return `/render/${encodeURIComponent(profileId)}/${encodeURIComponent(variantId)}`;
 }
 
+/** Where a variant is curated — the two-column editor (§7). */
+export function editPath(profileId: string, variantId: string): string {
+  return `/edit/${encodeURIComponent(profileId)}/${encodeURIComponent(variantId)}`;
+}
+
 /**
  * The export endpoint. `download` flips the response from an inline preview
  * to a save-to-disk attachment, so one endpoint serves both the browser's PDF

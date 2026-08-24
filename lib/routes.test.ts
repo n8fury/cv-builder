@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { contentDisposition, exportPath, pdfFilename, renderPath } from "./routes";
+import { contentDisposition, editPath, exportPath, pdfFilename, renderPath } from "./routes";
 
 describe("routes", () => {
   it("points View at the render route", () => {
     expect(renderPath("jordan-rivera", "detailed")).toBe("/render/jordan-rivera/detailed");
+  });
+
+  it("points Edit at the editor route", () => {
+    expect(editPath("jordan-rivera", "detailed")).toBe("/edit/jordan-rivera/detailed");
   });
 
   it("points Download at the export endpoint with both ids", () => {

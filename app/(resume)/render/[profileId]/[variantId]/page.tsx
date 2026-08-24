@@ -4,14 +4,13 @@
  * A server component reading the variant and library off disk — the single
  * surface both the live editor preview and the Puppeteer export path point
  * at. A missing profile or variant is a 404, never a blank page (§13).
+ *
+ * The document itself is `ResumeDocument`, which the editor preview renders
+ * too: this route contributes the disk read, not the layout.
  */
 import { notFound } from "next/navigation";
 
-import { ResumeHeader } from "@/components/resume/ResumeHeader";
-import { ResumePage } from "@/components/resume/ResumePage";
-import { ResumeSection } from "@/components/resume/ResumeSection";
-import { ResumeSectionBody } from "@/components/resume/ResumeSectionBody";
-import { SECTION_TITLE } from "@/lib/render/section-titles";
+import { ResumeDocument } from "@/components/resume/ResumeDocument";
 import { NotFoundError } from "@/lib/data/store";
 import { loadRenderModel, type LoadedRender } from "@/lib/render/load";
 
@@ -38,21 +37,5 @@ export default async function RenderPage({
   const { profileId, variantId } = await params;
   const { model } = await load(profileId, variantId);
 
-  return (
-    <ResumePage>
-      {model.sections.map((section, index) => {
-        const key = `${section.type}-${index}`;
-        if (section.type === "header") {
-          return <ResumeHeader key={key} header={section.header} mode={section.mode} />;
-        }
-        const title =
-          section.type === "custom" ? section.section.title : SECTION_TITLE[section.type];
-        return (
-          <ResumeSection key={key} type={section.type} title={title}>
-            <ResumeSectionBody section={section} />
-          </ResumeSection>
-        );
-      })}
-    </ResumePage>
-  );
+  return <ResumeDocument model={model} />;
 }

@@ -8,7 +8,7 @@
 import Link from "next/link";
 
 import { listDashboard, type ProfileSummary, type VariantSummary } from "@/lib/data/dashboard";
-import { renderPath } from "@/lib/routes";
+import { editPath, renderPath } from "@/lib/routes";
 import {
   deleteProfileAction,
   deleteVariantAction,
@@ -54,6 +54,12 @@ function VariantRow({ profileId, variant }: { profileId: string; variant: Varian
           href={renderPath(profileId, variant.id)}
         >
           View
+        </Link>
+        <Link
+          className="rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+          href={editPath(profileId, variant.id)}
+        >
+          Edit
         </Link>
         <DownloadButton profileId={profileId} variantId={variant.id} />
         <RenameForm
