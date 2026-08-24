@@ -717,10 +717,63 @@ and completion state.
     library manager exists to clean up. Verified: with the field blank the Add
     button is disabled and clicking it leaves the document clean.
 
-- [ ] Task 6.8: Implement Save and Save As (§7, §12.5)
+- [x] Task 6.8: Implement Save and Save As (§7, §12.5)
   - Verification: Save overwrites the open variant and bumps `updatedAt`; Save As
     creates a new file auto-named `{tag}_{date}` with an editable tag prefilled
     from the parent, leaving the original untouched.
+  - Result: driven through the page with Puppeteer against a throwaway
+    `zz-save-test` profile, reading both files off disk afterwards. Save is
+    disabled while clean and enabled once dirty; after it, the indicator reads
+    "Saved". `updatedAt` went `2026-08-22T11:00:00Z` → `2026-08-24T14:27:01.127Z`
+    with `createdAt` unchanged. Save As prefilled the tag `detailed`, accepted
+    `Google — Backend SWE`, showed the derived id live, wrote
+    `google-backend-swe_2026-08-24.json` and navigated to it — and
+    `detailed.json` came back **byte-identical**. Repeating the same tag
+    toasted `A variant named google-backend-swe_2026-08-24 already exists —
+    change the tag and try again.` and wrote no third file. The scratch profile
+    was removed; `data/profiles/` is unchanged.
+  - **This closes the deferred disk half of Tasks 6.3, 6.4, 6.5, 6.6 and 6.7.**
+    The one save above carried all three kinds of edit at once, and both files
+    were then read back: the library's `nw-depot` bullet held the rewritten
+    text (§11.4), a new bullet `bullet-8vtqwd` had been appended to the library
+    with the variant referencing that ID and carrying **no text of its own**
+    (§6.3, §6.2), and the Projects section's `visible: false` had persisted
+    (§12.2).
+  - A save is two files, not one. Curation and ordering live in the variant;
+    everything typed lives in the library, because a variant holds no text
+    (§6.2) and library edits propagate to every variant referencing them
+    (§11.4). Both are re-validated server-side — the payload comes from the
+    client, so the schemas are the boundary, the same one §10's n8n endpoint
+    will sit behind.
+  - The resolver runs as an admission check before either write: a variant
+    referencing an ID the library lacks renders as an error rather than a page
+    (§13), and writing that pair would persist a CV nothing can open.
+  - `content-library.json` is rewritten only when it actually changed. Most
+    saves are curation only, and those now leave the library file untouched
+    rather than rewriting it — so they cannot clobber an edit made elsewhere
+    in the meantime. This is not full concurrency control: a save that *does*
+    change the library still overwrites whatever is on disk.
+  - Save As creates with `wx` while Save replaces via temp-file-plus-rename.
+    The asymmetry is deliberate: there is nothing to lose on a new file, and
+    `rename` overwrites silently, so a fork whose auto-generated name collided
+    would destroy the variant it collided with.
+  - `updatedAt` is stamped on the server, so it records when the file was
+    written rather than what the browser's clock says. A fork gets a fresh
+    `createdAt` — it is a new record, and inheriting the parent's would
+    misdate it on the dashboard.
+  - Two defects found while verifying:
+    - The dirty indicator stayed on after a clean save. `isDirty` compared
+      `JSON.stringify` output, which is key-order sensitive, and the saved
+      document came back rebuilt in schema order. It now compares with keys
+      sorted — two documents that would write the same bytes are not unsaved
+      changes.
+    - Adopting the save response overwrote `tag` in the draft, discarding a
+      keystroke made while the request was in flight. Only `updatedAt` — the
+      one field the server sets and the editor does not — is carried back now.
+      A test pins both.
+  - `EditorStoreProvider` is now keyed by `profileId/variantId`: Save As
+    navigates to a different variant under the same route, and React would
+    otherwise reuse the component and hand the fork the parent's store.
 
 - [ ] Task 6.9: Show page-boundary guides and a live overflow indicator (§11.5)
   - Verification: adding enough bullets to cross a page boundary surfaces the

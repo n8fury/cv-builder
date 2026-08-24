@@ -98,6 +98,17 @@ export interface EditorState {
    */
   addEntry(index: number, values: NewItemValues): void;
   addBullet(index: number, ownerId: string, values: NewItemValues): void;
+  /**
+   * Adopt what a save just wrote as the new clean baseline (§7).
+   *
+   * The draft is deliberately *not* replaced: a save is a round trip, and
+   * anything typed while it was in flight belongs to the person, not to the
+   * response. `updatedAt` is the one field carried across, because the server
+   * sets it and nothing in the editor does — which is enough for an untouched
+   * draft to compare equal and the indicator to read "Saved". Copying an
+   * editable field back would overwrite a keystroke made mid-request.
+   */
+  markSaved(document: EditorDocument): void;
   /** Throw the draft away and go back to the files on disk. */
   revert(): void;
 }
@@ -105,11 +116,29 @@ export interface EditorState {
 export type EditorStore = ReturnType<typeof createEditorStore>;
 
 /**
+ * Serialises with object keys sorted, so the comparison below sees content
+ * rather than construction order. Two documents differing only in key order
+ * produce the same file — the schemas fix the written order — so calling that
+ * "unsaved changes" would leave the indicator stuck on after a clean save.
+ */
+function canonical(value: unknown): string {
+  return JSON.stringify(value, (_key, item: unknown) =>
+    item && typeof item === "object" && !Array.isArray(item)
+      ? Object.fromEntries(
+          Object.keys(item as Record<string, unknown>)
+            .sort()
+            .map((key) => [key, (item as Record<string, unknown>)[key]]),
+        )
+      : item,
+  );
+}
+
+/**
  * Structural comparison, not identity: reverting an edit by hand should clear
  * the dirty state, because at that point Save would write the same bytes.
  */
 export function isDirty(state: EditorState): boolean {
-  return JSON.stringify(state.draft) !== JSON.stringify(state.saved);
+  return canonical(state.draft) !== canonical(state.saved);
 }
 
 function editBullets<T extends { id: string; bullets: Bullet[] }>(
@@ -791,6 +820,15 @@ export function createEditorStore({ profileId, variantId, ...document }: EditorS
 
     addBullet: (index, ownerId, values) =>
       set(({ draft }) => ({ draft: addBulletTo(draft, index, ownerId, values) })),
+
+    markSaved: (document) =>
+      set(({ draft }) => ({
+        saved: document,
+        draft: {
+          ...draft,
+          variant: { ...draft.variant, updatedAt: document.variant.updatedAt },
+        },
+      })),
 
     revert: () => set((state) => ({ draft: state.saved })),
   }));

@@ -18,6 +18,7 @@ import { resolveVariant } from "@/lib/data/resolve";
 
 import { EditorStoreProvider, useEditor } from "./EditorStoreProvider";
 import { PreviewFrame } from "./PreviewFrame";
+import { SaveControls } from "./SaveControls";
 import { VariantForm } from "./VariantForm";
 import { isDirty, type EditorSnapshot } from "./store";
 
@@ -74,7 +75,13 @@ function Status() {
 
 export function EditorShell({ snapshot, css }: { snapshot: EditorSnapshot; css: string }) {
   return (
-    <EditorStoreProvider snapshot={snapshot}>
+    // Keyed by the open document: Save As navigates to a different variant
+    // under the same route, and React would otherwise reuse the component —
+    // handing the fork the parent's store, draft and all.
+    <EditorStoreProvider
+      key={`${snapshot.profileId}/${snapshot.variantId}`}
+      snapshot={snapshot}
+    >
       <div className="mx-auto max-w-[1600px] px-6 py-6">
         <header className="mb-4 flex items-baseline gap-3">
           <h1 className="text-lg font-semibold text-gray-900">
@@ -85,8 +92,9 @@ export function EditorShell({ snapshot, css }: { snapshot: EditorSnapshot; css: 
           <Link className="text-sm text-gray-600 underline hover:text-gray-900" href="/">
             Dashboard
           </Link>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-3">
             <Status />
+            <SaveControls />
           </div>
         </header>
 

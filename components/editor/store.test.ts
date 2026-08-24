@@ -387,6 +387,43 @@ describe("editor store", () => {
     expect(isDirty(store.getState())).toBe(false);
   });
 
+  it("adopts what a save wrote as the new clean baseline", () => {
+    const store = open();
+    store.getState().setLabel("Tailored");
+    const draft = store.getState().draft;
+
+    // What the server echoes back: the same document, plus its own timestamp,
+    // rebuilt by Zod — so its keys need not be in the client's order.
+    store.getState().markSaved({
+      variant: { ...draft.variant, updatedAt: "2026-09-01T00:00:00.000Z" },
+      library: draft.library,
+    });
+
+    expect(isDirty(store.getState())).toBe(false);
+    expect(store.getState().draft.variant.label).toBe("Tailored");
+    expect(store.getState().draft.variant.updatedAt).toBe("2026-09-01T00:00:00.000Z");
+  });
+
+  it("keeps edits typed while a save was in flight", () => {
+    const store = open();
+    store.getState().setLabel("Tailored");
+    const inFlight = store.getState().draft;
+    // The user keeps typing before the response lands.
+    store.getState().setTag("later");
+    store.getState().markSaved({ ...inFlight, variant: { ...inFlight.variant } });
+
+    expect(store.getState().draft.variant.tag).toBe("later");
+    expect(isDirty(store.getState())).toBe(true);
+  });
+
+  it("does not call a key-order difference an unsaved change", () => {
+    const store = open();
+    const { variant, library } = store.getState().draft;
+    // Same content, opposite key order — Save would write the same bytes.
+    store.getState().markSaved({ variant, library });
+    expect(isDirty(store.getState())).toBe(false);
+  });
+
   it("reverts the whole document, library included", () => {
     const store = open();
     store.getState().setLabel("Tailored");

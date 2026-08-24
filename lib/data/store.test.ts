@@ -11,6 +11,7 @@ import {
   InvalidDataError,
   NotFoundError,
   createProfile,
+  createVariant,
   deleteProfile,
   deleteVariant,
   isValidSlug,
@@ -20,7 +21,9 @@ import {
   listVariants,
   readLibrary,
   readVariant,
+  libraryPath,
   variantPath,
+  writeLibrary,
   writeVariant,
 } from "./store";
 
@@ -252,5 +255,62 @@ describe("createProfile", () => {
 
   it("rejects an id that is not a slug", async () => {
     await expect(createProfile("../escape", "Escape")).rejects.toBeInstanceOf(NotFoundError);
+  });
+});
+
+describe("createVariant", () => {
+  it("writes a new variant that can be read back", async () => {
+    await createVariant("temp-profile", "fork", variant);
+    expect(await readVariant("temp-profile", "fork")).toEqual(variant);
+  });
+
+  it("refuses to overwrite an existing variant", async () => {
+    await createVariant("temp-profile", "fork", variant);
+    // A fork whose auto-generated name collides must not destroy what it
+    // collided with (§12.5).
+    await expect(createVariant("temp-profile", "fork", { ...variant, tag: "other" })).rejects.toBeInstanceOf(
+      ConflictError,
+    );
+    expect((await readVariant("temp-profile", "fork")).tag).toBe("scratch");
+  });
+
+  it("creates exclusively rather than checking first", async () => {
+    await createVariant("temp-profile", "fork", variant);
+    const call = vi.mocked(fsp.writeFile).mock.calls.at(-1);
+    expect(call?.[2]).toMatchObject({ flag: "wx" });
+  });
+
+  it("validates before writing", async () => {
+    await expect(
+      createVariant("temp-profile", "bad", { ...variant, schemaVersion: 2 } as unknown as Variant),
+    ).rejects.toBeInstanceOf(InvalidDataError);
+  });
+});
+
+describe("writeLibrary", () => {
+  const library = contentLibrarySchema.parse({
+    schemaVersion: 1,
+    header: { name: "A Person" },
+    competencies: [{ id: "comp-1", text: "Something" }],
+  });
+
+  it("round-trips through disk", async () => {
+    await writeLibrary("temp-profile", library);
+    expect(await readLibrary("temp-profile")).toEqual(library);
+  });
+
+  it("replaces atomically — every variant reads through this file", async () => {
+    await writeLibrary("temp-profile", library);
+    const renamed = vi.mocked(fsp.rename).mock.calls.at(-1);
+    expect(renamed?.[0]).toMatch(/\.tmp$/);
+    expect(renamed?.[1]).toBe(libraryPath("temp-profile"));
+  });
+
+  it("validates before writing, leaving the old library in place", async () => {
+    await writeLibrary("temp-profile", library);
+    await expect(
+      writeLibrary("temp-profile", { schemaVersion: 9 } as unknown as typeof library),
+    ).rejects.toBeInstanceOf(InvalidDataError);
+    expect(await readLibrary("temp-profile")).toEqual(library);
   });
 });

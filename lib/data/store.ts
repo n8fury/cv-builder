@@ -5,10 +5,10 @@
  *   data/profiles/<profileId>/variants/<variantId>.json
  *
  * Every read is validated against the schemas in lib/schema, so nothing
- * downstream has to defend against malformed JSON. Variant writes go through
- * a temp file plus rename, so a crash mid-write can never leave a half-written
- * variant behind — the variant file is the only thing the editor overwrites in
- * place, and losing one to a partial write would lose real curation work.
+ * downstream has to defend against malformed JSON. Overwrites go through a
+ * temp file plus rename, so a crash mid-write can never leave a half-written
+ * file behind — losing a variant to a partial write would lose real curation
+ * work, and losing the library would lose everything the person has written.
  */
 import { randomUUID } from "node:crypto";
 import { access, mkdir, readdir, readFile, rename, rm, unlink, writeFile } from "node:fs/promises";
@@ -148,9 +148,20 @@ export async function readVariant(profileId: string, variantId: string): Promise
 }
 
 /**
- * Validates, then writes atomically: a sibling temp file is written and
- * fsync-free renamed over the target, which is atomic on both POSIX and NTFS.
+ * Replaces a file's contents atomically: a sibling temp file is written and
+ * renamed over the target, which is atomic on both POSIX and NTFS.
  */
+async function writeJsonFile(target: string, value: unknown): Promise<void> {
+  const temp = `${target}.${randomUUID()}.tmp`;
+  try {
+    await writeFile(temp, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+    await rename(temp, target);
+  } catch (error) {
+    await rm(temp, { force: true });
+    throw error;
+  }
+}
+
 export async function writeVariant(
   profileId: string,
   variantId: string,
@@ -160,17 +171,55 @@ export async function writeVariant(
   if (!parsed.success) {
     throw new InvalidDataError(`Refusing to write invalid variant: ${parsed.error.message}`);
   }
+  await mkdir(variantsDir(profileId), { recursive: true });
+  await writeJsonFile(variantPath(profileId, variantId), parsed.data);
+}
 
+/**
+ * Creates a variant that must not already exist — what Save As does (§12.5).
+ *
+ * An exclusive create rather than the atomic replace above: there is nothing
+ * to lose on a new file, and `rename` overwrites silently, so a fork whose
+ * auto-generated name happened to collide would destroy the variant it
+ * collided with. `wx` makes that impossible without a check-then-act race.
+ */
+export async function createVariant(
+  profileId: string,
+  variantId: string,
+  variant: Variant,
+): Promise<void> {
+  const parsed = variantSchema.safeParse(variant);
+  if (!parsed.success) {
+    throw new InvalidDataError(`Refusing to write invalid variant: ${parsed.error.message}`);
+  }
   const target = variantPath(profileId, variantId);
-  const temp = `${target}.${randomUUID()}.tmp`;
   await mkdir(variantsDir(profileId), { recursive: true });
   try {
-    await writeFile(temp, `${JSON.stringify(parsed.data, null, 2)}\n`, "utf8");
-    await rename(temp, target);
+    await writeFile(target, `${JSON.stringify(parsed.data, null, 2)}\n`, {
+      encoding: "utf8",
+      flag: "wx",
+    });
   } catch (error) {
-    await rm(temp, { force: true });
+    if ((error as NodeJS.ErrnoException).code === "EEXIST") {
+      throw new ConflictError(`A variant named ${variantId} already exists`);
+    }
     throw error;
   }
+}
+
+/**
+ * Overwrites `content-library.json` — the propagating half of a save (§11.4,
+ * §6.3). Every variant in the profile reads through this file, so it is
+ * validated before it is written and replaced atomically, never truncated in
+ * place.
+ */
+export async function writeLibrary(profileId: string, library: ContentLibrary): Promise<void> {
+  const parsed = contentLibrarySchema.safeParse(library);
+  if (!parsed.success) {
+    throw new InvalidDataError(`Refusing to write invalid content library: ${parsed.error.message}`);
+  }
+  await mkdir(profileDir(profileId), { recursive: true });
+  await writeJsonFile(libraryPath(profileId), parsed.data);
 }
 
 /**
