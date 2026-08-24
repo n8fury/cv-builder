@@ -62,6 +62,14 @@ export interface EditorState {
   setAboutMeId(index: number, aboutMeId: string): void;
   setRecommendationsMode(index: number, mode: RecommendationsMode): void;
   setCustomSectionId(index: number, customSectionId: string): void;
+  /**
+   * Entry-level curation (§6.2): an entry is in the variant's list or it is
+   * not — there is no `visible` flag below the section level. Covers the flat
+   * item lists too (Core Competencies, §12.3), which follow the same pattern.
+   */
+  setEntryIncluded(index: number, entryId: string, included: boolean): void;
+  /** Bullet-level curation, for the two section types that have bullets (§5.4, §5.5). */
+  setBulletIncluded(index: number, entryId: string, bulletId: string, included: boolean): void;
   /** Throw the draft away and go back to the files on disk. */
   revert(): void;
 }
@@ -146,6 +154,171 @@ function withVisible(variant: Variant, index: number, visible: boolean): Variant
   return { ...variant, sections };
 }
 
+/**
+ * Where a re-included item goes back in. Appending would drop it at the bottom
+ * of the section, so a mis-click followed by a correction would silently
+ * reorder the CV; instead it lands after the last already-included item that
+ * precedes it in the library, which is where it was before.
+ */
+function insertionIndex(currentIds: readonly string[], order: readonly string[], id: string): number {
+  const before = new Set(order.slice(0, order.indexOf(id)));
+  let at = 0;
+  currentIds.forEach((currentId, position) => {
+    if (before.has(currentId)) at = position + 1;
+  });
+  return at;
+}
+
+function withId<T extends { id: string }>(current: readonly T[], order: readonly string[], item: T): T[] {
+  if (current.some((entry) => entry.id === item.id)) return [...current];
+  const at = insertionIndex(current.map((entry) => entry.id), order, item.id);
+  return [...current.slice(0, at), item, ...current.slice(at)];
+}
+
+function withoutId<T extends { id: string }>(current: readonly T[], id: string): T[] {
+  return current.filter((entry) => entry.id !== id);
+}
+
+function toggleIds(
+  current: readonly string[],
+  order: readonly string[],
+  id: string,
+  included: boolean,
+): string[] {
+  if (!included) return current.filter((entry) => entry !== id);
+  if (current.includes(id)) return [...current];
+  const at = insertionIndex(current, order, id);
+  return [...current.slice(0, at), id, ...current.slice(at)];
+}
+
+/**
+ * Which bullets a newly re-included entry comes back with. The variant on disk
+ * is consulted first: un-ticking an entry and ticking it again should not
+ * quietly discard the bullet curation that was saved with it. An entry that is
+ * new to this variant starts with all of its bullets.
+ */
+function restoredBullets(saved: Variant, index: number, entryId: string, all: readonly Bullet[]): string[] {
+  const section = saved.sections[index];
+  if (section && (section.type === "experience" || section.type === "projects")) {
+    const found = section.entries.find((entry) => entry.id === entryId);
+    if (found) return [...found.bullets];
+  }
+  return all.map((bullet) => bullet.id);
+}
+
+/** Rewrites one section whatever its type; the update narrows for itself. */
+function withSectionAny(
+  variant: Variant,
+  index: number,
+  update: (section: VariantSection) => VariantSection,
+): Variant {
+  const section = variant.sections[index];
+  if (section === undefined) return variant;
+  const sections = [...variant.sections];
+  sections[index] = update(section);
+  return { ...variant, sections };
+}
+
+function ids(items: readonly { id: string }[]): string[] {
+  return items.map((item) => item.id);
+}
+
+/**
+ * Include or exclude one entry. Section types that curate nothing at entry
+ * level — Languages (§12.3), and the option-only sections — fall through
+ * unchanged rather than growing an entries array the schema forbids.
+ */
+function includeEntry(
+  library: ContentLibrary,
+  saved: Variant,
+  index: number,
+  section: VariantSection,
+  entryId: string,
+  included: boolean,
+): VariantSection {
+  switch (section.type) {
+    case "competencies":
+      return {
+        ...section,
+        items: toggleIds(section.items, ids(library.competencies), entryId, included),
+      };
+
+    case "experience": {
+      if (!included) return { ...section, entries: withoutId(section.entries, entryId) };
+      const entry = library.experience.find((item) => item.id === entryId);
+      if (!entry) return section;
+      return {
+        ...section,
+        entries: withId(section.entries, ids(library.experience), {
+          id: entryId,
+          bullets: restoredBullets(saved, index, entryId, entry.bullets),
+        }),
+      };
+    }
+
+    case "projects": {
+      if (!included) return { ...section, entries: withoutId(section.entries, entryId) };
+      const entry = library.projects.find((item) => item.id === entryId);
+      if (!entry) return section;
+      return {
+        ...section,
+        entries: withId(section.entries, ids(library.projects), {
+          id: entryId,
+          bullets: restoredBullets(saved, index, entryId, entry.bullets),
+        }),
+      };
+    }
+
+    // Entry-level only — Education has no bullets to trim (§15.7), and
+    // certifications and recommendations follow the same ID-list pattern.
+    case "education":
+      return {
+        ...section,
+        entries: included
+          ? withId(section.entries, ids(library.education), { id: entryId })
+          : withoutId(section.entries, entryId),
+      };
+
+    case "certifications":
+      return {
+        ...section,
+        entries: included
+          ? withId(section.entries, ids(library.certifications), { id: entryId })
+          : withoutId(section.entries, entryId),
+      };
+
+    case "recommendations":
+      return {
+        ...section,
+        entries: included
+          ? withId(section.entries, ids(library.recommendations), { id: entryId })
+          : withoutId(section.entries, entryId),
+      };
+
+    default:
+      return section;
+  }
+}
+
+/** Bullets exist on Experience and Projects entries only (§5.4, §5.5, §15.7). */
+function includeBullet(
+  library: ContentLibrary,
+  section: VariantSection,
+  entryId: string,
+  bulletId: string,
+  included: boolean,
+): VariantSection {
+  if (section.type !== "experience" && section.type !== "projects") return section;
+  const source = section.type === "experience" ? library.experience : library.projects;
+  const order = ids(source.find((item) => item.id === entryId)?.bullets ?? []);
+  const entries = section.entries.map((ref) =>
+    ref.id === entryId
+      ? { ...ref, bullets: toggleIds(ref.bullets, order, bulletId, included) }
+      : ref,
+  );
+  return { ...section, entries };
+}
+
 export function createEditorStore({ profileId, variantId, ...document }: EditorSnapshot) {
   return createStore<EditorState>()((set) => ({
     profileId,
@@ -210,6 +383,26 @@ export function createEditorStore({ profileId, variantId, ...document }: EditorS
             ...section,
             options: { customSectionId },
           })),
+        },
+      })),
+
+    setEntryIncluded: (index, entryId, included) =>
+      set(({ draft, saved }) => ({
+        draft: {
+          ...draft,
+          variant: withSectionAny(draft.variant, index, (section) =>
+            includeEntry(draft.library, saved.variant, index, section, entryId, included),
+          ),
+        },
+      })),
+
+    setBulletIncluded: (index, entryId, bulletId, included) =>
+      set(({ draft }) => ({
+        draft: {
+          ...draft,
+          variant: withSectionAny(draft.variant, index, (section) =>
+            includeBullet(draft.library, section, entryId, bulletId, included),
+          ),
         },
       })),
 

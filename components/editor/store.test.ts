@@ -128,6 +128,55 @@ describe("editor store", () => {
     expect(store.getState().draft.variant.sections[2]).toEqual(variant.sections[2]);
   });
 
+  it("removes a bullet from the variant's bullet-ID array", () => {
+    const store = open();
+    store.getState().setBulletIncluded(2, "exp-1", "b1", false);
+    expect(store.getState().draft.variant.sections[2]).toMatchObject({
+      entries: [{ id: "exp-1", bullets: ["b2"] }],
+    });
+  });
+
+  it("puts a re-included bullet back where it was, not at the end", () => {
+    const store = open();
+    store.getState().setBulletIncluded(2, "exp-1", "b1", false);
+    store.getState().setBulletIncluded(2, "exp-1", "b1", true);
+    expect(store.getState().draft.variant.sections[2]).toMatchObject({
+      entries: [{ id: "exp-1", bullets: ["b1", "b2"] }],
+    });
+    expect(isDirty(store.getState())).toBe(false);
+  });
+
+  it("drops a whole entry and restores its saved bullet curation", () => {
+    const store = open();
+    store.getState().setBulletIncluded(2, "exp-1", "b2", false);
+    store.getState().setEntryIncluded(2, "exp-1", false);
+    expect(store.getState().draft.variant.sections[2]).toMatchObject({ entries: [] });
+
+    store.getState().setEntryIncluded(2, "exp-1", true);
+    // Both bullets: the entry comes back as the *saved* variant had it, not as
+    // it was a moment before being excluded.
+    expect(store.getState().draft.variant.sections[2]).toMatchObject({
+      entries: [{ id: "exp-1", bullets: ["b1", "b2"] }],
+    });
+  });
+
+  it("includes an entry the variant never referenced, with all its bullets", () => {
+    const store = open();
+    store.getState().setEntryIncluded(2, "exp-2", true);
+    expect(store.getState().draft.variant.sections[2]).toMatchObject({
+      entries: [
+        { id: "exp-1", bullets: ["b1", "b2"] },
+        { id: "exp-2", bullets: ["b1"] },
+      ],
+    });
+  });
+
+  it("leaves a section alone when the entry is not in its library list", () => {
+    const store = open();
+    store.getState().setEntryIncluded(2, "no-such-entry", true);
+    expect(isDirty(store.getState())).toBe(false);
+  });
+
   it("reverts the whole document, library included", () => {
     const store = open();
     store.getState().setLabel("Tailored");

@@ -577,10 +577,37 @@ and completion state.
     as `<id> (missing)` rather than silently snapping the draft to another
     item (§13).
 
-- [ ] Task 6.4: Implement entry-level and bullet-level curation toggles (§6.2, §12.3)
+- [x] Task 6.4: Implement entry-level and bullet-level curation toggles (§6.2, §12.3)
   - Verification: unchecking a bullet removes it from the preview and from the
     saved variant's bullet-ID array; Education toggles whole entries only, with no
     bullet toggles rendered.
+  - Result: unchecking the first Experience bullet took the preview from 17
+    bullets to 16, the missing one being `Architected full-stack garage
+    management sys…`. Unchecking the `freelance` entry removed
+    `Freelance Full Stack Developer` from the preview entirely and moved it
+    into the form's "Not in this variant" group. The Education card renders
+    1 entry toggle, 0 bullet toggles and 0 bullet fields; Certifications, 4
+    entry toggles and 0 bullet toggles (§15.7). No page errors.
+  - **Deferred half**: "and from the saved variant's bullet-ID array" —
+    the write waits on Save (Task 6.8). The array itself is covered now: unit
+    tests assert the draft section becomes `entries: [{ id: "exp-1", bullets:
+    ["b2"] }]` after the toggle.
+  - The form lists the library's whole offering per section — included items
+    first in the variant's order (§15.3), the rest greyed out below. Curation
+    is a selection out of the library, so the un-chosen have to be visible to
+    be chosen.
+  - A re-included item goes back where it was, after the last already-included
+    item that precedes it in the library — appending would mean a mis-click and
+    its correction silently reordered the CV.
+  - Re-including an *entry* restores the bullet curation the variant was saved
+    with, rather than all of its bullets: un-ticking an entry by accident must
+    not quietly discard the selection saved with it. An entry new to the
+    variant does come in with all of its bullets.
+  - Bullet text stays editable whether or not the bullet is included — wording
+    belongs to the library, selection to the variant (§6.2, §11.4).
+  - Languages says so in place of a list: it is `visible`-only, with no per-item
+    curation at all (§12.3, §15.6). Custom-section bullets get fields but no
+    toggles — the library item is the unit there (§12.4).
 
 - [ ] Task 6.5: Implement two-level Technical Skills curation (§12.3)
   - Verification: a group can be excluded wholesale, and individual skills within

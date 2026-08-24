@@ -10,14 +10,12 @@
  * draft — exactly the propagating edit §11.4 describes, staged until Save.
  */
 import { SECTION_TITLE } from "@/lib/render/section-titles";
-import type { Bullet, ContentLibrary } from "@/lib/schema/library";
+import type { ContentLibrary } from "@/lib/schema/library";
 import type { VariantSection } from "@/lib/schema/variant";
 
+import { EntryCuration } from "./EntryCuration";
 import { useEditor } from "./EditorStoreProvider";
-import type { BulletOwner } from "./store";
 
-const FIELD =
-  "w-full rounded border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-500 focus:outline-none";
 const SELECT = "rounded border border-gray-300 px-1.5 py-0.5 text-xs text-gray-900";
 
 function sectionTitle(section: VariantSection, library: ContentLibrary): string {
@@ -29,30 +27,6 @@ function sectionTitle(section: VariantSection, library: ContentLibrary): string 
   return SECTION_TITLE[section.type];
 }
 
-function BulletField({
-  owner,
-  entryId,
-  bullet,
-}: {
-  owner: BulletOwner;
-  entryId: string;
-  bullet: Bullet;
-}) {
-  const setBulletText = useEditor((state) => state.setBulletText);
-  return (
-    <label className="block">
-      <span className="sr-only">Bullet {bullet.id}</span>
-      <textarea
-        className={`${FIELD} resize-y`}
-        data-bullet={bullet.id}
-        rows={2}
-        value={bullet.text}
-        onChange={(event) => setBulletText(owner, entryId, bullet.id, event.target.value)}
-      />
-    </label>
-  );
-}
-
 /** A reference the library cannot satisfy is named, not hidden (§13). */
 function MissingRef({ id }: { id: string }) {
   return (
@@ -62,98 +36,177 @@ function MissingRef({ id }: { id: string }) {
   );
 }
 
-function EntryEditor({
-  owner,
-  entryId,
-  heading,
-  subheading,
-  bullets,
-}: {
-  owner: BulletOwner;
-  entryId: string;
-  heading: string;
-  subheading: string;
-  bullets: Bullet[];
-}) {
-  return (
-    <div className="space-y-1 px-3 py-2">
-      <p className="text-sm font-medium text-gray-900">{heading}</p>
-      <p className="text-xs text-gray-500">{subheading}</p>
-      <div className="space-y-1 pt-1">
-        {bullets.map((bullet) => (
-          <BulletField key={bullet.id} owner={owner} entryId={entryId} bullet={bullet} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 /**
- * Bullets are curated per entry, so the variant's ID list decides which ones
- * appear here — the form shows the same subset the preview renders.
+ * Included items first, in the variant's order (§15.3), then everything else
+ * the library offers. The form's order is the CV's order, so the two columns
+ * read the same way down the page.
  */
-function curatedBullets(all: Bullet[], ids: readonly string[]): Bullet[] {
-  return ids.flatMap((id) => all.filter((bullet) => bullet.id === id));
+function ordered<T extends { id: string }>(all: readonly T[], includedIds: readonly string[]): T[] {
+  const byId = new Map(all.map((item) => [item.id, item]));
+  const included = includedIds.flatMap((id) => {
+    const found = byId.get(id);
+    return found ? [found] : [];
+  });
+  return [...included, ...all.filter((item) => !includedIds.includes(item.id))];
 }
 
 function SectionBody({
   section,
+  index,
   library,
 }: {
   section: VariantSection;
+  index: number;
   library: ContentLibrary;
 }) {
-  if (section.type === "experience" || section.type === "projects") {
-    const entries = section.type === "experience" ? library.experience : library.projects;
-    return (
-      <div className="divide-y divide-gray-100 border-t border-gray-100">
-        {section.entries.map((ref) => {
-          const entry = entries.find((item) => item.id === ref.id);
-          if (!entry) {
-            return (
-              <div key={ref.id} className="px-3 py-2">
-                <MissingRef id={ref.id} />
-              </div>
-            );
-          }
-          return (
-            <EntryEditor
-              key={entry.id}
-              owner={section.type}
-              entryId={entry.id}
-              heading={entry.title}
-              subheading={"company" in entry ? entry.company : entry.subtitle}
-              bullets={curatedBullets(entry.bullets, ref.bullets)}
-            />
-          );
-        })}
-      </div>
-    );
-  }
+  const setBulletText = useEditor((state) => state.setBulletText);
 
-  if (section.type === "custom") {
-    const entry = library.customSections.find((item) => item.id === section.options.customSectionId);
-    if (!entry) {
+  switch (section.type) {
+    case "competencies":
       return (
-        <div className="border-t border-gray-100 px-3 py-2">
-          <MissingRef id={section.options.customSectionId} />
+        <EntryCuration
+          sectionIndex={index}
+          entries={ordered(library.competencies, section.items).map((item) => ({
+            id: item.id,
+            heading: item.text,
+            subheading: "",
+            included: section.items.includes(item.id),
+          }))}
+        />
+      );
+
+    // One branch per collection: a union of two entry shapes would lose the
+    // fields that tell them apart.
+    case "experience": {
+      const includedIds = section.entries.map((ref) => ref.id);
+      return (
+        <EntryCuration
+          sectionIndex={index}
+          entries={ordered(library.experience, includedIds).map((entry) => ({
+            id: entry.id,
+            heading: entry.title,
+            subheading: entry.company,
+            included: includedIds.includes(entry.id),
+            bullets: {
+              all: entry.bullets,
+              includedIds: section.entries.find((ref) => ref.id === entry.id)?.bullets ?? [],
+              owner: "experience" as const,
+            },
+          }))}
+        />
+      );
+    }
+
+    case "projects": {
+      const includedIds = section.entries.map((ref) => ref.id);
+      return (
+        <EntryCuration
+          sectionIndex={index}
+          entries={ordered(library.projects, includedIds).map((entry) => ({
+            id: entry.id,
+            heading: entry.title,
+            subheading: entry.subtitle,
+            included: includedIds.includes(entry.id),
+            bullets: {
+              all: entry.bullets,
+              includedIds: section.entries.find((ref) => ref.id === entry.id)?.bullets ?? [],
+              owner: "projects" as const,
+            },
+          }))}
+        />
+      );
+    }
+
+    // Entry-level only: no bullet data is passed, so no bullet toggles exist
+    // to render (§15.7).
+    case "education": {
+      const includedIds = section.entries.map((ref) => ref.id);
+      return (
+        <EntryCuration
+          sectionIndex={index}
+          entries={ordered(library.education, includedIds).map((entry) => ({
+            id: entry.id,
+            heading: entry.institution,
+            subheading: entry.degree,
+            included: includedIds.includes(entry.id),
+          }))}
+        />
+      );
+    }
+
+    case "certifications": {
+      const includedIds = section.entries.map((ref) => ref.id);
+      return (
+        <EntryCuration
+          sectionIndex={index}
+          entries={ordered(library.certifications, includedIds).map((entry) => ({
+            id: entry.id,
+            heading: entry.text,
+            subheading: entry.dates,
+            included: includedIds.includes(entry.id),
+          }))}
+        />
+      );
+    }
+
+    case "recommendations": {
+      const includedIds = section.entries.map((ref) => ref.id);
+      return (
+        <EntryCuration
+          sectionIndex={index}
+          entries={ordered(library.recommendations, includedIds).map((entry) => ({
+            id: entry.id,
+            heading: entry.name,
+            subheading: [entry.role, entry.location].filter(Boolean).join(" — "),
+            included: includedIds.includes(entry.id),
+          }))}
+        />
+      );
+    }
+
+    // Not individually curated — whole-section `visible` only (§12.3, §15.6).
+    case "languages":
+      return (
+        <p className="border-t border-gray-100 px-3 py-2 text-xs text-gray-500">
+          Every language renders; this section is all-or-nothing.
+        </p>
+      );
+
+    case "custom": {
+      const entry = library.customSections.find(
+        (item) => item.id === section.options.customSectionId,
+      );
+      if (!entry) {
+        return (
+          <div className="border-t border-gray-100 px-3 py-2">
+            <MissingRef id={section.options.customSectionId} />
+          </div>
+        );
+      }
+      return (
+        <div className="space-y-1 border-t border-gray-100 px-3 py-2">
+          {/* A custom section's bullets are not curated per variant — the
+              library item is the unit (§12.4) — so they get fields, not
+              toggles. */}
+          {entry.bullets.map((bullet) => (
+            <textarea
+              key={bullet.id}
+              className="w-full resize-y rounded border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-500 focus:outline-none"
+              data-bullet={bullet.id}
+              rows={2}
+              value={bullet.text}
+              onChange={(event) =>
+                setBulletText("customSections", entry.id, bullet.id, event.target.value)
+              }
+            />
+          ))}
         </div>
       );
     }
-    return (
-      <div className="border-t border-gray-100">
-        <EntryEditor
-          owner="customSections"
-          entryId={entry.id}
-          heading={entry.title}
-          subheading={entry.paragraph ?? ""}
-          bullets={entry.bullets}
-        />
-      </div>
-    );
-  }
 
-  return null;
+    default:
+      return null;
+  }
 }
 
 /** The `options` a section type has, if any (§12.2). */
@@ -270,7 +323,7 @@ export function SectionCard({
   const setSectionVisible = useEditor((state) => state.setSectionVisible);
 
   return (
-    <li className={section.visible ? undefined : "bg-gray-50"}>
+    <li data-section={section.type} data-index={index} className={section.visible ? undefined : "bg-gray-50"}>
       <div className="flex items-baseline gap-2 px-3 py-2">
         <span className={`text-sm ${section.visible ? "text-gray-900" : "text-gray-400"}`}>
           {sectionTitle(section, library)}
@@ -290,7 +343,7 @@ export function SectionCard({
       {/* Shown for hidden sections too: curation is often prepared before a
           section is switched back on, and collapsing it would shuffle the
           whole column on every toggle. */}
-      <SectionBody section={section} library={library} />
+      <SectionBody section={section} index={index} library={library} />
     </li>
   );
 }
