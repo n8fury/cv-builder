@@ -18,10 +18,25 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
+import {
+  FALLBACK_FONTS_CLASS,
+  findFontProblems,
+  requiredFaceDescriptors,
+} from "@/lib/render/font-check";
+
 /** 612pt at 96dpi — the page's own width, before any fit-to-column scaling. */
 const PAGE_WIDTH_PX = 816;
 
-export function PreviewFrame({ css, children }: { css: string; children: ReactNode }) {
+export function PreviewFrame({
+  css,
+  children,
+  onFontProblems,
+}: {
+  css: string;
+  children: ReactNode;
+  /** Called once the faces have resolved, with one message per unusable face. */
+  onFontProblems?: (problems: string[]) => void;
+}) {
   const frame = useRef<HTMLIFrameElement>(null);
   const column = useRef<HTMLDivElement>(null);
   const [body, setBody] = useState<HTMLElement | null>(null);
@@ -48,6 +63,30 @@ export function PreviewFrame({ css, children }: { css: string; children: ReactNo
     observer.observe(body);
     return () => observer.disconnect();
   }, [body]);
+
+  // §13, §15.14: a face that fails to load costs the preview its typography
+  // and nothing else. The same check the export hard-fails on runs here, and
+  // the result only downgrades the type and raises a warning — the editor
+  // stays usable, and nothing waits on this.
+  useEffect(() => {
+    if (!body) return;
+    const doc = body.ownerDocument;
+    let live = true;
+    void (async () => {
+      // Settles either way — a missing woff2 resolves it just as a loaded one
+      // does, which is exactly why the check below still has to run.
+      await doc.fonts.ready;
+      const problems = await findFontProblems(requiredFaceDescriptors(), doc);
+      if (!live) return;
+      // Ends `font-display: block`'s three-second wait for a face that is
+      // never coming, rather than holding a blank page for it.
+      doc.documentElement.classList.toggle(FALLBACK_FONTS_CLASS, problems.length > 0);
+      onFontProblems?.(problems);
+    })();
+    return () => {
+      live = false;
+    };
+  }, [body, onFontProblems]);
 
   // Shrink to fit a narrow column, never enlarge — a preview shown above 100%
   // would misrepresent the printed page.

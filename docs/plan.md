@@ -829,11 +829,55 @@ and completion state.
     print media, the harness's character-for-character text assertion would
     have caught the `Page 2` labels, and the exported PDF is unchanged.
 
-- [ ] Task 6.10: Fall back to `serif` in the preview when fonts fail, without
+- [x] Task 6.10: Fall back to `serif` in the preview when fonts fail, without
       blocking (§13, §15.14)
   - Verification: with a woff2 removed, the editor preview still renders in
     `serif` with a non-blocking warning, while `/api/generate-pdf` still
     hard-fails.
+  - Result: with `charis-italic.woff2` moved aside, the editor read back
+    `rootClass: "resume-fallback-fonts"`, `nameFamily: "serif"`,
+    `subtitleFamily: "serif"` and the name still on the page
+    (`Jordan A. Rivera`), above the warning *Preview is showing a fallback
+    serif. CV Charis italic 400 failed to load (status: error). The layout
+    below is not to scale, and PDF export will fail until the fonts are
+    rebuilt — run npm run build:fonts.* Nothing was disabled by it: 1 of 210
+    controls, the same lone Save button disabled for being clean in the
+    baseline run. In the same state `/api/generate-pdf` returned **500 /
+    `application/json` / `PDF generation aborted — font faces unavailable: CV
+    Charis italic 400 failed to load (status: error)`**. Restored, the warning
+    is gone, all four faces read `loaded`, the export is 200, and the harness
+    exits 0 both ways (84/84, text and faces identical). No page errors.
+  - Both halves now ask the same question. `findFontProblems` in
+    `lib/render/font-check.ts` is the single implementation, run in the
+    preview iframe by the editor and serialised into the printed page by
+    Puppeteer; §13 splits the *response* to a dead face by path, not the
+    judgement, and two implementations would have been free to disagree about
+    which faces are usable.
+  - That function has to stay self-contained — Puppeteer ships its source, so
+    a module-scope reference would compile clean and fail inside Chromium as
+    an opaque `ReferenceError`. `font-check.test.ts` reads the file and
+    rejects one, which is cheaper than discovering it in an export.
+  - The preview does not merely end up in `serif`, it gets there in 300ms.
+    Every face is `font-display: block` (§8 — a fallback must never paint on
+    the export path), so a face that is never coming costs the preview the
+    full three-second block period as a blank page. Once the check has
+    confirmed the face is dead, `FALLBACK_FONTS_CLASS` on the preview root
+    ends that wait — measured at 300ms from `DOMContentLoaded`, against a
+    3000ms block period. That class is set by editor JavaScript only; nothing
+    on the print route can reach it, so the export still cannot substitute.
+  - The fallback rule has to name every selector that pins an embedded
+    family, not just the page: `.resume-entry-subtitle` pins `"CV Charis"`
+    separately and would otherwise stay blank while the rest of the document
+    painted. A test pairs the two lists off against `resume.css`, so a new
+    rule naming `"CV Charter"` or `"CV Charis"` without an override fails
+    `npm test`.
+  - The warning says both halves on purpose — that the preview is not to
+    scale, *and* that the export will refuse. Falling back quietly would make
+    the preview a faithful picture of nothing, and the first sign of trouble
+    would be an export 500ing for no visible reason.
+  - Not touched: `font-display: block` in `fonts.css`, and the export's
+    behaviour. The route's own check moved into the shared module and its
+    output is byte-identical — same message, same 500.
 
 ---
 

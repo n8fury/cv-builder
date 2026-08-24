@@ -11,7 +11,7 @@ import { NextResponse } from "next/server";
 import puppeteer, { type Browser, type Page } from "puppeteer";
 
 import { NotFoundError } from "@/lib/data/store";
-import { REQUIRED_FONT_FACES, faceLabel, faceShorthand } from "@/lib/render/fonts";
+import { findFontProblems, requiredFaceDescriptors } from "@/lib/render/font-check";
 import { loadRenderModel } from "@/lib/render/load";
 import { PDF_PAGE_OPTIONS } from "@/lib/render/pdf-options";
 import { contentDisposition, renderPath } from "@/lib/routes";
@@ -26,55 +26,17 @@ function errorResponse(status: number, message: string) {
 }
 
 /**
- * Verify every required face actually loaded, in the page that is about to be
- * printed (SPEC §8, §13, §15.14).
+ * Verify every required face actually loaded, in the page about to be printed
+ * (SPEC §8, §13, §15.14).
  *
- * `document.fonts.ready` alone is not enough: it settles once loading has
- * *finished*, successfully or not, so a missing woff2 resolves it just the
- * same and the page paints in `serif`. Each face is therefore looked up among
- * the document's CSS-connected faces, forced to load if the page never used
- * it, and checked. Returns one message per unusable face, empty when all four
- * are good.
+ * The judgement itself lives in `lib/render/font-check.ts` and is shared with
+ * the editor's preview warning, so the two paths cannot drift apart on what
+ * counts as a usable face. Puppeteer serialises the function's source into
+ * the page, which is why it takes its faces as an argument rather than
+ * importing them.
  */
 async function checkFonts(page: Page): Promise<string[]> {
-  const required = REQUIRED_FONT_FACES.map((face) => ({
-    label: faceLabel(face),
-    family: face.family,
-    style: face.style,
-    weight: String(face.weight),
-    shorthand: faceShorthand(face),
-  }));
-
-  return page.evaluate(async (faces) => {
-    const declared: FontFace[] = [];
-    document.fonts.forEach((face) => declared.push(face));
-
-    const problems: string[] = [];
-    for (const wanted of faces) {
-      const face = declared.find(
-        (candidate) =>
-          candidate.family.replace(/^["']|["']$/g, "") === wanted.family &&
-          candidate.style === wanted.style &&
-          candidate.weight === wanted.weight,
-      );
-      if (!face) {
-        problems.push(`${wanted.label} is not declared in the document`);
-        continue;
-      }
-      // A face the resume never uses is still required to exist: whether this
-      // variant happens to render italics must not decide whether the export
-      // is trustworthy.
-      if (face.status === "unloaded") {
-        await face.load().catch(() => undefined);
-      }
-      if (face.status !== "loaded") {
-        problems.push(`${wanted.label} failed to load (status: ${face.status})`);
-      } else if (!document.fonts.check(wanted.shorthand)) {
-        problems.push(`${wanted.label} loaded but document.fonts.check() rejects it`);
-      }
-    }
-    return problems;
-  }, required);
+  return page.evaluate(findFontProblems, requiredFaceDescriptors());
 }
 
 export async function GET(request: Request) {

@@ -19,6 +19,7 @@ import { resolveVariant } from "@/lib/data/resolve";
 import type { Pagination } from "@/lib/render/pagination";
 
 import { EditorStoreProvider, useEditor } from "./EditorStoreProvider";
+import { FontWarning } from "./FontWarning";
 import { PageCount } from "./PageCount";
 import { PreviewFrame } from "./PreviewFrame";
 import { SaveControls } from "./SaveControls";
@@ -28,9 +29,11 @@ import { isDirty, type EditorSnapshot } from "./store";
 function Preview({
   css,
   onPaginate,
+  onFontProblems,
 }: {
   css: string;
   onPaginate: (pagination: Pagination) => void;
+  onFontProblems: (problems: string[]) => void;
 }) {
   const draft = useEditor((state) => state.draft);
 
@@ -60,7 +63,7 @@ function Preview({
   // crosses out of the iframe without either side knowing about the other.
   return (
     <PaginationReporter value={onPaginate}>
-      <PreviewFrame css={css}>
+      <PreviewFrame css={css} onFontProblems={onFontProblems}>
         <ResumeDocument model={resolved.model!} />
       </PreviewFrame>
     </PaginationReporter>
@@ -88,8 +91,10 @@ function Status() {
 
 export function EditorShell({ snapshot, css }: { snapshot: EditorSnapshot; css: string }) {
   const [pagination, setPagination] = useState<Pagination>({ breaks: [], pageCount: 1 });
+  const [fontProblems, setFontProblems] = useState<string[]>([]);
   // Stable: the preview re-runs its reporting effect whenever this changes.
   const onPaginate = useCallback((next: Pagination) => setPagination(next), []);
+  const onFontProblems = useCallback((next: string[]) => setFontProblems(next), []);
 
   return (
     // Keyed by the open document: Save As navigates to a different variant
@@ -121,7 +126,8 @@ export function EditorShell({ snapshot, css }: { snapshot: EditorSnapshot; css: 
             <VariantForm />
           </div>
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-            <Preview css={css} onPaginate={onPaginate} />
+            <FontWarning problems={fontProblems} />
+            <Preview css={css} onPaginate={onPaginate} onFontProblems={onFontProblems} />
           </div>
         </div>
       </div>

@@ -165,6 +165,20 @@ body {
   }
 }
 
+/* Fallback typography (§13, §15.14). Set on the root by the editor once the
+   font check has found a face that will not load — see FALLBACK_FONTS_CLASS
+   in lib/render/font-check.ts. Every face is `font-display: block`, so
+   without this the preview holds a blank page for the full three-second
+   block period before painting anything at all.
+
+   Deliberately unreachable from the print route: the export refuses to
+   produce a PDF at all when a face is missing, and must never be able to
+   substitute one instead. */
+.resume-fallback-fonts .resume-page,
+.resume-fallback-fonts .resume-entry-subtitle {
+  font-family: serif;
+}
+
 /* Page-boundary guides (§11.5). Informational chrome, not part of the
    document: a hairline wherever a page ends, so a CV that runs long shows
    where each break will fall. Absolutely positioned and pointer-transparent,
