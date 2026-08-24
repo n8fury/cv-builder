@@ -630,10 +630,53 @@ and completion state.
     sentences, so they render as a wrapped row of checkboxes rather than the
     stack of text fields bullets need.
 
-- [ ] Task 6.6: Add drag-to-reorder for sections, entries, and bullets via
+- [x] Task 6.6: Add drag-to-reorder for sections, entries, and bullets via
       `@dnd-kit` (§7, §15.3)
   - Verification: dragging a section reorders it in the preview and rewrites the
     variant's section array position; no `order` field is written anywhere.
+  - Result: driven through the page with Puppeteer, using dnd-kit's own
+    keyboard sensor. Dragging Certifications up two moved the form list from
+    `[…, projects, education, skills, certifications]` to
+    `[…, projects, certifications, education, skills]` and the preview's
+    section list followed exactly; the dirty indicator flipped to "Unsaved
+    changes". Entries: the first project moved down one and the preview's
+    titles swapped to `[ML-Based Symptom Triage, Fleet Drive-Cycle Analysis]`.
+    Bullets: the first two Experience bullets swapped in the preview. Skills,
+    both levels: the Languages group moved down two and `skill-react` moved
+    one place right inside Frontend (`React.js` now ends that line). Only a
+    pre-existing `/favicon.ico` 404 in the console.
+  - **Deferred half**: "rewrites the variant's section array position" *on
+    disk* waits on Save (Task 6.8) — the editor still writes nothing. The
+    array itself is asserted now: unit tests drive all three levels and check
+    the resulting draft, including that a bullet move inside `exp-1` leaves
+    `exp-2`'s same-named bullet alone.
+  - No `order` field is written because none is ever constructed: every move
+    is a splice within the variant's own array (`ordering.ts`). A test pins it
+    by stringifying the moved draft and requiring no `"order"` key, and the
+    strict schema (§15.3) would reject one on read regardless.
+  - Only *included* items drag. The variant's array is exactly its included
+    list, so an excluded item has no position to move — the "Not in this
+    variant" rows therefore render outside the sortable list entirely, rather
+    than sitting inside it as drop targets that silently do nothing.
+  - The bullet and skill lists were re-split to match the entry list: included
+    first in the variant's order (§15.3), the rest greyed below. They
+    previously rendered in library order throughout, so the form could not
+    show a bullet reorder at all.
+  - Dragging is from an explicit handle, never the row: every row here is full
+    of checkboxes and textareas that a row-wide listener would fight. The
+    handle is a real `<button>`, which is also what makes the keyboard sensor
+    — and this verification — work.
+  - One `DndContext` per list, not one per section. Bullet IDs are unique only
+    within their entry and the seed library already repeats one, so a context
+    spanning a whole section would see duplicate draggable IDs.
+  - Sections are keyed by type-and-occurrence (`custom#0`, `custom#1`), not by
+    index: an index changes under the very drag that uses it, remounting every
+    row below the drop. Occurrence number is needed because §12.4 allows
+    several custom sections.
+  - Defect found while verifying: dnd-kit numbers its ARIA description element
+    from a module-level counter, which server and client do not walk in the
+    same order, so every list hydrated mismatched on this server-rendered
+    page. Each `DndContext` now takes a `useId()` value.
 
 - [ ] Task 6.7: Implement the new-content flow — everything typed is written to the
       library first (§6.3)

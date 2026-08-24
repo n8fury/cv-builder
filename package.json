@@ -20,6 +20,9 @@
     "harness:export": "node scripts/harness.mjs --export"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@tailwindcss/postcss": "^4.3.3",
     "next": "16.3.2",
     "postcss": "^8.5.26",

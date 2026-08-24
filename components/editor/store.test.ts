@@ -234,6 +234,80 @@ describe("editor store", () => {
     });
   });
 
+  it("reorders sections by array position", () => {
+    const store = open();
+    store.getState().moveSection(3, 1);
+    expect(store.getState().draft.variant.sections.map((section) => section.type)).toEqual([
+      "header",
+      "skills",
+      "aboutMe",
+      "experience",
+    ]);
+    // Only the draft moves; disk order is untouched until Save.
+    expect(store.getState().saved.variant.sections.map((section) => section.type)).toEqual([
+      "header",
+      "aboutMe",
+      "experience",
+      "skills",
+    ]);
+  });
+
+  it("reorders entries within a section", () => {
+    const store = open();
+    store.getState().setEntryIncluded(2, "exp-2", true);
+    store.getState().moveEntry(2, "exp-2", "exp-1");
+    expect(store.getState().draft.variant.sections[2]).toMatchObject({
+      entries: [{ id: "exp-2" }, { id: "exp-1" }],
+    });
+  });
+
+  it("reorders bullets within one entry, leaving its twin alone", () => {
+    const store = open();
+    store.getState().setEntryIncluded(2, "exp-2", true);
+    store.getState().moveBullet(2, "exp-1", "b2", "b1");
+    expect(store.getState().draft.variant.sections[2]).toMatchObject({
+      entries: [
+        { id: "exp-1", bullets: ["b2", "b1"] },
+        // exp-2 has a bullet with the same ID; the move must not reach it.
+        { id: "exp-2", bullets: ["b1"] },
+      ],
+    });
+  });
+
+  it("reorders skill groups and the skills inside one (§12.3)", () => {
+    const store = open();
+    store.getState().setEntryIncluded(3, "skills-frontend", true);
+    store.getState().moveEntry(3, "skills-frontend", "skills-backend");
+    store.getState().moveBullet(3, "skills-backend", "skill-express", "skill-nodejs");
+    expect(store.getState().draft.variant.sections[3]).toMatchObject({
+      groups: [
+        { id: "skills-frontend", skills: ["skill-react"] },
+        { id: "skills-backend", skills: ["skill-express", "skill-nodejs"] },
+      ],
+    });
+  });
+
+  it("ignores a move aimed at a section that holds no such list", () => {
+    const store = open();
+    // Header and About Me are option-only; Languages renders whole (§15.6).
+    store.getState().moveEntry(0, "a", "b");
+    store.getState().moveBullet(1, "e", "a", "b");
+    // And an index past the end of the section array.
+    store.getState().moveSection(9, 0);
+    expect(isDirty(store.getState())).toBe(false);
+  });
+
+  it("writes no order field at any level (§15.3)", () => {
+    const store = open();
+    store.getState().setEntryIncluded(2, "exp-2", true);
+    store.getState().moveSection(3, 1);
+    store.getState().moveEntry(3, "exp-2", "exp-1");
+    store.getState().moveBullet(3, "exp-1", "b2", "b1");
+    // Array position is the sole source of truth; a rank field alongside it is
+    // exactly the desync §15.3 removed.
+    expect(JSON.stringify(store.getState().draft.variant)).not.toContain('"order"');
+  });
+
   it("reverts the whole document, library included", () => {
     const store = open();
     store.getState().setLabel("Tailored");

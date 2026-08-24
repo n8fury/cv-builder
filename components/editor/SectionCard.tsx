@@ -15,7 +15,9 @@ import type { VariantSection } from "@/lib/schema/variant";
 
 import { EntryCuration } from "./EntryCuration";
 import { useEditor } from "./EditorStoreProvider";
+import { DragHandle, useSortableRow } from "./Sortable";
 import { SkillCuration } from "./SkillCuration";
+import { ordered } from "./ordering";
 
 const SELECT = "rounded border border-gray-300 px-1.5 py-0.5 text-xs text-gray-900";
 
@@ -35,20 +37,6 @@ function MissingRef({ id }: { id: string }) {
       <span className="font-mono">{id}</span> — not in the library
     </p>
   );
-}
-
-/**
- * Included items first, in the variant's order (§15.3), then everything else
- * the library offers. The form's order is the CV's order, so the two columns
- * read the same way down the page.
- */
-function ordered<T extends { id: string }>(all: readonly T[], includedIds: readonly string[]): T[] {
-  const byId = new Map(all.map((item) => [item.id, item]));
-  const included = includedIds.flatMap((id) => {
-    const found = byId.get(id);
-    return found ? [found] : [];
-  });
-  return [...included, ...all.filter((item) => !includedIds.includes(item.id))];
 }
 
 function SectionBody({
@@ -330,18 +318,29 @@ export function SectionCard({
   section,
   index,
   library,
+  sortId,
 }: {
   section: VariantSection;
   index: number;
   library: ContentLibrary;
+  sortId: string;
 }) {
   const setSectionVisible = useEditor((state) => state.setSectionVisible);
+  const { ref, style, dragging, handleProps } = useSortableRow(sortId);
+  const title = sectionTitle(section, library);
 
   return (
-    <li data-section={section.type} data-index={index} className={section.visible ? undefined : "bg-gray-50"}>
+    <li
+      ref={ref}
+      style={style}
+      data-section={section.type}
+      data-index={index}
+      className={`${section.visible ? "bg-white" : "bg-gray-50"} ${dragging ? "shadow-lg" : ""}`}
+    >
       <div className="flex items-baseline gap-2 px-3 py-2">
+        <DragHandle label={`Reorder ${title} section`} handleProps={handleProps} />
         <span className={`text-sm ${section.visible ? "text-gray-900" : "text-gray-400"}`}>
-          {sectionTitle(section, library)}
+          {title}
         </span>
         <span className="font-mono text-xs text-gray-400">{section.type}</span>
         <label className="ml-auto flex items-center gap-1.5 text-xs text-gray-600">

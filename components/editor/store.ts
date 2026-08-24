@@ -15,6 +15,8 @@
  */
 import { createStore } from "zustand/vanilla";
 
+import { moved, movedById, movedIds } from "./ordering";
+
 import type { Bullet, ContentLibrary } from "@/lib/schema/library";
 import type {
   HeaderMode,
@@ -74,6 +76,17 @@ export interface EditorState {
    * a skill group (§12.3) — one ID list nested in another, either way.
    */
   setBulletIncluded(index: number, entryId: string, bulletId: string, included: boolean): void;
+  /**
+   * Reordering, the same three levels as curation (§7). Array position is the
+   * whole of a variant's ordering (§15.3), so these move items inside the
+   * variant's own arrays and write no rank field anywhere.
+   *
+   * Sections have no ID, so they move by index; entries and bullets move by
+   * the pair of IDs a drop reports — dragged item onto target.
+   */
+  moveSection(from: number, to: number): void;
+  moveEntry(index: number, fromId: string, toId: string): void;
+  moveBullet(index: number, entryId: string, fromId: string, toId: string): void;
   /** Throw the draft away and go back to the files on disk. */
   revert(): void;
 }
@@ -370,6 +383,61 @@ function includeBullet(
   return { ...section, entries };
 }
 
+/**
+ * Reorders one section's curated list. Only the *included* items are here to
+ * move: the variant's array is exactly what it includes, and everything else
+ * the form offers sits in library order outside it.
+ *
+ * One branch per collection rather than a shared `entries` write, for the same
+ * reason `includeEntry` is written that way — the entry shapes differ, and a
+ * union write would lose that.
+ */
+function moveEntryIn(section: VariantSection, fromId: string, toId: string): VariantSection {
+  switch (section.type) {
+    case "competencies":
+      return { ...section, items: movedIds(section.items, fromId, toId) };
+    case "experience":
+      return { ...section, entries: movedById(section.entries, fromId, toId) };
+    case "projects":
+      return { ...section, entries: movedById(section.entries, fromId, toId) };
+    case "education":
+      return { ...section, entries: movedById(section.entries, fromId, toId) };
+    case "certifications":
+      return { ...section, entries: movedById(section.entries, fromId, toId) };
+    case "recommendations":
+      return { ...section, entries: movedById(section.entries, fromId, toId) };
+    // A skill group sits at entry level, as §12.3 defines it (§5.7).
+    case "skills":
+      return { ...section, groups: movedById(section.groups, fromId, toId) };
+    // Nothing to order: Languages renders the library list whole (§15.6), and
+    // the option-only sections hold no list at all.
+    default:
+      return section;
+  }
+}
+
+/** The nested list: an entry's bullets, or a skill group's skills (§12.3). */
+function moveBulletIn(
+  section: VariantSection,
+  entryId: string,
+  fromId: string,
+  toId: string,
+): VariantSection {
+  if (section.type === "skills") {
+    return {
+      ...section,
+      groups: section.groups.map((ref) =>
+        ref.id === entryId ? { ...ref, skills: movedIds(ref.skills, fromId, toId) } : ref,
+      ),
+    };
+  }
+  if (section.type !== "experience" && section.type !== "projects") return section;
+  const entries = section.entries.map((ref) =>
+    ref.id === entryId ? { ...ref, bullets: movedIds(ref.bullets, fromId, toId) } : ref,
+  );
+  return { ...section, entries };
+}
+
 export function createEditorStore({ profileId, variantId, ...document }: EditorSnapshot) {
   return createStore<EditorState>()((set) => ({
     profileId,
@@ -453,6 +521,34 @@ export function createEditorStore({ profileId, variantId, ...document }: EditorS
           ...draft,
           variant: withSectionAny(draft.variant, index, (section) =>
             includeBullet(draft.library, section, entryId, bulletId, included),
+          ),
+        },
+      })),
+
+    moveSection: (from, to) =>
+      set(({ draft }) => ({
+        draft: {
+          ...draft,
+          variant: { ...draft.variant, sections: moved(draft.variant.sections, from, to) },
+        },
+      })),
+
+    moveEntry: (index, fromId, toId) =>
+      set(({ draft }) => ({
+        draft: {
+          ...draft,
+          variant: withSectionAny(draft.variant, index, (section) =>
+            moveEntryIn(section, fromId, toId),
+          ),
+        },
+      })),
+
+    moveBullet: (index, entryId, fromId, toId) =>
+      set(({ draft }) => ({
+        draft: {
+          ...draft,
+          variant: withSectionAny(draft.variant, index, (section) =>
+            moveBulletIn(section, entryId, fromId, toId),
           ),
         },
       })),
