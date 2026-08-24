@@ -11,18 +11,27 @@
  * reserves for the explicit export action.
  */
 import Link from "next/link";
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { ResumeDocument } from "@/components/resume/ResumeDocument";
+import { PaginationReporter } from "@/components/resume/pagination-context";
 import { resolveVariant } from "@/lib/data/resolve";
+import type { Pagination } from "@/lib/render/pagination";
 
 import { EditorStoreProvider, useEditor } from "./EditorStoreProvider";
+import { PageCount } from "./PageCount";
 import { PreviewFrame } from "./PreviewFrame";
 import { SaveControls } from "./SaveControls";
 import { VariantForm } from "./VariantForm";
 import { isDirty, type EditorSnapshot } from "./store";
 
-function Preview({ css }: { css: string }) {
+function Preview({
+  css,
+  onPaginate,
+}: {
+  css: string;
+  onPaginate: (pagination: Pagination) => void;
+}) {
   const draft = useEditor((state) => state.draft);
 
   // A draft can reference a library item that is gone — a hand-edited or
@@ -47,10 +56,14 @@ function Preview({ css }: { css: string }) {
     );
   }
 
+  // Context reaches the resume through the portal, so the page-count reading
+  // crosses out of the iframe without either side knowing about the other.
   return (
-    <PreviewFrame css={css}>
-      <ResumeDocument model={resolved.model!} />
-    </PreviewFrame>
+    <PaginationReporter value={onPaginate}>
+      <PreviewFrame css={css}>
+        <ResumeDocument model={resolved.model!} />
+      </PreviewFrame>
+    </PaginationReporter>
   );
 }
 
@@ -74,6 +87,10 @@ function Status() {
 }
 
 export function EditorShell({ snapshot, css }: { snapshot: EditorSnapshot; css: string }) {
+  const [pagination, setPagination] = useState<Pagination>({ breaks: [], pageCount: 1 });
+  // Stable: the preview re-runs its reporting effect whenever this changes.
+  const onPaginate = useCallback((next: Pagination) => setPagination(next), []);
+
   return (
     // Keyed by the open document: Save As navigates to a different variant
     // under the same route, and React would otherwise reuse the component —
@@ -93,6 +110,7 @@ export function EditorShell({ snapshot, css }: { snapshot: EditorSnapshot; css: 
             Dashboard
           </Link>
           <div className="ml-auto flex items-center gap-3">
+            <PageCount pagination={pagination} />
             <Status />
             <SaveControls />
           </div>
@@ -103,7 +121,7 @@ export function EditorShell({ snapshot, css }: { snapshot: EditorSnapshot; css: 
             <VariantForm />
           </div>
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-            <Preview css={css} />
+            <Preview css={css} onPaginate={onPaginate} />
           </div>
         </div>
       </div>

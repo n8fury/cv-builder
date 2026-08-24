@@ -9,11 +9,13 @@
  */
 import type { ReactNode } from "react";
 
+import { PageGuides } from "./PageGuides";
+
 export function ResumePage({ children }: { children: ReactNode }) {
   return (
     <div className="resume-page">
       {children}
-      <div className="resume-page-guides" aria-hidden="true" />
+      <PageGuides />
     </div>
   );
 }

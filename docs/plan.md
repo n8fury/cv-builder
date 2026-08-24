@@ -775,10 +775,59 @@ and completion state.
     navigates to a different variant under the same route, and React would
     otherwise reuse the component and hand the fork the parent's store.
 
-- [ ] Task 6.9: Show page-boundary guides and a live overflow indicator (§11.5)
+- [x] Task 6.9: Show page-boundary guides and a live overflow indicator (§11.5)
   - Verification: adding enough bullets to cross a page boundary surfaces the
     indicator; export remains enabled — the indicator is informational, not
     blocking.
+  - Result: driven through the page with Puppeteer. Hiding Experience,
+    Projects and Certifications took `detailed` down to a single page
+    (`1 page`, no guides); with Projects back but every project bullet
+    un-ticked it stayed at one, and ticking them back one at a time flipped
+    the indicator on the sixth (`st-gui`) to `2 pages — crosses a page
+    boundary`, with a `Page 2` guide appearing at 736.99pt. No page errors.
+  - Export remains enabled and unaffected: the same variant exports 200 /
+    `application/pdf` / **128,461 bytes — the identical size recorded in Task
+    4.1** — with `/MediaBox [0 0 612 792]` on both pages, and
+    `npm run harness -- --pdf` still reports 84/84 within +/-2pt, text and
+    faces identical. Nothing in the indicator gates any control; the Download
+    button it would have to block lives on the dashboard and never sees it.
+  - The guides were wrong before this and are now measured. They were a
+    repeating hairline every `--page-height`, which is right for page one
+    only: every later page loses 110pt to its own margins, so the drawn line
+    ran an inch ahead of the real one by page two, and further with each page
+    after that.
+  - `lib/render/pagination.ts` is the replacement — a pure model of the two
+    fragmentation rules the stylesheet actually uses: `break-inside: avoid`
+    (push the atom whole) and `break-after: avoid` (§15.11 — a pushed entry
+    takes its heading with it). `PageGuides.tsx` measures the document and
+    feeds it; the split keeps the interesting half testable without a DOM.
+  - Cross-checked against the printer, not just against itself: for
+    unmodified `detailed` the model puts the break immediately above the
+    **Projects** heading, and `Projects` is exactly what opens page 2 of the
+    exported PDF.
+  - The atom selectors live in `page-blocks.ts`, and `page-blocks.test.ts`
+    holds them against `resume.css` — a `break-inside: avoid` added to the
+    stylesheet alone would leave the guides modelling a page the printer no
+    longer produces, and now fails `npm test` instead.
+  - A break inside ordinary prose is reported at the page's full height,
+    since the model does not know where the lines are — accurate to within
+    one 12pt leading. Every break an atom forces, which is where all the
+    visible movement comes from, is exact.
+  - Measuring runs on every commit, not on a ResizeObserver alone: a section
+    reorder moves the breaks without changing the document's height, which an
+    observer would never see. Re-measuring cannot cause a re-render, because
+    an unchanged reading returns the previous object.
+  - The reading leaves the document by React context. In the editor the
+    resume is inside an iframe with no DOM path to the chrome, but the
+    preview is portalled, so the two are one React tree; the print route
+    provides no listener and pays nothing.
+  - Scale is derived from the page box (`rect.width / 612`) rather than
+    assumed to be 96/72, so blocks and page height convert on whatever the
+    browser rounded 612pt to. A 0.5pt tolerance stops a sub-pixel crumb from
+    inventing a second page on a CV that fills its first exactly.
+  - Still screen-only: `.resume-page-guides` computes `display: none` under
+    print media, the harness's character-for-character text assertion would
+    have caught the `Page 2` labels, and the exported PDF is unchanged.
 
 - [ ] Task 6.10: Fall back to `serif` in the preview when fonts fail, without
       blocking (§13, §15.14)

@@ -166,11 +166,16 @@ body {
 }
 
 /* Page-boundary guides (§11.5). Informational chrome, not part of the
-   document: a repeating hairline every --page-height down the page, so a CV
-   that runs long shows where each break will fall. Absolutely positioned and
-   pointer-transparent, so it contributes nothing to layout, and confined to
-   screen media — Puppeteer renders under print media (§15.10), which is what
-   keeps the guides out of every exported PDF.
+   document: a hairline wherever a page ends, so a CV that runs long shows
+   where each break will fall. Absolutely positioned and pointer-transparent,
+   so it contributes nothing to layout, and confined to screen media —
+   Puppeteer renders under print media (§15.10), which is what keeps the
+   guides out of every exported PDF.
+
+   The offsets come from PageGuides.tsx, which measures the document and runs
+   the §11.5 pagination model over it. They cannot be a repeating background:
+   every page after the first loses 110pt to its own margins, so a hairline
+   every --page-height is right once and then drifts by an inch a page.
 
    The line weight is in pixels on purpose: this is a screen hairline, not a
    §4 measurement, and it has no business in metrics.ts. */
@@ -187,14 +192,29 @@ body {
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background-image: repeating-linear-gradient(
-      to bottom,
-      transparent 0,
-      transparent calc(var(--page-height) - 1px),
-      var(--page-guide-color) calc(var(--page-height) - 1px),
-      var(--page-guide-color) var(--page-height)
-    );
   }
+}
+
+.resume-page-guide {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px dashed var(--page-guide-color);
+}
+
+/* Sits in the next page's top margin, clear of the text on either side. The
+   sans stack is deliberate — this is a label on the document, not part of
+   it, and must not read as resume copy. Sized in pixels for the same reason
+   the hairline is: screen chrome, with no §4 measurement behind it. */
+.resume-page-guide-label {
+  position: absolute;
+  right: 0;
+  top: 3px;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 8px;
+  line-height: 1;
+  letter-spacing: 0.3px;
+  color: var(--page-guide-color);
 }
 
 /* Header (§5.1, §15.9). The name block sits flush against the top padding
