@@ -54,7 +54,12 @@ export function VariantForm() {
         ) : (
           <ul className="divide-y divide-gray-100 rounded border border-gray-200">
             {sections.map((section, index) => (
-              <SectionCard key={`${section.type}-${index}`} section={section} library={library} />
+              <SectionCard
+                key={`${section.type}-${index}`}
+                section={section}
+                index={index}
+                library={library}
+              />
             ))}
           </ul>
         )}

@@ -8,7 +8,10 @@ import { createEditorStore, isDirty, type EditorSnapshot } from "./store";
 const library = {
   schemaVersion: 1,
   header: { name: "A", location: "", email: "", phone: "", linkedin: "", github: "" },
-  aboutMe: [],
+  aboutMe: [
+    { id: "about-default", key: "default", text: "Default about.", tags: [] },
+    { id: "about-short", key: "short", text: "Short about.", tags: [] },
+  ],
   competencies: [],
   experience: [
     {
@@ -49,6 +52,8 @@ const variant = {
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
   sections: [
+    { type: "header", visible: true, options: { mode: "full" } },
+    { type: "aboutMe", visible: true, options: { aboutMeId: "about-default" } },
     {
       type: "experience",
       visible: true,
@@ -94,6 +99,33 @@ describe("editor store", () => {
     store.getState().setTag("other");
     store.getState().setTag("detailed");
     expect(isDirty(store.getState())).toBe(false);
+  });
+
+  it("toggles a section's visibility by array position", () => {
+    const store = open();
+    store.getState().setSectionVisible(1, false);
+    expect(store.getState().draft.variant.sections[1].visible).toBe(false);
+    expect(store.getState().draft.variant.sections[0].visible).toBe(true);
+    expect(store.getState().saved.variant.sections[1].visible).toBe(true);
+  });
+
+  it("writes per-section options", () => {
+    const store = open();
+    store.getState().setHeaderMode(0, "minimal");
+    store.getState().setAboutMeId(1, "about-short");
+
+    const [header, aboutMe] = store.getState().draft.variant.sections;
+    expect(header).toMatchObject({ type: "header", options: { mode: "minimal" } });
+    expect(aboutMe).toMatchObject({ type: "aboutMe", options: { aboutMeId: "about-short" } });
+  });
+
+  it("ignores an option written at an index of the wrong type", () => {
+    const store = open();
+    // An index left over from a reorder must not put header options on the
+    // experience section.
+    store.getState().setHeaderMode(2, "minimal");
+    expect(isDirty(store.getState())).toBe(false);
+    expect(store.getState().draft.variant.sections[2]).toEqual(variant.sections[2]);
   });
 
   it("reverts the whole document, library included", () => {

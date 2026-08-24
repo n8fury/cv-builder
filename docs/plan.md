@@ -542,11 +542,40 @@ and completion state.
   - The form lists each entry's *curated* bullets, the same subset the preview
     renders, so the two columns cannot disagree about what is in the CV.
 
-- [ ] Task 6.3: Implement section-level curation — visibility and per-section
+- [x] Task 6.3: Implement section-level curation — visibility and per-section
       `options` (§12.2)
   - Verification: toggling `visible` hides a section in the preview; changing
     header `mode` and `aboutMeId` updates the preview and persists to the variant
     JSON on save.
+  - Result: unchecking Projects took the preview's section list from
+    `[about-me, competencies, experience, projects, education, skills,
+    certifications]` to the same list without `projects`, and re-checking put it
+    back. Header `mode` `minimal → full` turned one contact line into two —
+    `Northside, Springfield, SP-1010 | jordan.rivera@example.com | +1-555-0142`
+    over `linkedin.com/in/jordan-rivera | github.com/jordan-rivera-demo` (§5.1). No page
+    errors.
+  - `aboutMeId`, recommendations `mode` and `customSectionId` were driven on a
+    throwaway `zz-scratch` profile, since the real library has one About Me
+    version and no recommendations or custom sections: the About Me paragraph
+    swapped long → short, Recommendations went from `References available upon
+    request` to the named referee, and the custom section swapped A → B. The
+    scratch profile was deleted afterwards.
+  - **Deferred half**: "persists to the variant JSON on save" waits on Save
+    itself (Task 6.8) — nothing in the editor writes to disk yet. What the save
+    will write is covered now: unit tests assert the draft variant carries
+    `options: { mode: "minimal" }` and `options: { aboutMeId: "about-short" }`
+    after those actions.
+  - Options are written by section *index*, with the expected type passed in and
+    checked. Array position is a section's only identity (§15.3) and a variant
+    may hold several custom sections (§12.4), so index is the address — but an
+    index left over from a reorder must not write header options onto another
+    section, so a type mismatch is a no-op. A test pins that.
+  - A hidden section keeps its editable body in the form: curation is usually
+    prepared before a section is switched back on, and collapsing it would
+    shuffle the whole column on every toggle.
+  - A missing `aboutMeId` / `customSectionId` reference is offered in its select
+    as `<id> (missing)` rather than silently snapping the draft to another
+    item (§13).
 
 - [ ] Task 6.4: Implement entry-level and bullet-level curation toggles (§6.2, §12.3)
   - Verification: unchecking a bullet removes it from the preview and from the

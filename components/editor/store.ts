@@ -16,7 +16,13 @@
 import { createStore } from "zustand/vanilla";
 
 import type { Bullet, ContentLibrary } from "@/lib/schema/library";
-import type { Variant } from "@/lib/schema/variant";
+import type {
+  HeaderMode,
+  RecommendationsMode,
+  SectionType,
+  Variant,
+  VariantSection,
+} from "@/lib/schema/variant";
 
 /** The two files an open editor edits together. */
 export interface EditorDocument {
@@ -46,6 +52,16 @@ export interface EditorState {
    * are part of the address.
    */
   setBulletText(owner: BulletOwner, entryId: string, bulletId: string, text: string): void;
+  /**
+   * Section-level curation (§12.2). Sections are addressed by array position,
+   * because that is their only identity — there is no `order` field and a
+   * variant may hold several custom sections (§15.3, §12.4).
+   */
+  setSectionVisible(index: number, visible: boolean): void;
+  setHeaderMode(index: number, mode: HeaderMode): void;
+  setAboutMeId(index: number, aboutMeId: string): void;
+  setRecommendationsMode(index: number, mode: RecommendationsMode): void;
+  setCustomSectionId(index: number, customSectionId: string): void;
   /** Throw the draft away and go back to the files on disk. */
   revert(): void;
 }
@@ -103,6 +119,33 @@ function withBulletText(
   }
 }
 
+/**
+ * Rewrites one section in place. The type is passed in and checked: an index
+ * left over from a reorder must not write header options onto a projects
+ * section, so a mismatch is a no-op rather than a corrupted variant.
+ */
+function withSection<T extends SectionType>(
+  variant: Variant,
+  index: number,
+  type: T,
+  update: (section: Extract<VariantSection, { type: T }>) => VariantSection,
+): Variant {
+  const section = variant.sections[index];
+  if (section === undefined || section.type !== type) return variant;
+  const sections = [...variant.sections];
+  sections[index] = update(section as Extract<VariantSection, { type: T }>);
+  return { ...variant, sections };
+}
+
+/** `visible` is the one curation field every section type shares (§12.2). */
+function withVisible(variant: Variant, index: number, visible: boolean): Variant {
+  const section = variant.sections[index];
+  if (section === undefined) return variant;
+  const sections = [...variant.sections];
+  sections[index] = { ...section, visible };
+  return { ...variant, sections };
+}
+
 export function createEditorStore({ profileId, variantId, ...document }: EditorSnapshot) {
   return createStore<EditorState>()((set) => ({
     profileId,
@@ -119,6 +162,55 @@ export function createEditorStore({ profileId, variantId, ...document }: EditorS
     setBulletText: (owner, entryId, bulletId, text) =>
       set(({ draft }) => ({
         draft: { ...draft, library: withBulletText(draft.library, owner, entryId, bulletId, text) },
+      })),
+
+    setSectionVisible: (index, visible) =>
+      set(({ draft }) => ({
+        draft: { ...draft, variant: withVisible(draft.variant, index, visible) },
+      })),
+
+    setHeaderMode: (index, mode) =>
+      set(({ draft }) => ({
+        draft: {
+          ...draft,
+          variant: withSection(draft.variant, index, "header", (section) => ({
+            ...section,
+            options: { mode },
+          })),
+        },
+      })),
+
+    setAboutMeId: (index, aboutMeId) =>
+      set(({ draft }) => ({
+        draft: {
+          ...draft,
+          variant: withSection(draft.variant, index, "aboutMe", (section) => ({
+            ...section,
+            options: { aboutMeId },
+          })),
+        },
+      })),
+
+    setRecommendationsMode: (index, mode) =>
+      set(({ draft }) => ({
+        draft: {
+          ...draft,
+          variant: withSection(draft.variant, index, "recommendations", (section) => ({
+            ...section,
+            options: { mode },
+          })),
+        },
+      })),
+
+    setCustomSectionId: (index, customSectionId) =>
+      set(({ draft }) => ({
+        draft: {
+          ...draft,
+          variant: withSection(draft.variant, index, "custom", (section) => ({
+            ...section,
+            options: { customSectionId },
+          })),
+        },
       })),
 
     revert: () => set((state) => ({ draft: state.saved })),
