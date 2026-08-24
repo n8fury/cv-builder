@@ -15,6 +15,7 @@ import type { VariantSection } from "@/lib/schema/variant";
 
 import { EntryCuration } from "./EntryCuration";
 import { useEditor } from "./EditorStoreProvider";
+import { SkillCuration } from "./SkillCuration";
 
 const SELECT = "rounded border border-gray-300 px-1.5 py-0.5 text-xs text-gray-900";
 
@@ -159,6 +160,20 @@ function SectionBody({
             heading: entry.name,
             subheading: [entry.role, entry.location].filter(Boolean).join(" — "),
             included: includedIds.includes(entry.id),
+          }))}
+        />
+      );
+    }
+
+    case "skills": {
+      const includedIds = section.groups.map((ref) => ref.id);
+      return (
+        <SkillCuration
+          sectionIndex={index}
+          choices={ordered(library.skillGroups, includedIds).map((group) => ({
+            group,
+            included: includedIds.includes(group.id),
+            includedSkillIds: section.groups.find((ref) => ref.id === group.id)?.skills ?? [],
           }))}
         />
       );

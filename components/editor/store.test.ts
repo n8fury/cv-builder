@@ -38,7 +38,23 @@ const library = {
   ],
   projects: [],
   education: [],
-  skillGroups: [],
+  skillGroups: [
+    {
+      id: "skills-backend",
+      label: "Backend",
+      tags: [],
+      skills: [
+        { id: "skill-nodejs", text: "Node.js", tags: [] },
+        { id: "skill-express", text: "Express.js", tags: [] },
+      ],
+    },
+    {
+      id: "skills-frontend",
+      label: "Frontend",
+      tags: [],
+      skills: [{ id: "skill-react", text: "React.js", tags: [] }],
+    },
+  ],
   certifications: [],
   recommendations: [],
   languages: [],
@@ -59,6 +75,12 @@ const variant = {
       visible: true,
       options: {},
       entries: [{ id: "exp-1", bullets: ["b1", "b2"] }],
+    },
+    {
+      type: "skills",
+      visible: true,
+      options: {},
+      groups: [{ id: "skills-backend", skills: ["skill-nodejs", "skill-express"] }],
     },
   ],
 } satisfies Variant;
@@ -175,6 +197,41 @@ describe("editor store", () => {
     const store = open();
     store.getState().setEntryIncluded(2, "no-such-entry", true);
     expect(isDirty(store.getState())).toBe(false);
+  });
+
+  it("curates Technical Skills at both levels", () => {
+    const store = open();
+    // A skill inside an included group.
+    store.getState().setBulletIncluded(3, "skills-backend", "skill-express", false);
+    expect(store.getState().draft.variant.sections[3]).toMatchObject({
+      groups: [{ id: "skills-backend", skills: ["skill-nodejs"] }],
+    });
+
+    // And the group wholesale.
+    store.getState().setEntryIncluded(3, "skills-backend", false);
+    expect(store.getState().draft.variant.sections[3]).toMatchObject({ groups: [] });
+  });
+
+  it("restores a re-included group's saved skill selection", () => {
+    const store = open();
+    store.getState().setBulletIncluded(3, "skills-backend", "skill-nodejs", false);
+    store.getState().setEntryIncluded(3, "skills-backend", false);
+    store.getState().setEntryIncluded(3, "skills-backend", true);
+    expect(store.getState().draft.variant.sections[3]).toMatchObject({
+      groups: [{ id: "skills-backend", skills: ["skill-nodejs", "skill-express"] }],
+    });
+    expect(isDirty(store.getState())).toBe(false);
+  });
+
+  it("adds a group the variant never had, with all of its skills", () => {
+    const store = open();
+    store.getState().setEntryIncluded(3, "skills-frontend", true);
+    expect(store.getState().draft.variant.sections[3]).toMatchObject({
+      groups: [
+        { id: "skills-backend", skills: ["skill-nodejs", "skill-express"] },
+        { id: "skills-frontend", skills: ["skill-react"] },
+      ],
+    });
   });
 
   it("reverts the whole document, library included", () => {

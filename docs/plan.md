@@ -609,9 +609,26 @@ and completion state.
     curation at all (§12.3, §15.6). Custom-section bullets get fields but no
     toggles — the library item is the unit there (§12.4).
 
-- [ ] Task 6.5: Implement two-level Technical Skills curation (§12.3)
+- [x] Task 6.5: Implement two-level Technical Skills curation (§12.3)
   - Verification: a group can be excluded wholesale, and individual skills within
     an included group can be toggled; both are reflected in the saved variant.
+  - Result: the Technical Skills card renders 7 group toggles and 33 skill
+    toggles. Unticking `skill-js` turned the preview's first line from
+    `Languages: JavaScript (ES6+), TypeScript, Python, C/C++` into
+    `Languages: TypeScript, Python, C/C++`; unticking the `skills-languages`
+    group then removed that line from the preview altogether. No page errors.
+  - **Deferred half**: "reflected in the saved variant" on disk waits on Save
+    (Task 6.8). The draft is asserted now — a test drives both levels and checks
+    the section becomes `groups: [{ id: "skills-backend", skills:
+    ["skill-nodejs"] }]`, then `groups: []`.
+  - No new store actions: §12.3 defines a skill group as referencing its skills
+    the way an entry references its bullets, so the group goes through
+    `setEntryIncluded` and the skill through `setBulletIncluded`, restore rule
+    included — a re-included group comes back with the skill selection the
+    variant was saved with.
+  - Skills get their own component even so. They are two or three words, not
+    sentences, so they render as a wrapped row of checkboxes rather than the
+    stack of text fields bullets need.
 
 - [ ] Task 6.6: Add drag-to-reorder for sections, entries, and bullets via
       `@dnd-kit` (§7, §15.3)

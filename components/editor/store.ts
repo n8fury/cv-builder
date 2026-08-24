@@ -65,10 +65,14 @@ export interface EditorState {
   /**
    * Entry-level curation (§6.2): an entry is in the variant's list or it is
    * not — there is no `visible` flag below the section level. Covers the flat
-   * item lists too (Core Competencies, §12.3), which follow the same pattern.
+   * item lists too (Core Competencies, §12.3) and Technical Skills' groups,
+   * which §12.3 defines as mirroring how an entry references its bullets.
    */
   setEntryIncluded(index: number, entryId: string, included: boolean): void;
-  /** Bullet-level curation, for the two section types that have bullets (§5.4, §5.5). */
+  /**
+   * The second level: a bullet inside an entry (§5.4, §5.5), or a skill inside
+   * a skill group (§12.3) — one ID list nested in another, either way.
+   */
   setBulletIncluded(index: number, entryId: string, bulletId: string, included: boolean): void;
   /** Throw the draft away and go back to the files on disk. */
   revert(): void;
@@ -206,6 +210,21 @@ function restoredBullets(saved: Variant, index: number, entryId: string, all: re
   return all.map((bullet) => bullet.id);
 }
 
+/** The same restore rule one level down in Technical Skills (§12.3). */
+function restoredSkills(
+  saved: Variant,
+  index: number,
+  groupId: string,
+  all: readonly { id: string }[],
+): string[] {
+  const section = saved.sections[index];
+  if (section?.type === "skills") {
+    const found = section.groups.find((group) => group.id === groupId);
+    if (found) return [...found.skills];
+  }
+  return all.map((skill) => skill.id);
+}
+
 /** Rewrites one section whatever its type; the update narrows for itself. */
 function withSectionAny(
   variant: Variant,
@@ -295,12 +314,31 @@ function includeEntry(
           : withoutId(section.entries, entryId),
       };
 
+    // A skill group is curated exactly like an entry, and its skills like that
+    // entry's bullets — §12.3 defines the shape as mirroring the other (§5.7).
+    case "skills": {
+      if (!included) return { ...section, groups: withoutId(section.groups, entryId) };
+      const group = library.skillGroups.find((item) => item.id === entryId);
+      if (!group) return section;
+      return {
+        ...section,
+        groups: withId(section.groups, ids(library.skillGroups), {
+          id: entryId,
+          skills: restoredSkills(saved, index, entryId, group.skills),
+        }),
+      };
+    }
+
     default:
       return section;
   }
 }
 
-/** Bullets exist on Experience and Projects entries only (§5.4, §5.5, §15.7). */
+/**
+ * The nested ID list: bullets on Experience and Projects entries (§5.4, §5.5,
+ * §15.7), skills inside a skill group (§12.3). Every other section type has
+ * nothing at this level.
+ */
 function includeBullet(
   library: ContentLibrary,
   section: VariantSection,
@@ -308,6 +346,19 @@ function includeBullet(
   bulletId: string,
   included: boolean,
 ): VariantSection {
+  if (section.type === "skills") {
+    const order = ids(
+      library.skillGroups.find((group) => group.id === entryId)?.skills ?? [],
+    );
+    return {
+      ...section,
+      groups: section.groups.map((ref) =>
+        ref.id === entryId
+          ? { ...ref, skills: toggleIds(ref.skills, order, bulletId, included) }
+          : ref,
+      ),
+    };
+  }
   if (section.type !== "experience" && section.type !== "projects") return section;
   const source = section.type === "experience" ? library.experience : library.projects;
   const order = ids(source.find((item) => item.id === entryId)?.bullets ?? []);
