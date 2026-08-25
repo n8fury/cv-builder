@@ -106,7 +106,7 @@ export function PreviewFrame({
         <iframe
           ref={frame}
           title="Resume preview"
-          className="block border-0 bg-white shadow-sm"
+          className="block border-0"
           style={{
             width: PAGE_WIDTH_PX,
             height,

@@ -20,6 +20,7 @@ import {
   BULLET_TO_BULLET_EXTRA_PT,
   COMPANY_TO_FIRST_BULLET_PT,
   CONTACT_LINE_GAP_PT,
+  CONTENT_HEIGHT_PT,
   CONTENT_WIDTH_PT,
   ENTRY_GAP_MARGIN_PT,
   ENTRY_TO_NEXT_ENTRY_PT,
@@ -78,6 +79,7 @@ function declarations(): string[] {
   add("page-height", PAGE_HEIGHT_PT);
   add("page-margin", PAGE_MARGIN_PT);
   add("content-width", CONTENT_WIDTH_PT);
+  add("content-height", CONTENT_HEIGHT_PT);
 
   group("Type sizes (§3)");
   add("font-size-name", NAME_FONT_SIZE_PT);

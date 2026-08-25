@@ -10,14 +10,14 @@
 import type { RenderModel } from "@/lib/data/resolve";
 import { SECTION_TITLE } from "@/lib/render/section-titles";
 
+import { PagedDocument } from "./PagedDocument";
 import { ResumeHeader } from "./ResumeHeader";
-import { ResumePage } from "./ResumePage";
 import { ResumeSection } from "./ResumeSection";
 import { ResumeSectionBody } from "./ResumeSectionBody";
 
 export function ResumeDocument({ model }: { model: RenderModel }) {
   return (
-    <ResumePage>
+    <PagedDocument>
       {model.sections.map((section, index) => {
         const key = `${section.type}-${index}`;
         if (section.type === "header") {
@@ -31,6 +31,6 @@ export function ResumeDocument({ model }: { model: RenderModel }) {
           </ResumeSection>
         );
       })}
-    </ResumePage>
+    </PagedDocument>
   );
 }

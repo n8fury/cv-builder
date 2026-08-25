@@ -1,14 +1,14 @@
 /**
  * Where the printed page breaks fall (SPEC §11.5).
  *
- * The editor preview is one continuous column — a single `.resume-page` box
- * that grows past 792pt rather than a stack of sheets. To draw the boundary
- * guides §11.5 asks for, and to say how many pages the CV runs to, something
- * has to work out where a printer would cut that column.
+ * The document is laid out once, as one continuous flow, and the preview then
+ * shows it as a stack of sheets — each sheet a window onto a slice of that
+ * flow. Nothing observes where the slices fall, because on screen the flow is
+ * never fragmented, so where a printer would cut it has to be worked out.
  *
  * This module is that model, kept pure and free of the DOM so it can be
  * tested against hand-built layouts. The measuring half lives in
- * `components/resume/PageGuides.tsx`.
+ * `components/resume/PagedDocument.tsx`.
  *
  * The model is Chromium's block-fragmentation rules reduced to the two that
  * the resume stylesheet actually uses:
@@ -109,4 +109,44 @@ export function paginate({
   fillTo(contentHeight);
 
   return { breaks, pageCount: breaks.length + 1 };
+}
+
+/** One preview sheet: which page it is, and what slice of the flow it shows. */
+export type PageWindow = {
+  /** 1-based, as printed. */
+  pageNumber: number;
+  /** Flow offset, in points, of the first line this sheet shows. */
+  offset: number;
+  /**
+   * Height of the slice, in points, or `undefined` for the last sheet — which
+   * runs to the full page and needs no cap.
+   *
+   * A page does not always fill its height: an unbreakable block that will not
+   * fit is pushed whole to the next page, ending this one early. The sheet is
+   * still a whole page tall, but its window onto the flow has to stop where
+   * the page did, or it shows the pushed block in the leftover space at the
+   * bottom — and then the next sheet shows it again.
+   */
+  height?: number;
+};
+
+/**
+ * The sheets a pagination describes (SPEC §11.5).
+ *
+ * Page one starts at the top of the flow and every later page starts where
+ * the previous one was cut, so the offsets are the breaks with a leading zero
+ * — which is the whole translation from "where does it break" to "what does
+ * each sheet show". Kept here, beside the model that produced the breaks, so
+ * the sheet stack cannot drift from the page count reported next to it.
+ */
+export function pageWindows({ breaks, pageCount }: Pagination): PageWindow[] {
+  return Array.from({ length: pageCount }, (_, index) => {
+    const offset = index === 0 ? 0 : breaks[index - 1];
+    const end = breaks[index];
+    return {
+      pageNumber: index + 1,
+      offset,
+      height: end === undefined ? undefined : end - offset,
+    };
+  });
 }

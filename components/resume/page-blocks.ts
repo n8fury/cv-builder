@@ -4,8 +4,8 @@
  * These name the same elements the stylesheet marks `break-inside: avoid` and
  * `break-after: avoid`. They are kept here, apart from the measuring
  * component, so `page-blocks.test.ts` can hold them against `resume.css`: a
- * rule added there and not here would leave the guides modelling a page the
- * printer no longer produces.
+ * rule added there and not here would leave the preview's sheets modelling a
+ * page the printer no longer produces.
  */
 
 /** Everything the stylesheet declares `break-inside: avoid`. */

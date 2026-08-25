@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { PAGE_HEIGHT_PT, PAGE_MARGIN_PT } from "./metrics";
-import { paginate, type FlowBlock } from "./pagination";
+import { pageWindows, paginate, type FlowBlock } from "./pagination";
 
 /** The real page: 792pt less two 55pt margins (§4.1). */
 const USABLE = PAGE_HEIGHT_PT - 2 * PAGE_MARGIN_PT;
@@ -93,5 +93,52 @@ describe("paginate", () => {
     expect(() => paginate({ blocks: [], contentHeight: 10, usableHeight: 0 })).toThrow(
       /usableHeight/,
     );
+  });
+});
+
+describe("pageWindows", () => {
+  it("gives a one-page CV a single sheet showing the top of the flow", () => {
+    expect(pageWindows({ breaks: [], pageCount: 1 })).toEqual([
+      { pageNumber: 1, offset: 0, height: undefined },
+    ]);
+  });
+
+  it("starts each later sheet where the previous page was cut", () => {
+    expect(pageWindows({ breaks: [600, 1200], pageCount: 3 })).toEqual([
+      { pageNumber: 1, offset: 0, height: 600 },
+      { pageNumber: 2, offset: 600, height: 600 },
+      // The last sheet runs to the full page — nothing caps it.
+      { pageNumber: 3, offset: 1200, height: undefined },
+    ]);
+  });
+
+  it("windows a real measurement end to end, leaving no gap between sheets", () => {
+    // A block that will not fit under the boundary is pushed whole, so its
+    // page ends early — and the next sheet has to pick up exactly there, or
+    // the preview shows a slice of the document twice or not at all.
+    const pagination = paginate({
+      blocks: [block(USABLE - 20, 60)],
+      contentHeight: USABLE + 200,
+      usableHeight: USABLE,
+    });
+    const windows = pageWindows(pagination);
+
+    expect(windows).toHaveLength(2);
+    expect(windows[1].offset).toBe(USABLE - 20);
+    expect(windows[1].offset).toBeLessThan(USABLE);
+    // The page ended 20pt early, so its window has to stop 20pt early too —
+    // otherwise the sheet shows the pushed block that page two starts with.
+    expect(windows[0].height).toBe(USABLE - 20);
+  });
+
+  it("never gives a sheet a window taller than the page", () => {
+    const pagination = paginate({
+      blocks: [],
+      contentHeight: USABLE * 2.5,
+      usableHeight: USABLE,
+    });
+    for (const { height } of pageWindows(pagination)) {
+      if (height !== undefined) expect(height).toBeLessThanOrEqual(USABLE);
+    }
   });
 });

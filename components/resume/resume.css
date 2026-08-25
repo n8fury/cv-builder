@@ -20,6 +20,7 @@
   --page-height: 792pt;
   --page-margin: 55pt;
   --content-width: 502pt;
+  --content-height: 682pt;
 
   /* Type sizes (§3) */
   --font-size-name: 24.9pt;
@@ -135,33 +136,112 @@ body {
   background: #fff;
 }
 
-/* Page box (§2, §8).
+/* The sheet stack (§2, §8, §11.5).
 
-   On screen this is a literal sheet: 612×792pt with the 55pt margins drawn as
-   padding, so the preview and its page-boundary guides show the real thing.
+   A CV may run to several pages and every one of them is the same page, so
+   the preview shows real sheets rather than one endless column: 612×792pt
+   each, the 55pt margins drawn as padding, all four sides identical on every
+   sheet. Each sheet renders the whole document and windows it — the clip is
+   exactly one page's content box tall, and the flow inside is shifted up by
+   that page's offset, so the sheet shows its slice and hides the rest.
 
-   In print the margins come from @page instead — see pageRule() in
-   css-variables.ts. Keeping the padding here as well would double them on
-   page one and still leave page two with none, and a 612pt-wide box inside a
-   502pt content area would overflow, so both are dropped for print and the
-   text simply flows through the page box @page defines. */
-.resume-page {
-  position: relative;
-  width: var(--page-width);
-  min-height: var(--page-height);
-  padding: var(--page-margin);
-  box-sizing: border-box;
+   The document is therefore laid out once, not fragmented across page
+   elements: the preview breaks where the printer breaks because it is the
+   same single flow both are measuring.
+
+   In print all of that comes off. The margins come from @page instead — see
+   pageRule() in css-variables.ts — because padding applies once, at the top
+   and bottom of one box, and would leave a continuation page with no top
+   margin at all. Page one unclips to the full document and the later sheets,
+   which only ever held copies of it, are hidden. What Puppeteer prints is
+   the flow running through the page boxes @page defines. */
+.resume-document {
   color: #000;
   font-family: "CV Charter", serif;
   font-size: var(--font-size-body);
   line-height: var(--leading-body);
 }
 
+.resume-page {
+  position: relative;
+  width: var(--page-width);
+  height: var(--page-height);
+  padding: var(--page-margin);
+  box-sizing: border-box;
+  background: #fff;
+}
+
+/* The window onto the flow: one page's content box, to the point. Its
+   overflow clip is what ends a page, and the block formatting context it
+   establishes is what stops the first section's top margin collapsing out
+   through it and displacing the flow the measurement calls its origin. */
+.resume-page-clip {
+  height: var(--content-height);
+  overflow: hidden;
+}
+
+/* The document, in full, on every sheet — offset upwards by the page's flow
+   offset, which PagedDocument.tsx sets inline. `flow-root` for the same
+   margin-collapsing reason as the clip above: the first child's top margin
+   must move the text, not this box. */
+.resume-page-flow {
+  position: relative;
+  display: flow-root;
+}
+
+@media screen {
+  /* A desk, so the sheets read as sheets. */
+  html,
+  body {
+    background: #ebebeb;
+  }
+
+  .resume-document {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    /* Room for the page label, which sits in the gap under each sheet. */
+    gap: 34px;
+    padding: 12px 0;
+  }
+
+  .resume-page {
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.28);
+  }
+}
+
 @media print {
+  .resume-document {
+    display: block;
+  }
+
   .resume-page {
     width: auto;
-    min-height: 0;
+    height: auto;
     padding: 0;
+    box-shadow: none;
+  }
+
+  /* !important because both of these undo an inline style: the clip carries
+     the page's slice height whenever a pushed block ended it early, and page
+     one is exactly the page that has one. Unclipped, it shows the whole
+     document, which is what the page boxes then fragment. */
+  .resume-page-clip {
+    height: auto !important;
+    overflow: visible;
+  }
+
+  /* Page one is never offset, so this undoes nothing in practice — but the
+     offset is an inline style too, and print correctness is not worth
+     resting on that. */
+  .resume-page-flow {
+    top: 0 !important;
+  }
+
+  /* Every sheet after the first is a second copy of a document that has
+     already been printed in full by the one above. */
+  .resume-page + .resume-page {
+    display: none;
   }
 }
 
@@ -174,61 +254,37 @@ body {
    Deliberately unreachable from the print route: the export refuses to
    produce a PDF at all when a face is missing, and must never be able to
    substitute one instead. */
-.resume-fallback-fonts .resume-page,
+.resume-fallback-fonts .resume-document,
 .resume-fallback-fonts .resume-entry-subtitle {
   font-family: serif;
 }
 
-/* Page-boundary guides (§11.5). Informational chrome, not part of the
-   document: a hairline wherever a page ends, so a CV that runs long shows
-   where each break will fall. Absolutely positioned and pointer-transparent,
-   so it contributes nothing to layout, and confined to screen media —
-   Puppeteer renders under print media (§15.10), which is what keeps the
-   guides out of every exported PDF.
+/* The page number under each sheet (§11.5). Chrome, not document: it sits
+   below the sheet rather than on it, and is confined to screen media —
+   Puppeteer renders under print media (§15.10), which is what keeps it out
+   of every exported PDF. Shown only when there is more than one sheet to
+   tell apart.
 
-   The offsets come from PageGuides.tsx, which measures the document and runs
-   the §11.5 pagination model over it. They cannot be a repeating background:
-   every page after the first loses 110pt to its own margins, so a hairline
-   every --page-height is right once and then drifts by an inch a page.
-
-   The line weight is in pixels on purpose: this is a screen hairline, not a
-   §4 measurement, and it has no business in metrics.ts. */
-.resume-page-guides {
-  /* Chrome, so it lives here rather than in the generated block: no §4
-     measurement is a colour. */
-  --page-guide-color: #b3b3b3;
+   The sans stack is deliberate — this is a label on the document, not part
+   of it, and must not read as resume copy. Sized in pixels for the same
+   reason: screen chrome, with no §4 measurement behind it. */
+.resume-page-label {
   display: none;
 }
 
 @media screen {
-  .resume-page-guides {
+  .resume-page-label {
     display: block;
     position: absolute;
-    inset: 0;
-    pointer-events: none;
+    top: 100%;
+    left: 0;
+    padding-top: 9px;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 11px;
+    line-height: 1;
+    letter-spacing: 0.3px;
+    color: #6b6b6b;
   }
-}
-
-.resume-page-guide {
-  position: absolute;
-  left: 0;
-  right: 0;
-  border-top: 1px dashed var(--page-guide-color);
-}
-
-/* Sits in the next page's top margin, clear of the text on either side. The
-   sans stack is deliberate — this is a label on the document, not part of
-   it, and must not read as resume copy. Sized in pixels for the same reason
-   the hairline is: screen chrome, with no §4 measurement behind it. */
-.resume-page-guide-label {
-  position: absolute;
-  right: 0;
-  top: 3px;
-  font-family: ui-sans-serif, system-ui, sans-serif;
-  font-size: 8px;
-  line-height: 1;
-  letter-spacing: 0.3px;
-  color: var(--page-guide-color);
 }
 
 /* Header (§5.1, §15.9). The name block sits flush against the top padding

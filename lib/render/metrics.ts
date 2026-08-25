@@ -34,6 +34,15 @@ export const CONTENT_WIDTH_PT = CONTENT_RIGHT_PT - CONTENT_LEFT_PT;
 export const CONTENT_TOP_Y_PT = PAGE_HEIGHT_PT - PAGE_MARGIN_PT;
 
 /**
+ * Height available for content on one page: 792pt less the two 55pt margins.
+ *
+ * The same figure the pagination model calls `usableHeight` (§11.5), and the
+ * exact height of the window each preview sheet shows onto the flow — which
+ * is why it is derived here rather than restated in the stylesheet.
+ */
+export const CONTENT_HEIGHT_PT = PAGE_HEIGHT_PT - 2 * PAGE_MARGIN_PT;
+
+/**
  * Top margin → first heading baseline on a continuation page (§4.1).
  * Equals the 12pt heading's ascent: its box top lands exactly on the margin.
  */
