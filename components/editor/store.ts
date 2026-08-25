@@ -15,7 +15,7 @@
  */
 import { createStore } from "zustand/vanilla";
 
-import { generateLinkId, type HeaderFieldName } from "@/lib/data/header-edit";
+import { generateLinkId, normalizeLinkUrl, type HeaderFieldName } from "@/lib/data/header-edit";
 import { generateId, libraryIds } from "@/lib/data/ids";
 import { build, type NewItemValues } from "@/lib/data/new-items";
 
@@ -72,6 +72,7 @@ export interface EditorState {
   /** One extra contact link (§16.6) — appended, with a fresh ID. */
   addHeaderLink(values: NewItemValues): void;
   setHeaderLinkText(id: string, text: string): void;
+  setHeaderLinkUrl(id: string, url: string): void;
   removeHeaderLink(id: string): void;
   /**
    * A custom section's own text (§12.4). The title and paragraph belong to the
@@ -825,7 +826,7 @@ export function createEditorStore({ profileId, variantId, ...document }: EditorS
             ...draft,
             library: withHeader(draft.library, {
               ...draft.library.header,
-              links: [...links, { id, text }],
+              links: [...links, { id, text, url: normalizeLinkUrl(values.url) }],
             }),
           },
         };
@@ -839,6 +840,22 @@ export function createEditorStore({ profileId, variantId, ...document }: EditorS
             ...draft.library.header,
             links: draft.library.header.links.map((link) =>
               link.id === id ? { ...link, text } : link,
+            ),
+          }),
+        },
+      })),
+
+    // Kept raw, unlike the store's other link writer: the field is normalized
+    // on blur (§18.1), because prefixing "https://" mid-word would rewrite the
+    // box under the cursor after the first keystroke.
+    setHeaderLinkUrl: (id, url) =>
+      set(({ draft }) => ({
+        draft: {
+          ...draft,
+          library: withHeader(draft.library, {
+            ...draft.library.header,
+            links: draft.library.header.links.map((link) =>
+              link.id === id ? { ...link, url: url === "" ? null : url } : link,
             ),
           }),
         },

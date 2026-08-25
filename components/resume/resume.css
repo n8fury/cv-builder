@@ -603,6 +603,17 @@ body {
   text-decoration: underline;
 }
 
+/* Header contact details (§18.1). Live hrefs, no underline — deliberately
+   unlike .resume-link above. That rule underlines because a repo URL in the
+   right column has no other affordance on paper; the contact line is measured
+   against the source PDF, which carries no underline anywhere, so an
+   underline here would be a visible change against the document §11.2 gates
+   on. Href live, ink identical. */
+.resume-contact-link {
+  color: inherit;
+  text-decoration: none;
+}
+
 /* Bullets (§4.5). Consecutive body lines, no gap: the leading is the spacing.
    The marker is positioned out to the left of the hanging indent so it takes
    no width from the first line. */

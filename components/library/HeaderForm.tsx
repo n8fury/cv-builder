@@ -9,8 +9,13 @@
  * component would mean disabling three of its four controls.
  *
  * The links list is edited client-side and posted as parallel `link.id` /
- * `link.text` fields, so adding and removing rows costs no round trip — the
- * save is still one write, and clearing a row's text is what deletes it.
+ * `link.text` / `link.url` fields, so adding and removing rows costs no round
+ * trip — the save is still one write, and clearing a row's text is what
+ * deletes it.
+ *
+ * A row is two boxes: what prints, and where it points (§18.1). The URL is
+ * optional — a row with only text prints exactly as it did before it had the
+ * second box.
  */
 import { useActionState, useState } from "react";
 
@@ -25,6 +30,8 @@ const INPUT = "w-full rounded border border-gray-300 px-2 py-1 text-sm";
 interface DraftLink {
   id: string;
   text: string;
+  /** Empty rather than null: this is an input's value, not stored data. */
+  url: string;
   /** Distinguishes rows in React's key space while `id` is still blank. */
   key: string;
 }
@@ -42,14 +49,16 @@ export function HeaderForm({
 }) {
   const [state, submit, pending] = useActionState(action, IDLE);
   const [rows, setRows] = useState<DraftLink[]>(() =>
-    links.map((link) => ({ id: link.id, text: link.text, key: link.id })),
+    links.map((link) => ({ id: link.id, text: link.text, url: link.url ?? "", key: link.id })),
   );
 
   const addRow = () =>
-    setRows((current) => [...current, { id: "", text: "", key: `new-${Date.now()}` }]);
+    setRows((current) => [...current, { id: "", text: "", url: "", key: `new-${Date.now()}` }]);
 
-  const setRowText = (key: string, text: string) =>
-    setRows((current) => current.map((row) => (row.key === key ? { ...row, text } : row)));
+  const setRowField = (key: string, field: "text" | "url", value: string) =>
+    setRows((current) =>
+      current.map((row) => (row.key === key ? { ...row, [field]: value } : row)),
+    );
 
   const removeRow = (key: string) =>
     setRows((current) => current.filter((row) => row.key !== key));
@@ -92,7 +101,7 @@ export function HeaderForm({
           <div className="flex items-baseline gap-3">
             <span className="text-xs font-medium text-gray-600">Other links</span>
             <span className="text-xs text-gray-500">
-              printed after GitHub, in this order
+              printed after GitHub, in this order — the URL is optional
             </span>
             <button
               className="ml-auto rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
@@ -113,13 +122,22 @@ export function HeaderForm({
               <div className="flex items-center gap-2" key={row.key}>
                 <input name="link.id" type="hidden" value={row.id} />
                 <input
-                  aria-label="Link"
+                  aria-label="Link text"
                   className={INPUT}
                   disabled={pending}
                   name="link.text"
-                  onChange={(event) => setRowText(row.key, event.target.value)}
+                  onChange={(event) => setRowField(row.key, "text", event.target.value)}
                   placeholder="portfolio.example.com"
                   value={row.text}
+                />
+                <input
+                  aria-label="Link URL"
+                  className={INPUT}
+                  disabled={pending}
+                  name="link.url"
+                  onChange={(event) => setRowField(row.key, "url", event.target.value)}
+                  placeholder="https://portfolio.example.com"
+                  value={row.url}
                 />
                 <button
                   className="rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"

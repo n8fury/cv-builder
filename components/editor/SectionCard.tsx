@@ -9,7 +9,7 @@
  * to the library, not the variant (§6.2), so those fields edit the library
  * draft — exactly the propagating edit §11.4 describes, staged until Save.
  */
-import { headerFieldValues } from "@/lib/data/header-edit";
+import { headerFieldValues, normalizeLinkUrl } from "@/lib/data/header-edit";
 import { NEW_BULLET, NEW_ENTRY, NEW_HEADER_LINK } from "@/lib/data/new-items";
 import { SECTION_TITLE } from "@/lib/render/section-titles";
 import type { ContentLibrary } from "@/lib/schema/library";
@@ -62,6 +62,7 @@ function MissingRef({ id }: { id: string }) {
 function HeaderFields({ library }: { library: ContentLibrary }) {
   const setHeaderField = useEditor((state) => state.setHeaderField);
   const setHeaderLinkText = useEditor((state) => state.setHeaderLinkText);
+  const setHeaderLinkUrl = useEditor((state) => state.setHeaderLinkUrl);
   const removeHeaderLink = useEditor((state) => state.removeHeaderLink);
   const addHeaderLink = useEditor((state) => state.addHeaderLink);
 
@@ -88,30 +89,63 @@ function HeaderFields({ library }: { library: ContentLibrary }) {
       </div>
 
       {/* Extra links ride the same printed line as LinkedIn and GitHub, in
-          this order (§16.6) — hence a list rather than more named boxes. */}
+          this order (§16.6) — hence a list rather than more named boxes.
+
+          Two boxes per row: the text prints, the URL is what it points at
+          (§18.1). The named fields above need no second box because their
+          target is derived from what they already say; a portfolio's is not.
+          The URL is normalized on blur, not on change — "https://" appearing
+          after the first keystroke would fight the person typing. */}
       <div className="space-y-1">
         <span className="text-xs font-medium text-gray-600">
           Other links
           <span className="ml-2 font-normal text-gray-500">printed after GitHub</span>
         </span>
         {library.header.links.map((link) => (
-          <div className="flex items-center gap-2" key={link.id}>
-            <input
-              aria-label="Link"
-              className={FIELD}
-              data-header-link={link.id}
-              onBlur={(event) => setHeaderLinkText(link.id, event.target.value.trim())}
-              onChange={(event) => setHeaderLinkText(link.id, event.target.value)}
-              value={link.text}
-            />
-            <button
-              className={GHOST}
-              data-remove-link={link.id}
-              onClick={() => removeHeaderLink(link.id)}
-              type="button"
-            >
-              Remove
-            </button>
+          <div className="space-y-0.5" key={link.id}>
+            <div className="flex items-center gap-2">
+              <input
+                aria-label="Link text"
+                className={FIELD}
+                data-header-link={link.id}
+                onBlur={(event) => setHeaderLinkText(link.id, event.target.value.trim())}
+                onChange={(event) => setHeaderLinkText(link.id, event.target.value)}
+                placeholder="portfolio.example.com"
+                value={link.text}
+              />
+              <input
+                aria-label="Link URL"
+                className={FIELD}
+                data-header-link-url={link.id}
+                onBlur={(event) => setHeaderLinkUrl(link.id, normalizeLinkUrl(event.target.value) ?? "")}
+                onChange={(event) => setHeaderLinkUrl(link.id, event.target.value)}
+                placeholder="https://portfolio.example.com"
+                value={link.url ?? ""}
+              />
+              <button
+                className={GHOST}
+                data-remove-link={link.id}
+                onClick={() => removeHeaderLink(link.id)}
+                type="button"
+              >
+                Remove
+              </button>
+            </div>
+            <p className="text-xs text-gray-500">
+              {link.text.trim() === "" ? (
+                "Blank rows are dropped on save."
+              ) : link.url ? (
+                <>
+                  Prints as <span className="text-gray-700">{link.text}</span>, links to{" "}
+                  <span className="text-gray-700">{link.url}</span>.
+                </>
+              ) : (
+                <>
+                  Prints as <span className="text-gray-700">{link.text}</span> — no URL, so it
+                  is not clickable in the PDF.
+                </>
+              )}
+            </p>
           </div>
         ))}
         <NewItemForm spec={NEW_HEADER_LINK} onAdd={addHeaderLink} />

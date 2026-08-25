@@ -500,8 +500,24 @@ describe("header content", () => {
     store.getState().setHeaderLinkText(links[0].id, "portfolio.dev");
     store.getState().removeHeaderLink(links[1].id);
     expect(store.getState().draft.library.header.links).toEqual([
-      { id: links[0].id, text: "portfolio.dev" },
+      { id: links[0].id, text: "portfolio.dev", url: null },
     ]);
+  });
+
+  it("stores a link's url, normalizing a missing scheme (§18.1)", () => {
+    const store = open();
+    store.getState().addHeaderLink({ text: "Dev.to", url: "dev.to/jordan-rivera-demo" });
+
+    const [link] = store.getState().draft.library.header.links;
+    expect(link.url).toBe("https://dev.to/jordan-rivera-demo");
+
+    // Set raw on change: normalizing every keystroke would rewrite the box
+    // under the cursor. The field normalizes on blur instead.
+    store.getState().setHeaderLinkUrl(link.id, "portfolio.exa");
+    expect(store.getState().draft.library.header.links[0].url).toBe("portfolio.exa");
+
+    store.getState().setHeaderLinkUrl(link.id, "");
+    expect(store.getState().draft.library.header.links[0].url).toBeNull();
   });
 
   it("refuses to store a blank link", () => {

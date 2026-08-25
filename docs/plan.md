@@ -1290,3 +1290,268 @@ and completion state.
     tree, with the two pending fixes applied and re-checked-out so the
     `.gitattributes` conversion actually took effect. `data/profiles/` in this
     tree was never in reach — the mutating checks ran inside the clone.
+
+---
+
+## Phase 10 — Header links, entry splitting, and editor UX
+
+Post-release work, raised after Phase 9 closed. Three independent strands:
+two are defects the spec's own wording did not intend (10.1, 10.2), the rest
+is editor experience, ordered by payoff rather than by spec section.
+
+Two of these amend `SPEC.md` rather than implement it. Neither touches a
+measured value, but both need a §15-style resolution entry written *before*
+the code, so the spec stays the source of truth for values:
+- **§16.6** never gave header links an href. See Task 10.1.
+- **§11.5**'s `break-inside: avoid` forbids all entry splits, where its own
+  sentence asks only to prevent *awkward* ones. See Task 10.2.
+
+### 10.1 — Header contact details are dead text
+
+- [x] Task 10.1: Make header contact details real links (§5.1, §16.6, §18.1)
+  - Verification: a PDF exported from a variant whose header carries an
+    email, a LinkedIn, a GitHub and one extra link has a working link
+    annotation on each; the printed text of every contact line is
+    byte-identical to before the change, and `npm run harness:export` still
+    reports 84/84 within ±2pt with text and faces identical.
+  - Result: all three hold. Exported from a scratch copy of the profile
+    (`CV_PROFILES_DIR`) carrying one extra link, the PDF's page-one header
+    holds exactly four Link annotations —
+    `mailto:jordan.rivera@example.com`, `https://linkedin.com/in/jordan-rivera`,
+    `https://github.com/jordan-rivera-demo`, `https://portfolio.example.com` — each
+    boxed to its own text and nothing more. The separators sit in the ~10pt
+    gaps between the boxes, so no `|` is clickable.
+  - `harness:export` against the real profile: **84/84** within ±2pt, 59
+    exact, 25 reflowed, document text identical, faces identical. Also clean:
+    `npm test` **328/328** (up from 251 — the header test moved to `.tsx` and
+    gained the href and markup cases), `tsc --noEmit`, `lint`,
+    `validate:data`, `check:tailwind-scope`.
+  - The byte-identical claim is a test, not a one-off reading:
+    `ResumeHeader.test.tsx` renders the header, strips every tag, and holds
+    the result against `contactLines()` — the function that defines the
+    printed text. §18.1 turns entirely on that staying true.
+  - §18 is new: a "Post-release resolutions" section for Phase 10's two spec
+    amendments, with §18.1 written before any of this code. §5.1's `links[]`
+    line was updated to `{ id, text, url }` alongside it.
+  - The named fields derive their href and gain no schema field, so every
+    profile on disk stays valid untouched. `links[]` gains `url`, defaulting
+    to `null` — which renders exactly as it did before, so no profile needs
+    rewriting either. As with `tags`, the first save after this materialises
+    `url: null` on each existing link.
+  - Header anchors are `.resume-contact-link` — `text-decoration: none`,
+    deliberately unlike `.resume-link`'s underline. The contact line is
+    measured against a source PDF that has no underline in it; adding one
+    would be a visible change against the document the harness gates on.
+  - Both editors gained a URL box next to the link text (editor and library
+    manager), normalized on blur rather than on change: prefixing `https://`
+    after the first keystroke would rewrite the box under the cursor. A URL
+    the schema cannot store is passed through so the save reports it, rather
+    than being silently discarded.
+  - Not exercised by this run: `tel:`. The detailed variant's header is
+    minimal mode, which prints no phone line, so its derivation is covered by
+    unit tests rather than by the annotation check.
+
+  Header contact data is display text only. `lib/schema/library.ts:160-169`
+  types `email`, `phone`, `linkedin` and `github` as plain `z.string()`, and
+  `headerLinkSchema` is `{ id, text }` with no url field at all.
+  `ResumeHeader.tsx:36-43` joins them into one string and prints it in a
+  `<div>` — there is no `<a>` anywhere in the header. In the exported PDF
+  every one of them is dead text, and a URL cannot be supplied today because
+  the schema has nowhere to put one.
+
+  The pattern already exists elsewhere: `ResumeProjectLinks.tsx:37` and
+  `ResumeCertifications.tsx:30` render real `<a href>` and use `linkLabel()`
+  to strip `https://` so the link prints bare while staying clickable.
+  Puppeteer emits real PDF link annotations for those. The header never
+  adopted it.
+
+  Two halves, both cheap:
+  - **Named fields — derive, no schema change.** `email` → `mailto:`,
+    `phone` → `tel:`, and `linkedin`/`github` → `https://` + the text when it
+    already looks like a host path (`github.com/jordan-rivera-demo`), or
+    `https://github.com/` + handle when a bare handle was typed. The printed
+    text stays byte-identical, so every §4.1 metric is untouched.
+  - **`links[]` — add an explicit optional url.**
+    `headerLinkSchema = { id, text, url: optionalUrl }`. A portfolio or Dev.to
+    entry cannot be derived from a handle, so it needs a real field.
+    `url: null` renders exactly as it does now.
+
+  One constraint: render header anchors `text-decoration: none`, unlike
+  `.resume-link` (`resume.css:601-604`), which underlines. Underlining the
+  contact line would be a visible change against the reference PDF the
+  harness gates on.
+
+  Editor side: the "Other links" row in `SectionCard.tsx:96-119` becomes two
+  inputs (Text | URL) with a small "prints as … , links to …" hint.
+
+### 10.2 — A long entry leaves a hole at the foot of the page
+
+- [ ] Task 10.2: Let a long entry split across a page break, opt-in (§11.5)
+  - Verification: a variant with `splitEntries` on, whose Experience entry
+    would overrun, splits after at least two bullets instead of migrating
+    whole; no bullet is cut mid-line, no entry head is left as the last thing
+    on a page, and no single bullet is carried over alone. With the flag off
+    (the default) pagination is byte-identical to today, and both
+    `npm run harness` and `npm run harness:export` still report 84/84.
+
+  `resume.css:502-503` marks `.resume-entry` `break-inside: avoid` per §11.5,
+  and an entry is `head + every bullet` in one `<article>`
+  (`ResumeEntry.tsx:47`) — so the whole entry is one indivisible atom. When
+  `pagination.ts:100-103` finds `block.bottom` overruns, it pushes the entire
+  block. A 7-bullet entry needing 160pt with 140pt left on page 1 moves all
+  160pt to page 2 and the 140pt becomes a hole. With a section heading
+  attached it is worse: `break-after: avoid` glues the heading to that entry,
+  so both migrate and the hole grows.
+
+  §11.5 asks for `break-inside: avoid` "so a single entry's title and bullets
+  don't get split **awkwardly**". The intent is to prevent *bad* splits;
+  `break-inside: avoid` forbids *all* splits. Amend §11.5 accordingly.
+
+  **Fix — demote the atom from "the entry" to "the head plus its first
+  bullets":**
+
+  ```css
+  .resume-entry { }                                        /* no longer an atom */
+  .resume-entry-head { break-inside: avoid; break-after: avoid; }
+  .resume-bullet { break-inside: avoid; }                  /* never cut mid-bullet */
+  .resume-bullet:first-child { break-after: avoid; }       /* head keeps >= 2 bullets */
+  .resume-bullet:nth-last-child(2) { break-after: avoid; } /* never a lone final bullet */
+  ```
+
+  Two implementation notes that are easy to get wrong:
+  - **`orphans` / `widows` will not work here.** They are the natural first
+    reach, but Chromium applies them to line boxes *within* a block, not to
+    sibling `<li>` elements. The `break-after: avoid` pair above is what
+    actually does the job.
+  - **Use `:nth-last-child(2) { break-after: avoid }`, not
+    `:last-child { break-before: avoid }`.** They render identically, but
+    `FlowBlock` (`pagination.ts:31`) models only backward glue, via
+    `keepWithNext`; there is no forward-glue concept. The `break-after`
+    phrasing fits the existing model with **zero changes to `pagination.ts`**,
+    where `break-before` would force a whole new glue direction into it.
+
+  The preview must move in lockstep: `UNBREAKABLE_SELECTOR` and
+  `KEEP_WITH_NEXT_SELECTOR` (`page-blocks.ts:12-17`) become the new selectors.
+  `page-blocks.test.ts` already holds those against the stylesheet, so drift
+  between CSS and model fails a test rather than silently desyncing the
+  preview from the printer.
+
+  **Why opt-in, and why the default must stay atomic.** Both goldens are two
+  pages. In `harness/golden.json` page 1 ends on the last Experience bullet
+  and page 2 opens with the `Projects` heading — a clean section boundary.
+  That is less safe than it looks: today the heading + first project entry
+  form one glued chain too tall for page 1's remainder, so it is pushed
+  whole. Relax the entry atom and that chain shrinks to
+  `heading + head + 2 bullets`, which may now *fit* at the foot of page 1,
+  pulling content up and breaking the 84/84 line match. So:
+  - Add `splitEntries: boolean` (default `false`) as a variant option on the
+    Experience and Projects sections.
+  - When on, emit `data-split="true"` on the section and scope the new rules
+    to `[data-split="true"] .resume-entry …`.
+  - The goldens carry no such flag, so the harness stays 84/84 **by
+    construction** — no re-baselining, and no argument about whether the
+    reference PDF is ground truth.
+
+  Pair it with Task 10.3: when an entry is pushed, say so in the left column
+  — "Experience 2 moved to page 2 — 140pt left unused. Allow this entry to
+  split?" — with the toggle right there, so the gap becomes a one-click
+  decision instead of a mystery.
+
+### Tier 1 — the things that actually hurt right now
+
+- [ ] Task 10.3: Make fit-to-page feedback actionable (§11.5)
+  - Verification: the editor reports remaining space on the last page and the
+    amount of overflow past a break, and names the entry a break pushed; the
+    readings agree with the sheet stack the preview draws.
+  - `PageCount.tsx` says "2 pages" and stops. Tailoring a CV is largely a
+    fitting problem, and the editor gives a number with no gradient to
+    descend. Show *how much* — "page 2 holds 3 lines, 41pt used" — plus a
+    space-left gauge on the last page. §11.5 forbids blocking the export on
+    overflow; all of this stays informational.
+
+- [ ] Task 10.4: Link the form and the preview in both directions
+  - Verification: hovering a bullet's field highlights that bullet in the
+    preview; clicking a block in the preview scrolls to and focuses its field.
+  - The left column is long and controls are currently found by eye. The
+    preview is the same React tree fed from the same draft, so the ids to
+    match on already exist on both sides.
+
+- [ ] Task 10.5: Stop losing the draft on a refresh
+  - Verification: with unsaved changes, a reload prompts before leaving; after
+    a forced reload the editor offers to restore the draft, and declining
+    leaves the on-disk variant untouched.
+  - The draft lives only in memory, there is no `beforeunload` guard, and a
+    refresh silently loses everything. Add the guard plus a `localStorage`
+    snapshot keyed by `profileId/variantId`. Closer to a bug than a feature.
+
+- [ ] Task 10.6: Add undo/redo (Ctrl+Z / Ctrl+Y)
+  - Verification: every store mutation is undoable and redoable in order, and
+    undo past the last save leaves the dirty flag correct.
+  - The store holds one draft object, so a history stack of drafts is nearly
+    free. Today the only escape from a mistake is Revert, which throws away
+    the whole session.
+
+### Tier 2 — speed of tailoring
+
+- [ ] Task 10.7: Use tags in the editor (§6.1)
+  - Verification: a section can include or exclude every entry carrying a
+    given tag in one action, and the result is an ordinary curation edit no
+    different from ticking the boxes by hand.
+  - Every library item carries `tags`, `TagFilter` exists in the library
+    manager, and the editor ignores them entirely. "Include everything tagged
+    `backend`" is precisely what tailoring a variant to a posting *is* — the
+    biggest capability gap on this list.
+
+- [ ] Task 10.8: Add a filter box over the whole form
+  - Verification: typing a term narrows every section to matching entries and
+    bullets; clearing it restores the full list with curation unchanged.
+
+- [ ] Task 10.9: Add bulk curation per section
+  - Verification: include-all, include-none and invert each produce the same
+    draft as performing the equivalent toggles individually.
+  - So a variant can start from empty rather than un-ticking twenty rows.
+
+- [ ] Task 10.10: Add a section jump rail and sticky section headers
+  - Verification: every section is reachable in one click from the rail, and
+    the toggling behaviour of §15.3's drag ordering is unaffected.
+  - Keeps the deliberate no-collapse decision — which avoids the column
+    shuffling on every toggle — while fixing the navigation cost it creates.
+
+### Tier 3 — writing comfort
+
+- [ ] Task 10.11: Improve the bullet editing fields (§16.3)
+  - Verification: bullet fields grow with their content rather than scrolling
+    inside two rows; each shows the wrapped line count the preview measures;
+    Ctrl+I wraps the selection in `*…*`.
+  - Three small things in one task, all on the same control. Fields are
+    hardcoded `rows={2}` (`EntryCuration.tsx`), so a real bullet gets a
+    scrollbar in a two-line box. The wrapped-line count tells you the true
+    cost of a word before committing to it, and the preview already measures
+    it. `*inline italic*` is the markup (§16.3) and currently has no helper.
+
+- [ ] Task 10.12: Add keyboard shortcuts
+  - Verification: Ctrl+S saves, Ctrl+Shift+S opens Save As, `/` focuses the
+    filter, and none of them fire while a text field has focus in a way that
+    would swallow a keystroke.
+
+### Tier 4 — bigger swings
+
+- [ ] Task 10.13: Add preview zoom and page-fit control
+  - Verification: 100%, fit-width and fit-page each render correctly, and a
+    one-page-at-a-time toggle pages through the sheet stack.
+  - `PreviewFrame.tsx:44` auto-scales to the column width with no user
+    control over it.
+
+- [ ] Task 10.14: Add a variant diff
+  - Verification: two variants of one profile are compared entry by entry,
+    naming what each includes that the other does not.
+  - Useful once a family of variants is being kept alive together.
+
+- [ ] Task 10.15: Edit directly in the preview
+  - Verification: editing text in the preview writes the same library draft
+    the left-column field would, and the rendered result is unchanged from
+    typing it in the form.
+  - `InlineText` and the resume tree are already client-rendered, so
+    `contentEditable` on text blocks writing back to the store is feasible.
+    Highest effort here, but it is the change that would make this feel like
+    a document editor rather than a form driving a document.

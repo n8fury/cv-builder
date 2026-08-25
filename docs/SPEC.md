@@ -185,8 +185,10 @@ under the name (§16.6):
 
 Fields: `name, title, location, email, phone, linkedin, github, links[]`
 
-`links[]` is `{ id, text }` — extra contact lines past LinkedIn and GitHub
-(portfolio, X, Dev.to), printed on the same line, in library order.
+`links[]` is `{ id, text, url }` — extra contact lines past LinkedIn and
+GitHub (portfolio, X, Dev.to), printed on the same line, in library order.
+`url` is optional and is what the printed `text` links to (§18.1); the
+named contact fields derive theirs instead of storing one.
 `title` is content; whether it prints is the variant option
 `options.showTitle`, alongside `mode`. See §16.6.
 
@@ -928,3 +930,55 @@ can reach would be stored, printed on every CV, and uneditable.
 - Authentication/accounts
 - Version search/filtering (flat list is fine until it isn't)
 - Caching of generated PDFs
+---
+
+## 18. Post-release resolutions
+
+Raised after the §14 build order finished and the app was in daily use.
+Each entry names a place the spec's own wording did not say what it
+meant. None of them changes a measured value from §2–§4; where one
+touches the page at all, it says so explicitly and says why the §11.2
+harness still holds.
+
+### 18.1 Header contact details carry hrefs
+§16.6 settled what the header contact line *prints* and never said what
+it links to, so it linked to nothing: `email`, `phone`, `linkedin` and
+`github` render as plain text, and `links[]` is `{ id, text }` with
+nowhere to put a URL. In an exported PDF every one of them is dead — the
+one place a reader would click. §6.4 already had the answer for
+repo/demo/credential links, and the header simply never adopted it.
+
+**Printed text is unchanged.** This is a rendering addition, not a
+content change: the same characters print, in the same order, at the same
+positions. §4.1's measured contact lines are untouched, and §11.2's
+harness compares the same text against the same golden.
+
+**Named fields derive their href; no schema change.** They are already
+display strings (§16.6), and a display string of this kind determines its
+target:
+
+| Field | Href |
+|---|---|
+| `email` | `mailto:` + the text |
+| `phone` | `tel:` + the text, punctuation and spaces stripped |
+| `linkedin` / `github` | the text as a URL when it already reads as one (`github.com/jordan-rivera-demo` → `https://github.com/jordan-rivera-demo`), otherwise the site's profile prefix + a bare handle (`jordan-rivera-demo` → `https://github.com/jordan-rivera-demo`) |
+| `location` | none — it is not a link |
+
+A field whose text cannot yield a target renders exactly as it does
+today, as text. Deriving rather than storing keeps §16.6's rule that
+these are display strings, and keeps every profile on disk valid
+unchanged.
+
+**`links[]` gains an explicit optional url.** `headerLinkSchema` becomes
+`{ id, text, url }`, with `url` the same nullable `z.url()` §6.4 uses.
+Unlike the named fields there is no site to derive from — a portfolio or
+a Dev.to page is not recoverable from its display text — so it needs a
+real field. `url: null` renders as text, which is what every link
+already on disk becomes, so no profile needs rewriting.
+
+**No underline.** §6.4's `.resume-link` underlines because a printed CV
+has no hover state and the underline is the only affordance. The header
+does not follow it: the contact line is measured against the source PDF,
+which has no underline anywhere in it, and adding one would be a visible
+change against the document §11.2 gates on. The href is live; the ink is
+identical. Where the two rules disagree, the source wins (§16).

@@ -114,8 +114,10 @@ export async function updateItemAction(
  * propagate through an ID — every variant renders `library.header` directly,
  * so rewriting it *is* the change everywhere at once.
  *
- * Links post as parallel `link.id` / `link.text` lists, positionally paired.
- * A blank text drops its row, which is how the form deletes one.
+ * Links post as parallel `link.id` / `link.text` / `link.url` lists,
+ * positionally paired. A blank text drops its row, which is how the form
+ * deletes one; a blank url just means the text prints without a target
+ * (§18.1).
  */
 export async function updateHeaderAction(
   _state: ActionState,
@@ -130,7 +132,12 @@ export async function updateHeaderAction(
 
   const ids = form.getAll("link.id").map(String);
   const texts = form.getAll("link.text").map(String);
-  const links = texts.map((text, index) => ({ id: ids[index], text }));
+  const urls = form.getAll("link.url").map(String);
+  const links = texts.map((text, index) => ({
+    id: ids[index],
+    text,
+    url: urls[index] ?? "",
+  }));
 
   return mutate(profileId, (library) =>
     setHeaderLinks(updateHeaderFields(library, values), links),

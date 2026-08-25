@@ -144,10 +144,17 @@ export const customSectionSchema = z.object({
  * thing. It carries an `id` so the manager can address one row of a list the
  * person reorders and deletes from — the same reason every library item has
  * one (§6.1), though no variant references it.
+ *
+ * `url` is where that text points, and it is stored rather than derived
+ * (§18.1). The named fields can derive theirs — an email is a `mailto:`, a
+ * GitHub handle has one home — but a portfolio or a Dev.to page is not
+ * recoverable from "portfolio.example.com", so it needs a real field. `null`
+ * prints exactly as before, which is what every link already on disk is.
  */
 export const headerLinkSchema = z.object({
   id: idSchema,
   text: z.string(),
+  url: optionalUrl,
 });
 
 /**

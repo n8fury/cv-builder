@@ -135,7 +135,7 @@ export const NEW_SKILL: NewItemSpec = { noun: "skill", fields: [text("text", "Sk
  */
 export const NEW_HEADER_LINK: NewItemSpec = {
   noun: "link",
-  fields: [text("text", "Link")],
+  fields: [text("text", "Link"), text("url", "URL", { optional: true })],
 };
 
 /** Typed field values straight off the form. */

@@ -6,6 +6,7 @@ import {
   HEADER_FIELDS,
   generateLinkId,
   headerFieldValues,
+  normalizeLinkUrl,
   setHeaderLinks,
   updateHeaderFields,
 } from "./header-edit";
@@ -100,14 +101,16 @@ describe("setHeaderLinks", () => {
     ]);
 
     expect(next.header.links).toEqual([
-      { id: "link-aaaaaa", text: "portfolio.example.com" },
-      { id: "link-bbbbbb", text: "x.com/jordan-rivera-demo" },
+      { id: "link-aaaaaa", text: "portfolio.example.com", url: null },
+      { id: "link-bbbbbb", text: "x.com/jordan-rivera-demo", url: null },
     ]);
   });
 
   it("keeps an existing link's id across an edit to its text", () => {
     const next = setHeaderLinks(library, [{ id: "link-aaaaaa", text: "new.example.com" }]);
-    expect(next.header.links).toEqual([{ id: "link-aaaaaa", text: "new.example.com" }]);
+    expect(next.header.links).toEqual([
+      { id: "link-aaaaaa", text: "new.example.com", url: null },
+    ]);
   });
 
   it("mints an id for a row that arrives without one", () => {
@@ -143,6 +146,50 @@ describe("setHeaderLinks", () => {
     const next = setHeaderLinks(library, []);
     expect(next.header.name).toBe("Jordan A. Rivera");
     expect(next.header.title).toBe("Aspiring Backend Engineer");
+  });
+
+  it("stores a row's url and normalizes a missing scheme (§18.1)", () => {
+    const next = setHeaderLinks(library, [
+      { id: "link-aaaaaa", text: "portfolio.example.com", url: "portfolio.example.com" },
+      { id: "link-bbbbbb", text: "Dev.to", url: "https://dev.to/jordan-rivera-demo" },
+      { id: "link-cccccc", text: "X", url: "  " },
+    ]);
+
+    expect(next.header.links.map((link) => link.url)).toEqual([
+      "https://portfolio.example.com",
+      "https://dev.to/jordan-rivera-demo",
+      null,
+    ]);
+  });
+
+  it("keeps a row whose url is blank — text with no target still prints", () => {
+    const next = setHeaderLinks(library, [{ id: "link-aaaaaa", text: "x.com/jordan-rivera-demo" }]);
+    expect(next.header.links).toEqual([
+      { id: "link-aaaaaa", text: "x.com/jordan-rivera-demo", url: null },
+    ]);
+  });
+
+  it("refuses a url the schema cannot store rather than dropping it silently", () => {
+    // Passed through unchanged so `z.url()` rejects it and the form reports
+    // it: quietly discarding a URL someone typed is the worse outcome.
+    expect(() =>
+      setHeaderLinks(library, [{ id: "link-aaaaaa", text: "X", url: "https://" }]),
+    ).toThrow();
+  });
+});
+
+describe("normalizeLinkUrl", () => {
+  it("returns null for nothing at all", () => {
+    expect(normalizeLinkUrl("")).toBeNull();
+    expect(normalizeLinkUrl("   ")).toBeNull();
+    expect(normalizeLinkUrl(null)).toBeNull();
+    expect(normalizeLinkUrl(undefined)).toBeNull();
+  });
+
+  it("adds https:// only when there is no scheme", () => {
+    expect(normalizeLinkUrl("example.com")).toBe("https://example.com");
+    expect(normalizeLinkUrl("http://example.com")).toBe("http://example.com");
+    expect(normalizeLinkUrl("mailto:me@example.com")).toBe("mailto:me@example.com");
   });
 });
 

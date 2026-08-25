@@ -10,7 +10,9 @@
  *
  * Extra contact links *are* a list, and they do carry IDs — but only so a form
  * can address one row. No variant references them (§16.6), so they are edited
- * here with the rest of the header rather than as library items.
+ * here with the rest of the header rather than as library items. Each also
+ * carries the URL its text points at (§18.1), which is stored rather than
+ * derived because nothing about "portfolio.example.com" says where it lives.
  *
  * Like every edit in `library-edit.ts`, these are pure functions: the result is
  * re-parsed through the schema before it is returned, so a change that would
@@ -92,26 +94,45 @@ export function updateHeaderFields(
 }
 
 /**
- * Replaces the extra contact links, in the order given (§16.6).
+ * A typed link target, in the shape `headerLinkSchema` will accept (§18.1).
+ *
+ * Blank is `null` — the link then prints as text, which is what every link
+ * already on disk does. A scheme is added when there is none, because
+ * "portfolio.example.com" is what a person types into a box labelled URL and
+ * `z.url()` rejects it; that one prefix is the whole of the leniency here.
+ * Anything still malformed is passed through unchanged rather than quietly
+ * dropped, so the schema refuses it and the form says so — silently discarding
+ * a URL someone typed is the one outcome worse than an error.
+ */
+export function normalizeLinkUrl(input: string | null | undefined): string | null {
+  const url = (input ?? "").trim();
+  if (url === "") return null;
+  return /^[a-z][a-z0-9+.-]*:/i.test(url) ? url : `https://${url}`;
+}
+
+/**
+ * Replaces the extra contact links, in the order given (§16.6, §18.1).
  *
  * Blank rows are dropped rather than stored: they render nothing — the header
  * filters empty fields out of the contact line — so keeping them would leave
- * the manager showing rows that cannot appear on any CV. Existing IDs are
- * preserved, and a row arriving without one is given a fresh ID here.
+ * the manager showing rows that cannot appear on any CV. A blank *url* does
+ * not drop the row: text with no target is a valid link line, and was the only
+ * kind that existed before §18.1. Existing IDs are preserved, and a row
+ * arriving without one is given a fresh ID here.
  */
 export function setHeaderLinks(
   library: ContentLibrary,
-  links: readonly { id?: string; text: string }[],
+  links: readonly { id?: string; text: string; url?: string | null }[],
 ): ContentLibrary {
   const taken = new Set(library.header.links.map((link) => link.id));
-  const next: { id: string; text: string }[] = [];
+  const next: { id: string; text: string; url: string | null }[] = [];
 
   for (const link of links) {
     const text = link.text.trim();
     if (text === "") continue;
     const id = link.id && link.id.trim() !== "" ? link.id.trim() : generateLinkId(taken);
     taken.add(id);
-    next.push({ id, text });
+    next.push({ id, text, url: normalizeLinkUrl(link.url) });
   }
 
   return reparse(library, { ...library.header, links: next });
