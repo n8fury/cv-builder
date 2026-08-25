@@ -1183,10 +1183,29 @@ and completion state.
     `readyState === "complete"` first; without that the create step silently
     did nothing and the run looked like a bug in the button.
 
-- [ ] Task 9.3: Write the project `README.md`
+- [x] Task 9.3: Write the project `README.md`
   - Verification: covers setup, the font build step, `npm run dev`,
     `npm run harness`, the data layout under `data/profiles/`, and the
     localhost-only / no-auth caveat from §9.
+  - Result: all six covered. The no-auth caveat leads the document, directly
+    under the intro, rather than sitting in a footnote — it is the one thing a
+    reader has to know before they run anything.
+  - Every command in it was run while writing: `npm install`, `build:fonts`,
+    `dev`, `harness` and `harness:export` (84/84, text and faces identical),
+    `test` (251/251), `lint`, `tsc --noEmit`, `validate:data`,
+    `check:tailwind-scope`. Route table, script list and schema description
+    are read off the code, not off the spec.
+  - `npm run harness` needs a dev server on :3000 and says so with the two
+    terminals spelled out. Run without one it does not error usefully — it
+    prints Next's 404 page to PDF and reports eight unpaired lines in Segoe
+    UI, which reads as catastrophic drift rather than as "nothing is
+    listening".
+  - Documents what is *not* there as well: `theme.json` is reserved by §9 and
+    read by nothing, and `extract:golden` needs the gitignored reference PDFs,
+    so the goldens are regenerable only by someone holding them.
+  - `CV_PROFILES_DIR` is written up next to the two mutating browser checks,
+    since pointing it at a scratch copy is the difference between running
+    `check:pending` and letting it near real profile data.
 
 - [ ] Task 9.4: Re-run the full harness and test suite as a release gate
   - Verification: `npm test` and `npm run harness` both exit 0 on a clean
