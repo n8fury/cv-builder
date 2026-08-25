@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { SECTION_TYPES, variantSchema, type Variant } from "../schema/variant";
-import { mapVariantRefs, repointVariant, variantReferencedIds } from "./variant-refs";
+import { danglingRefs, mapVariantRefs, repointVariant, variantReferencedIds } from "./variant-refs";
 
 /** One section of every type, each referencing distinctly named ids. */
 const variant: Variant = variantSchema.parse({
@@ -92,5 +92,27 @@ describe("repointVariant", () => {
 
   it("writes no `order` field while rebuilding sections (§15.3)", () => {
     expect(JSON.stringify(mapVariantRefs(variant, (id) => id))).not.toContain('"order"');
+  });
+});
+
+describe("danglingRefs", () => {
+  it("reports every unknown id once, in the order the variant names them", () => {
+    const known = new Set(variantReferencedIds(variant));
+    known.delete("about-1");
+    known.delete("b2");
+
+    expect(danglingRefs(variant, known)).toEqual(["about-1", "b2"]);
+  });
+
+  it("names a repeated id once", () => {
+    // Two slots pointing at the same missing item are one missing item; a
+    // caller listing it twice would read as two separate mistakes.
+    const repeated = repointVariant(variant, new Map([["b1", "gone"], ["b2", "gone"]]));
+
+    expect(danglingRefs(repeated, variantReferencedIds(variant))).toEqual(["gone"]);
+  });
+
+  it("is empty when the library satisfies the whole variant", () => {
+    expect(danglingRefs(variant, variantReferencedIds(variant))).toEqual([]);
   });
 });

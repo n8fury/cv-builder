@@ -11,7 +11,8 @@ land within ±2pt, which is what "pixel-perfect" means here and what the harness
 enforces.
 
 See [docs/SPEC.md](docs/SPEC.md) for the full brief and
-[docs/plan.md](docs/plan.md) for build sequencing.
+[docs/plan.md](docs/plan.md) for build sequencing. Optional AI-assisted
+drafting through n8n is documented in [docs/n8n.md](docs/n8n.md).
 
 ## ⚠️ Localhost only — there is no authentication
 
@@ -20,6 +21,11 @@ There are no accounts, no login, and no authorization checks anywhere (SPEC
 whoever can reach it: anyone who can open the app can read, edit, and delete
 every profile's content. The 404 body from the export endpoint also includes
 the absolute path of the missing variant file.
+
+The one exception is the drafting write endpoint: set `CV_API_TOKEN` and
+`POST /api/variants` requires `Authorization: Bearer <token>`, which is what
+makes it safe to point an n8n instance on another machine at it. Unset, it is
+as open as everything else.
 
 Run it bound to localhost and nothing else. If you ever need it off your own
 machine, put it behind basic auth or a VPN rather than exposing it directly —

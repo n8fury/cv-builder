@@ -1071,27 +1071,66 @@ and completion state.
 
 ## Phase 8 — n8n integration (§10)
 
-- [ ] Task 8.1: Expose a variant-write API endpoint for external drafting
+- [x] Task 8.1: Expose a variant-write API endpoint for external drafting
   - Verification: `POST /api/variants` with a schema-valid body creates a variant
     file and returns its id; a body with a dangling library ID returns 400 with
     the offending ID named.
+  - Result: green — `app/api/variants/route.test.ts`, 10 cases against a real
+    temp profile. A valid draft writes a file that reads back through
+    `variantSchema` and returns `{ variantId, editPath, exportPath }`; a draft
+    naming `about-invented` and `comp-madeup` returns 400 with both in
+    `unknownIds` and nothing on disk.
+  - `danglingRefs` (in `lib/data/variant-refs.ts`) reports *all* unknown ids at
+    once rather than throwing on the first, the way `resolveVariant` does — a
+    model that has invented content usually invents several things, and one per
+    round trip wastes a round trip each time.
+  - Also rejected: a real id in the wrong slot (caught by resolving before the
+    write, so a stored draft always renders), an unknown key (the variant schema
+    is strict), an id that would escape the profiles directory, and a second
+    write over an existing variant (409 — `overwrite: true` replaces it
+    deliberately). `CV_API_TOKEN`, when set, gates the whole endpoint; unset,
+    the endpoint is as open as the rest of the app (§9).
+  - `GET /api/library` came with it: the workflow's "fetch the library" step
+    (§10 step 2) needs an HTTP surface, since n8n need not share the disk.
 
 - [ ] Task 8.2: Build the n8n workflow — webhook → fetch library → LLM draft →
       save → render → email
+  - **Left to the user** — the workflow JSON is written and committed
+    (`n8n/cv-draft-workflow.json`, 8 nodes, importable), but verifying it needs
+    an n8n instance, an Anthropic API key and an SMTP credential, none of which
+    live in this repo. Import it, fill in the two credentials and the `baseUrl`
+    in the Config node, then run the verification below.
   - Verification: posting
     `{ profileId, variantId, targetRole, jobDescription, notifyEmail }` to the
     webhook results in a new variant on disk and a PDF delivered to
     `notifyEmail`.
 
-- [ ] Task 8.3: Constrain the LLM system prompt to selection and reordering only (§10)
+- [x] Task 8.3: Constrain the LLM system prompt to selection and reordering only (§10)
   - Verification: the prompt explicitly forbids inventing experience, metrics, or
     skills; a test run against an unrelated job description produces a variant
     whose every referenced ID already exists in the library — asserted
     programmatically, not by eye.
+  - Result: prompt half green, live-run half deferred. `lib/n8n/prompt.ts`
+    holds `DRAFT_SYSTEM_PROMPT` and `libraryDigest`; `prompt.test.ts` asserts
+    the prohibition is present in so many words — no inventing experience,
+    metrics or skills, no rewriting wording — and that the digest offers
+    exactly `libraryIds(library)`, no more and no less. A section type the
+    schema defines but the prompt never describes is also a failure: the
+    drafter would silently never use it.
+  - The programmatic assertion §10 asks for is enforced on every write, not
+    just in a test: `POST /api/variants` rejects a draft naming an unknown id
+    (Task 8.1). A prompt is a request; the endpoint is where it is settled.
+  - Deferred: the live run against an unrelated job description needs an
+    Anthropic key and a running n8n, so it belongs with Task 8.2.
 
-- [ ] Task 8.4: Document the n8n setup
+- [x] Task 8.4: Document the n8n setup
   - Verification: `docs/n8n.md` records the webhook payload, the node sequence,
     and the exported workflow JSON path.
+  - Result: green — all three, plus the two endpoints' request and response
+    shapes, the credentials to attach, and the `CV_API_TOKEN` guard for running
+    n8n off-machine. The workflow is at `n8n/cv-draft-workflow.json`.
+  - `README.md` now points at it, and its "no authentication" section names
+    `CV_API_TOKEN` as the single exception.
 
 ---
 

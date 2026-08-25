@@ -82,3 +82,22 @@ export function variantReferencedIds(variant: Variant): Set<string> {
   });
   return ids;
 }
+
+/**
+ * The IDs a variant names that the library cannot satisfy (§10, §13).
+ *
+ * `resolveVariant` already refuses to render a dangling reference, but it
+ * throws on the first one it meets, which is the wrong shape for the drafting
+ * API: an LLM that has invented content tends to invent several IDs at once,
+ * and telling it about one per round trip wastes a round trip each time. This
+ * reports all of them, in the order the variant names them, so a rejection can
+ * name the whole set (§10: the model may only select from what exists).
+ */
+export function danglingRefs(variant: Variant, known: ReadonlySet<string>): string[] {
+  const missing: string[] = [];
+  mapVariantRefs(variant, (id) => {
+    if (!known.has(id) && !missing.includes(id)) missing.push(id);
+    return id;
+  });
+  return missing;
+}

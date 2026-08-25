@@ -1,0 +1,200 @@
+{
+  "name": "CV draft — webhook to emailed PDF",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "base-url",
+              "name": "baseUrl",
+              "value": "http://localhost:3000",
+              "type": "string"
+            },
+            {
+              "id": "model",
+              "name": "model",
+              "value": "claude-opus-5",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-380, 0],
+      "id": "b1a0f4c2-0000-4000-8000-000000000001",
+      "name": "Config",
+      "notes": "The only place to edit: where the CV builder runs, and which model drafts."
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cv-draft",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-600, 0],
+      "id": "b1a0f4c2-0000-4000-8000-000000000000",
+      "name": "Webhook",
+      "webhookId": "b1a0f4c2-0000-4000-8000-0000000000ff",
+      "notes": "Body: { profileId, variantId, targetRole, jobDescription, notifyEmail }"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Config').first().json.baseUrl }}/api/library",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "profileId",
+              "value": "={{ $('Webhook').first().json.body.profileId }}"
+            },
+            {
+              "name": "format",
+              "value": "catalogue"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-160, 0],
+      "id": "b1a0f4c2-0000-4000-8000-000000000002",
+      "name": "Fetch library catalogue",
+      "notes": "Returns { systemPrompt, catalogue } — the prompt lives in the repo, not here."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: $('Config').first().json.model,\n  max_tokens: 16000,\n  system: $json.systemPrompt,\n  messages: [\n    {\n      role: 'user',\n      content: '# Library catalogue — the only IDs you may use\n\n'\n        + $json.catalogue\n        + '\n\n# Target role\n'\n        + $('Webhook').first().json.body.targetRole\n        + '\n\n# Job description\n'\n        + $('Webhook').first().json.body.jobDescription\n    }\n  ]\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [60, 0],
+      "id": "b1a0f4c2-0000-4000-8000-000000000003",
+      "name": "Draft the variant",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_ANTHROPIC_CREDENTIAL_ID",
+          "name": "Anthropic x-api-key"
+        }
+      },
+      "notes": "Header-auth credential: name 'x-api-key', value the Anthropic API key."
+    },
+    {
+      "parameters": {
+        "jsCode": "// The model answers with JSON only (the system prompt says so), but a\n// stray code fence is the one deviation worth surviving — everything else\n// is left to fail loudly here rather than reach the variant store.\nconst text = $input.first().json.content\n  .filter((block) => block.type === 'text')\n  .map((block) => block.text)\n  .join('')\n  .trim();\n\nconst json = text.replace(/^```(?:json)?\\s*/, '').replace(/```$/, '');\nconst draft = JSON.parse(json);\n\nconst body = $('Webhook').first().json.body;\n\nreturn [{\n  json: {\n    profileId: body.profileId,\n    variantId: body.variantId,\n    tag: draft.tag,\n    label: draft.label,\n    sections: draft.sections,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [280, 0],
+      "id": "b1a0f4c2-0000-4000-8000-000000000004",
+      "name": "Parse draft"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.baseUrl }}/api/variants",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 0],
+      "id": "b1a0f4c2-0000-4000-8000-000000000005",
+      "name": "Save variant",
+      "notes": "400 here means the model invented an ID — the response names every one."
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Config').first().json.baseUrl }}{{ $json.exportPath }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 0],
+      "id": "b1a0f4c2-0000-4000-8000-000000000006",
+      "name": "Render PDF",
+      "notes": "Chromium starts per request — allow a generous node timeout."
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Webhook').first().json.body.notifyEmail }}",
+        "subject": "=CV draft ready — {{ $('Webhook').first().json.body.targetRole }}",
+        "emailFormat": "text",
+        "message": "=A draft variant has been created from your content library.\n\nOpen it in the editor to fine-tune before sending:\n{{ $('Config').first().json.baseUrl }}{{ $('Save variant').first().json.editPath }}\n\nThe attached PDF is the draft as it stands. Nothing in it was written by the model — every line comes from your library.",
+        "options": {
+          "attachments": "data"
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [940, 0],
+      "id": "b1a0f4c2-0000-4000-8000-000000000007",
+      "name": "Email the draft",
+      "credentials": {
+        "smtp": {
+          "id": "REPLACE_WITH_SMTP_CREDENTIAL_ID",
+          "name": "SMTP"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Config", "type": "main", "index": 0 }]]
+    },
+    "Config": {
+      "main": [[{ "node": "Fetch library catalogue", "type": "main", "index": 0 }]]
+    },
+    "Fetch library catalogue": {
+      "main": [[{ "node": "Draft the variant", "type": "main", "index": 0 }]]
+    },
+    "Draft the variant": {
+      "main": [[{ "node": "Parse draft", "type": "main", "index": 0 }]]
+    },
+    "Parse draft": {
+      "main": [[{ "node": "Save variant", "type": "main", "index": 0 }]]
+    },
+    "Save variant": {
+      "main": [[{ "node": "Render PDF", "type": "main", "index": 0 }]]
+    },
+    "Render PDF": {
+      "main": [[{ "node": "Email the draft", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "tags": []
+}
