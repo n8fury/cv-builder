@@ -16,6 +16,7 @@ import { useCallback, useMemo, useState } from "react";
 import { ResumeDocument } from "@/components/resume/ResumeDocument";
 import { PaginationReporter } from "@/components/resume/pagination-context";
 import { resolveVariant } from "@/lib/data/resolve";
+import { libraryPath } from "@/lib/routes";
 import type { Pagination } from "@/lib/render/pagination";
 
 import { EditorStoreProvider, useEditor } from "./EditorStoreProvider";
@@ -113,6 +114,14 @@ export function EditorShell({ snapshot, css }: { snapshot: EditorSnapshot; css: 
           </h1>
           <Link className="text-sm text-gray-600 underline hover:text-gray-900" href="/">
             Dashboard
+          </Link>
+          {/* Carries the open variant, so the manager's Fork acts on this one
+              — §11.4's "the currently open variant", made literal. */}
+          <Link
+            className="text-sm text-gray-600 underline hover:text-gray-900"
+            href={`${libraryPath(snapshot.profileId)}?variant=${encodeURIComponent(snapshot.variantId)}`}
+          >
+            Library
           </Link>
           <div className="ml-auto flex items-center gap-3">
             <PageCount pagination={pagination} />

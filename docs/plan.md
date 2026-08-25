@@ -883,27 +883,189 @@ and completion state.
 
 ## Phase 7 — Library manager (§7, §12.7)
 
-- [ ] Task 7.1: Build the library browser screen, separate from the variant editor
+- [x] Task 7.1: Build the library browser screen, separate from the variant editor
   - Verification: `/library/jordan-rivera` lists every library item grouped by
     type with its ID and tags.
+  - Result: the route returns 200 and renders all ten collections — About Me,
+    Core Competencies, Experience, Projects, Education, Technical Skills,
+    Certifications, Recommendations, Languages, Custom Sections. Every one of
+    the **81 IDs in `content-library.json` appears on the page**, compared
+    set-for-set against the file rather than counted by eye; nothing is
+    missing. Tags render as chips, verified on a scratch profile carrying
+    them at both levels (`backend`, `iot` on a competency, `ml` on a bullet),
+    since the seed library has none yet. `npx tsc --noEmit` passes.
+  - `lib/data/library-index.ts` is the one shape all four remaining tasks
+    edit through: each collection becomes a group, each item a `LibraryItem`
+    with its ID, tags and editable fields. Uniform rows are what let one set
+    of controls edit, tag and delete twelve different item types.
+  - Bullets and skills nest under the entry they belong to rather than
+    forming a flat list of every bullet in the profile — a bullet's text only
+    means anything next to the job it describes, and this screen exists to
+    decide whether an item is still worth keeping.
+  - The editable field list per kind is held against the Zod schemas by
+    `library-index.test.ts`: every schema field must be offered except `id`,
+    `tags` and the nested arrays. A field added to `content-library.json` that
+    the manager cannot reach would otherwise be stored, rendered and
+    permanently uneditable — `repoUrl`, `demoUrl` and `credentialUrl` are
+    exactly that case today (§12.6 says to fill them in from here).
+  - Empty collections still render. A group that vanished with its last item
+    would leave nowhere to look for what used to be there.
+  - `components/library/**` is registered as a Tailwind source and added to
+    `check:tailwind-scope`'s probes, so the new directory is covered by the
+    same §7 guarantee the editor is — and `components/resume/**` still
+    generates nothing.
 
-- [ ] Task 7.2: Implement edit-with-propagation (§11.4)
+- [x] Task 7.2: Implement edit-with-propagation (§11.4)
   - Verification: editing a bullet's text updates `content-library.json` and
     every variant referencing that ID renders the new text — verified by
     re-rendering a second variant that shares the bullet.
+  - Result: driven through the page with Puppeteer against a throwaway
+    `zz-lib-scratch` profile holding **two variants that reference the same
+    bullet id**. Opening `bullet-shared`, replacing its text and pressing Save
+    took the file from `ORIGINAL SHARED TEXT` to `REWRITTEN VIA LIBRARY
+    MANAGER`; re-rendering both variants gave 200 each with the new text
+    present and the old text **absent in both** — the second one was never
+    opened or edited. The bullet kept its id and its `["ml"]` tags, and its
+    sibling bullet was untouched. No page errors.
+  - Propagation is not a mechanism this task builds — it is what follows from
+    a variant holding IDs and no text (§6.2). Rewriting the library *is* the
+    whole operation, which is why nothing here touches a variant file.
+  - The action re-reads the library, applies one pure edit and writes it back,
+    rather than accepting a whole library from the client the way the editor's
+    Save does. This screen changes one item at a time, and posting the entire
+    file back would let a tab left open overwrite an edit made in the variant
+    editor since it loaded.
+  - `updateItemFields` writes only the fields `ITEM_FIELDS` declares for that
+    kind, so a stray key cannot introduce one the schema rejects, and a key
+    the form did not post leaves its field alone rather than blanking it. A
+    blank link is written as `null`, not `""` — §6.4's URL fields are nullable
+    and the schema rejects an empty string, so clearing one has to mean absent.
+  - `mapLibraryItems` is one traversal over all twelve item kinds, children
+    before parents, with the result re-parsed through the schema before it is
+    returned. Fork, tagging and delete are all written against it, so an
+    unwritable library fails in the pure layer with the offending field named
+    rather than at the store.
+  - Editing an id no item carries throws rather than silently succeeding —
+    a no-op save that reports success is how a stale row quietly loses an edit.
+  - Rows are collapsed by default: the library holds every bullet the person
+    has ever written, and expanding all of them would bury the list this
+    screen exists to scan.
 
-- [ ] Task 7.3: Implement "Fork this bullet" (§11.4)
+- [x] Task 7.3: Implement "Fork this bullet" (§11.4)
   - Verification: forking creates a new library item with a new ID, repoints only
     the currently open variant at it, and leaves other variants on the original.
+  - Result: driven through the page with Puppeteer on `zz-lib-scratch`, whose
+    two variants both referenced `bullet-shared`. Forking from `?variant=alpha`
+    put a second bullet `bullet-gklqja` in the library carrying a copy of the
+    text, moved **alpha's** reference to it, and left **beta** on
+    `bullet-shared` — file-for-file, `alpha` reads `[bullet-gklqja,
+    bullet-solo]` and `beta` still reads `[bullet-shared, bullet-solo]`.
+    Rewriting the fork afterwards then showed the split doing its job: alpha
+    renders the new wording and not the old, beta renders the old and not the
+    new. No page errors.
+  - "The currently open variant" is carried in the URL, not guessed. The
+    editor's header now links to `?variant=<open variant>`, and the manager
+    shows that selection in a scope control — so the variant a fork repoints is
+    stated on screen rather than inferred from where the user came from.
+    Browsing and editing stay library-wide regardless: an edit reaches every
+    variant (§11.4) whatever is selected here.
+  - With no variant selected the Fork button is disabled with the reason next
+    to it, rather than hidden. An absent button reads as "this item cannot be
+    forked", which is the wrong lesson. The same applies when the selected
+    variant does not reference the item — there is nothing to repoint, and the
+    server re-checks that rather than trusting the disabled state.
+  - The copy is inserted immediately after the original, not appended. Library
+    order is what the editor's "not in this variant" list shows (§15.3), and a
+    fork at the bottom of a long list would read as an unrelated new item
+    instead of a sibling wording.
+  - Forking an *entry* forks its bullets too, each with its own new ID.
+    Sharing them would leave the fork only half independent — an edit to one
+    of those bullets would propagate straight back into the variant the fork
+    was meant to diverge from.
+  - The variant is written before the library. If that write fails nothing has
+    happened; the other order would leave an unreferenced copy behind — the
+    orphaned cruft §7's manager exists to clean up (Task 7.5).
+  - `variant-refs.ts` holds both the reference walk and the swap, and its test
+    asserts the fixture covers **every** section type in `SECTION_TYPES`. A
+    type handled by the schema but missed here would make a fork silently drop
+    a reference, and would make Task 7.5 report a live item as an orphan.
+  - New IDs are checked against the whole library *and* against each other
+    within one fork, so a forked entry's bullets cannot collide with the copy,
+    the original, or one another.
 
-- [ ] Task 7.4: Implement tagging on library items (§6.1)
+- [x] Task 7.4: Implement tagging on library items (§6.1)
   - Verification: adding a tag persists to the item's `tags` array and the
     browser can filter by it.
+  - Result: driven through the page with Puppeteer. Typing
+    `" Backend , iot,backend "` on `proj-zz` and saving wrote
+    `["backend","iot"]` to the item's `tags` array on disk, leaving its title
+    and every other field untouched. The filter bar then offered
+    `all / backend / iot / ml`, built from what the library actually carries;
+    `?tag=backend` narrowed 7 rows to `[comp-tagged, proj-zz]` ("2 items
+    tagged backend"), `?tag=ml` to `[exp-shared, bullet-shared,
+    bullet-gklqja]`, and `?tag=nope` to none. No page errors.
+  - Tags are normalised on the way in — lowercased, trimmed, de-duplicated,
+    in the order typed. `Backend`, `backend ` and `backend` being three
+    different tags would split every filter three ways, and §6.1 wants these
+    for AI drafting too, where a near-miss is silently worse.
+  - They ride along with the item's text on one Save rather than having a
+    button of their own: they are one property of one item, and two save
+    buttons on a row leaves the person guessing which one they just pressed.
+    They stay out of `ITEM_FIELDS` regardless — they are universal, not
+    per-kind, which is what `EXCLUDED_FIELDS` records.
+  - Filtering keeps a parent whose *child* matched. A bullet is only reachable
+    through the entry it hangs off, so dropping unmatched parents would hide
+    every bullet-level result — visible above as `ml` keeping `exp-shared`,
+    which carries no tag itself. A parent that matched on its own shows only
+    its matching children, so no row appears that the tag does not apply to.
+  - The filter lives in the URL and each chip carries `?variant=` through, so
+    filtering does not silently drop the fork scope — verified: selecting
+    `alpha` then filtering left the scope control still reading `alpha`.
+  - An unknown tag filters to nothing and says so, rather than falling back to
+    the unfiltered library as though the filter had not applied.
 
-- [ ] Task 7.5: Implement orphan detection and delete
+- [x] Task 7.5: Implement orphan detection and delete
   - Verification: an item referenced by no variant is flagged as orphaned;
     deleting it removes it from `content-library.json`, and deletion of a
     referenced item is blocked with a message naming the referencing variants.
+  - Result: driven through the page with Puppeteer on `zz-lib-scratch`, with a
+    `comp-orphaned` item added that no variant referenced. The page reported
+    *8 items across 10 types, referenced by 2 variants. 4 orphaned* and
+    flagged exactly those four rows. Deleting `comp-orphaned` removed it from
+    `content-library.json` (competencies went `[comp-tagged, comp-orphaned]`
+    → `[comp-tagged]`) and the row disappeared, the count dropping to 3
+    orphaned. Deleting the referenced `bullet-solo` was **refused** with
+    *"Still used by alpha, beta — remove it there first, or fork it."*, and
+    the bullet is still on disk. Both variants still render 200. No page
+    errors.
+  - The block names the variants, in the confirmation *and* in the server's
+    refusal. "Cannot delete" without them leaves the person opening every
+    variant to find out which one is holding it.
+  - Deleting anyway would not merely lose a line: the resolver refuses a
+    variant naming an ID the library lacks (§13), so those CVs would stop
+    rendering altogether. The check therefore lives on the server, not in the
+    disabled state of a button a stale page could talk past.
+  - Nested IDs are checked with the item. Removing an entry takes its bullets
+    with it, and a variant naming one of *those* would break identically —
+    a test pins that `exp-used`'s block comes from its bullet, not itself.
+  - **A hidden section's references still count.** Verified as a real
+    behaviour, not an assumption: `resolveVariant` filters `visible: false`
+    sections *before* resolving, so a dangling reference under one does not
+    throw today — but it does the moment the section is switched back on, and
+    §12.2 makes a hidden section curation the person chose. Counting them is
+    the conservative reading, and the test asserts both halves.
+  - A bullet is judged on its own reference, not its parent's: a variant that
+    includes a job but drops one of its bullets leaves that bullet orphaned,
+    which is exactly the wording §11.4's propagating edits leave behind.
+  - An unreadable variant blocks deletion entirely, with its name. Skipping it
+    would silently widen the orphan set to include everything it was using,
+    and the first symptom would be a deleted item breaking a CV that had been
+    fine.
+  - Phase gate: `npm test` 240/240, `npx tsc --noEmit` clean,
+    `npm run check:tailwind-scope` passing on all three probes, and
+    `npm run harness` still **84/84 within ±2pt, 59 exact, text and faces
+    identical** — the library manager changed nothing about what renders.
+    The scratch profile was removed; `data/profiles/` is unchanged.
 
 ---
 

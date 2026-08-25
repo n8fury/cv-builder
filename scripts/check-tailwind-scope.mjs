@@ -8,6 +8,7 @@ import tailwind from "@tailwindcss/postcss";
 
 const probes = [
   { dir: "components/editor", cls: "bg-lime-300", expected: true },
+  { dir: "components/library", cls: "bg-amber-300", expected: true },
   { dir: "components/resume", cls: "bg-fuchsia-300", expected: false },
 ];
 const probeFile = "__tailwind-scope-probe.tsx";

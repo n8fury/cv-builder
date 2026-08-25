@@ -17,6 +17,14 @@ export function editPath(profileId: string, variantId: string): string {
 }
 
 /**
+ * Where a profile's content library is browsed and cleaned up — the library
+ * manager, a separate screen from the variant editor (§7, §12.7).
+ */
+export function libraryPath(profileId: string): string {
+  return `/library/${encodeURIComponent(profileId)}`;
+}
+
+/**
  * The export endpoint. `download` flips the response from an inline preview
  * to a save-to-disk attachment, so one endpoint serves both the browser's PDF
  * viewer and the dashboard's Download button.

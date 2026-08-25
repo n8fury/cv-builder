@@ -8,7 +8,7 @@
 import Link from "next/link";
 
 import { listDashboard, type ProfileSummary, type VariantSummary } from "@/lib/data/dashboard";
-import { editPath, renderPath } from "@/lib/routes";
+import { editPath, libraryPath, renderPath } from "@/lib/routes";
 import {
   deleteProfileAction,
   deleteVariantAction,
@@ -87,6 +87,12 @@ function ProfileCard({ profile }: { profile: ProfileSummary }) {
         <span className="ml-auto text-xs text-gray-500">
           {profile.variants.length} variant{profile.variants.length === 1 ? "" : "s"}
         </span>
+        <Link
+          className="rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+          href={libraryPath(profile.id)}
+        >
+          Library
+        </Link>
         <RenameForm
           action={renameProfileAction}
           currentId={profile.id}
