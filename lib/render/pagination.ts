@@ -35,6 +35,11 @@
  *
  * Breaks forced by an atom, which is where every visible jump in the preview
  * comes from, are exact either way.
+ *
+ * Alongside the breaks the model reports how full each page ended up, and what
+ * a break moved on when it moved something whole. Those readings are pure
+ * arithmetic over the breaks it just committed to — the editor's fit report is
+ * a second reading of the pagination, never a second measurement of it.
  */
 
 /** A `break-inside: avoid` box, in flow coordinates: 0 is the first line. */
@@ -52,12 +57,47 @@ export type FlowBlock = {
    * caller resolves that and reports the answer, not the raw declaration.
    */
   keepWithNext: boolean;
+  /**
+   * What to call this block when a break pushes it — an entry's title, a
+   * section heading's words (SPEC §11.5). Purely for the editor's fit
+   * readout: nothing in the model reads it, and omitting it changes no break.
+   */
+  label?: string;
+};
+
+/**
+ * How full one page ended up (SPEC §11.5).
+ *
+ * The counterpart to `PageWindow`: that says what slice of the flow a sheet
+ * shows, this says how much of the page that slice fills. Both are derived
+ * from the same breaks, so the editor's readout and the sheets it describes
+ * cannot disagree.
+ *
+ * `free` is the hole at the foot of the page. On the last page it is the room
+ * left to fill — the gradient §11.5's page count never gave. On an earlier
+ * page it is what a pushed block left behind, and `pushed` names that block.
+ */
+export type PageFit = {
+  /** 1-based, as printed. */
+  pageNumber: number;
+  /** Flow height, in points, of what this page holds. */
+  used: number;
+  /** Points of page left unused; zero on a page filled to the boundary. */
+  free: number;
+  /**
+   * The block whose push ended this page early, if one did — the label of the
+   * block that would not fit, which now opens the next page. Absent when the
+   * page ended on a prose line boundary, and on the last page.
+   */
+  pushed?: string;
 };
 
 export type Pagination = {
   /** Flow offsets where a page ends, ascending; empty for a one-page CV. */
   breaks: number[];
   pageCount: number;
+  /** One entry per page, in order — how full each ended up (§11.5). */
+  pages: PageFit[];
 };
 
 /**
@@ -105,10 +145,10 @@ export type PaginateOptions = {
  * chain from its first heading to its last, and the first overrun anywhere
  * pushes the whole document onto page two.
  */
-function chainTop(blocks: readonly FlowBlock[], index: number): number {
+function chainStart(blocks: readonly FlowBlock[], index: number): number {
   let first = index;
   while (first > 0 && blocks[first - 1].keepWithNext) first -= 1;
-  return blocks[first].top;
+  return first;
 }
 
 export function paginate({
@@ -121,6 +161,11 @@ export function paginate({
   if (usableHeight <= 0) throw new Error("paginate: usableHeight must be positive");
 
   const breaks: number[] = [];
+  /**
+   * What each break pushed, aligned with `breaks` — `undefined` wherever a
+   * page simply ran out of room mid-prose and nothing was moved whole.
+   */
+  const pushed: (string | undefined)[] = [];
   let pageStart = 0;
 
   /**
@@ -147,9 +192,10 @@ export function paginate({
   };
 
   /** Ends the current page at `at`. Ignores anything that cannot move it on. */
-  const breakAt = (at: number): boolean => {
+  const breakAt = (at: number, moved?: string): boolean => {
     if (at <= pageStart) return false;
     breaks.push(at);
+    pushed.push(moved);
     pageStart = at;
     return true;
   };
@@ -172,8 +218,14 @@ export function paginate({
 
     // It overruns. Push it — and anything glued above it — to a fresh page,
     // unless it already starts one, in which case there is nothing to push.
-    const anchor = chainTop(blocks, i);
-    breakAt(anchor > pageStart ? anchor : block.top);
+    //
+    // The name reported is the overrunning block's own, not the chain's: the
+    // chain may start at a section heading that came along only because it is
+    // glued forward, and the block that would not fit is the one worth
+    // naming. The heading's label stands in when the entry carries none.
+    const start = chainStart(blocks, i);
+    const anchor = blocks[start].top;
+    breakAt(anchor > pageStart ? anchor : block.top, block.label ?? blocks[start].label);
 
     // A block (or glued chain) taller than a page has to be cut regardless.
     fillTo(block.bottom);
@@ -182,7 +234,34 @@ export function paginate({
   // Prose after the last block.
   fillTo(contentHeight);
 
-  return { breaks, pageCount: breaks.length + 1 };
+  return { breaks, pageCount: breaks.length + 1, pages: pageFits() };
+
+  /**
+   * How full each page ended up — the same arithmetic `pageWindows` does, read
+   * against the page rather than against the flow (§11.5).
+   *
+   * A page runs from the previous break to its own, and the last one runs to
+   * the end of the content, so `used` is a difference of two numbers the model
+   * has already committed to. That is what keeps the readout and the sheets
+   * the preview draws in agreement: neither measures anything the other does
+   * not.
+   */
+  function pageFits(): PageFit[] {
+    return Array.from({ length: breaks.length + 1 }, (_, index) => {
+      const top = index === 0 ? 0 : breaks[index - 1];
+      // A break past the content's own end cannot happen, but a document
+      // shorter than its last break would report a negative fill if one did.
+      const used = Math.max((breaks[index] ?? contentHeight) - top, 0);
+      return {
+        pageNumber: index + 1,
+        used,
+        // Clamped: the last page may exceed the boundary by the tolerance, and
+        // "-0.3pt free" is a rounding crumb dressed up as an overflow.
+        free: Math.max(usableHeight - used, 0),
+        pushed: pushed[index],
+      };
+    });
+  }
 }
 
 /** One preview sheet: which page it is, and what slice of the flow it shows. */
@@ -213,7 +292,10 @@ export type PageWindow = {
  * each sheet show". Kept here, beside the model that produced the breaks, so
  * the sheet stack cannot drift from the page count reported next to it.
  */
-export function pageWindows({ breaks, pageCount }: Pagination): PageWindow[] {
+export function pageWindows({
+  breaks,
+  pageCount,
+}: Pick<Pagination, "breaks" | "pageCount">): PageWindow[] {
   return Array.from({ length: pageCount }, (_, index) => {
     const offset = index === 0 ? 0 : breaks[index - 1];
     const end = breaks[index];

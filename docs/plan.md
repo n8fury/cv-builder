@@ -1470,10 +1470,42 @@ the code, so the spec stays the source of truth for values:
 
 ### Tier 1 — the things that actually hurt right now
 
-- [ ] Task 10.3: Make fit-to-page feedback actionable (§11.5)
+- [x] Task 10.3: Make fit-to-page feedback actionable (§11.5)
   - Verification: the editor reports remaining space on the last page and the
     amount of overflow past a break, and names the entry a break pushed; the
     readings agree with the sheet stack the preview draws.
+  - Result: all three hold, read out of a browser on the real detailed
+    variant. The editor reports **“2 pages · Page 2: 144pt free — room for 12
+    more lines”**, and under it **“Page 2 holds 538pt, about 45 lines.
+    ‘Fleet Drive-Cycle Analysis Toolkit’ moved here whole, leaving 38pt
+    at the foot of page 1.”**
+  - Agreement is checked against the sheets themselves, not against a second
+    model: page one's clip measures 643.7pt of a 682pt page — 38.3pt short,
+    the hole reported — and the flow runs to 1181.4pt, so page two holds
+    537.8pt and has 144.2pt left. Every printed figure is one of those,
+    rounded.
+  - It cannot drift, because it is not a second measurement: `paginate` now
+    returns a `PageFit` per page alongside the breaks, derived from the breaks
+    it just committed to. The report and `pageWindows` read the same numbers.
+  - `FlowBlock` gained an optional `label`, and `paginate` records what each
+    break moved — the overrunning block's own name, not the chain's, so a
+    heading dragged along by `break-after: avoid` does not get the credit for
+    an entry that would not fit. Labels are read out of the document
+    (`.resume-entry-title`, `.resume-recommendation-name`, a heading's own
+    words), so nothing in the markup has a second copy to keep in step.
+  - `PageCount.tsx` is gone, replaced by `PageFit.tsx` above the preview —
+    beside the sheets it describes rather than up in the page header. Points
+    are given in body lines as well, since a line is the unit a bullet is
+    edited in. Still purely informational, as §11.5 requires: nothing here
+    disables the export or turns red.
+  - The one thing this changed in the model's own behaviour: `PagedDocument`
+    now compares page fills as well as breaks before it re-renders. Without
+    that a one-page CV's gauge would never move, since its break list is empty
+    however much text is added.
+  - `npm test` **358/358** (up from 334 — 8 page-fill cases plus a new
+    `PageFit.test.tsx`), `tsc --noEmit`, `lint`, and `npm run harness`
+    **84/84**, text and faces identical. The printed document is untouched:
+    nothing outside the editor's chrome and the model's return shape moved.
   - `PageCount.tsx` says "2 pages" and stops. Tailoring a CV is largely a
     fitting problem, and the editor gives a number with no gradient to
     descend. Show *how much* — "page 2 holds 3 lines, 41pt used" — plus a

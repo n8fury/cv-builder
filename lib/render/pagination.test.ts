@@ -10,15 +10,21 @@ function block(top: number, height: number, keepWithNext = false): FlowBlock {
   return { top, bottom: top + height, keepWithNext };
 }
 
+/**
+ * `toMatchObject`, not `toEqual`, wherever a whole reading is compared: the
+ * page fills alongside the breaks are asserted on their own below, and
+ * restating them in every geometry test would make each one a test of the
+ * arithmetic as well as of the break it exists to pin.
+ */
 describe("paginate", () => {
   it("reports one page when the content fits exactly", () => {
     expect(
       paginate({ blocks: [block(0, 100)], contentHeight: USABLE, usableHeight: USABLE }),
-    ).toEqual({ breaks: [], pageCount: 1 });
+    ).toMatchObject({ breaks: [], pageCount: 1 });
   });
 
   it("breaks prose at the page height when no block is in the way", () => {
-    expect(paginate({ blocks: [], contentHeight: USABLE + 50, usableHeight: USABLE })).toEqual({
+    expect(paginate({ blocks: [], contentHeight: USABLE + 50, usableHeight: USABLE })).toMatchObject({
       breaks: [USABLE],
       pageCount: 2,
     });
@@ -29,7 +35,7 @@ describe("paginate", () => {
     const entry = block(USABLE - 40, 90);
     expect(
       paginate({ blocks: [entry], contentHeight: entry.bottom, usableHeight: USABLE }),
-    ).toEqual({ breaks: [entry.top], pageCount: 2 });
+    ).toMatchObject({ breaks: [entry.top], pageCount: 2 });
   });
 
   it("takes a keepWithNext heading down with the entry it pushes", () => {
@@ -37,7 +43,7 @@ describe("paginate", () => {
     const entry = block(USABLE - 40, 90);
     expect(
       paginate({ blocks: [heading, entry], contentHeight: entry.bottom, usableHeight: USABLE }),
-    ).toEqual({ breaks: [heading.top], pageCount: 2 });
+    ).toMatchObject({ breaks: [heading.top], pageCount: 2 });
   });
 
   it("leaves a heading alone when its entry still fits", () => {
@@ -45,14 +51,14 @@ describe("paginate", () => {
     const entry = block(USABLE - 180, 90);
     expect(
       paginate({ blocks: [heading, entry], contentHeight: entry.bottom, usableHeight: USABLE }),
-    ).toEqual({ breaks: [], pageCount: 1 });
+    ).toMatchObject({ breaks: [], pageCount: 1 });
   });
 
   it("cuts a block taller than a page rather than looping forever", () => {
     const giant = block(0, USABLE * 2 + 30);
     expect(
       paginate({ blocks: [giant], contentHeight: giant.bottom, usableHeight: USABLE }),
-    ).toEqual({ breaks: [USABLE, USABLE * 2], pageCount: 3 });
+    ).toMatchObject({ breaks: [USABLE, USABLE * 2], pageCount: 3 });
   });
 
   it("does not push a block that already starts its own page", () => {
@@ -65,7 +71,7 @@ describe("paginate", () => {
         contentHeight: second.bottom,
         usableHeight: USABLE,
       }),
-    ).toEqual({ breaks: [600, 600 + USABLE], pageCount: 3 });
+    ).toMatchObject({ breaks: [600, 600 + USABLE], pageCount: 3 });
   });
 
   it("measures the second page from the pushed block, not from the page grid", () => {
@@ -75,7 +81,7 @@ describe("paginate", () => {
     const later = block(USABLE - 40 + USABLE - 20, 60);
     expect(
       paginate({ blocks: [pushed, later], contentHeight: later.bottom, usableHeight: USABLE }),
-    ).toEqual({ breaks: [pushed.top, later.top], pageCount: 3 });
+    ).toMatchObject({ breaks: [pushed.top, later.top], pageCount: 3 });
   });
 
   it("ignores an overrun inside the tolerance", () => {
@@ -86,13 +92,125 @@ describe("paginate", () => {
         usableHeight: USABLE,
         tolerance: 0.5,
       }),
-    ).toEqual({ breaks: [], pageCount: 1 });
+    ).toMatchObject({ breaks: [], pageCount: 1 });
   });
 
   it("rejects a non-positive page height instead of looping", () => {
     expect(() => paginate({ blocks: [], contentHeight: 10, usableHeight: 0 })).toThrow(
       /usableHeight/,
     );
+  });
+});
+
+describe("page fills (§11.5)", () => {
+  it("reports the room left on a page the content does not fill", () => {
+    const { pages } = paginate({ blocks: [], contentHeight: 400, usableHeight: USABLE });
+
+    expect(pages).toEqual([{ pageNumber: 1, used: 400, free: USABLE - 400, pushed: undefined }]);
+  });
+
+  it("reports how much spilled past a break", () => {
+    const { pages } = paginate({ blocks: [], contentHeight: USABLE + 41, usableHeight: USABLE });
+
+    expect(pages[0]).toMatchObject({ used: USABLE, free: 0 });
+    // The whole point of the reading: 41pt on page two, not "2 pages".
+    expect(pages[1]).toMatchObject({ pageNumber: 2, used: 41, free: USABLE - 41 });
+  });
+
+  it("names the entry a break pushed, and the hole it left", () => {
+    const entry: FlowBlock = {
+      top: USABLE - 40,
+      bottom: USABLE + 50,
+      keepWithNext: false,
+      label: "Senior Engineer",
+    };
+    const { pages } = paginate({ blocks: [entry], contentHeight: entry.bottom, usableHeight: USABLE });
+
+    expect(pages[0]).toMatchObject({ pushed: "Senior Engineer", free: 40 });
+    // Named against the page it left, not the page it landed on: the last
+    // page has nothing after it to have pushed anything.
+    expect(pages[1].pushed).toBeUndefined();
+  });
+
+  it("names the block that would not fit, not the heading dragged with it", () => {
+    const heading: FlowBlock = {
+      top: USABLE - 60,
+      bottom: USABLE - 40,
+      keepWithNext: true,
+      label: "Experience",
+    };
+    const entry: FlowBlock = {
+      top: USABLE - 40,
+      bottom: USABLE + 50,
+      keepWithNext: false,
+      label: "Senior Engineer",
+    };
+    const { pages } = paginate({
+      blocks: [heading, entry],
+      contentHeight: entry.bottom,
+      usableHeight: USABLE,
+    });
+
+    expect(pages[0]).toMatchObject({ pushed: "Senior Engineer", free: 60 });
+  });
+
+  it("falls back to the heading when the entry it pushed has no label", () => {
+    const heading: FlowBlock = {
+      top: USABLE - 60,
+      bottom: USABLE - 40,
+      keepWithNext: true,
+      label: "Experience",
+    };
+    const { pages } = paginate({
+      blocks: [heading, block(USABLE - 40, 90)],
+      contentHeight: USABLE + 50,
+      usableHeight: USABLE,
+    });
+
+    expect(pages[0].pushed).toBe("Experience");
+  });
+
+  it("leaves a prose break unattributed — nothing was moved whole", () => {
+    const { pages } = paginate({
+      blocks: [],
+      proseRuns: [bullet(604, 10)],
+      contentHeight: 900,
+      usableHeight: USABLE,
+    });
+
+    expect(pages[0].pushed).toBeUndefined();
+    // The fill follows the break the snap actually made, so page one reads as
+    // ending short of the boundary rather than at it.
+    expect(pages[0].used).toBeLessThan(USABLE);
+    expect(pages[0].used + pages[1].used).toBe(900);
+  });
+
+  it("agrees with the sheets the preview draws", () => {
+    // One reading, two views of it: a sheet's window and the page's fill are
+    // the same slice of the flow, so they cannot report different heights.
+    const pagination = paginate({
+      blocks: [block(USABLE - 20, 60)],
+      contentHeight: USABLE + 200,
+      usableHeight: USABLE,
+    });
+
+    for (const window of pageWindows(pagination)) {
+      const fill = pagination.pages[window.pageNumber - 1];
+      expect(fill.used).toBe(window.height ?? USABLE + 200 - window.offset);
+      expect(fill.used + fill.free).toBeLessThanOrEqual(USABLE);
+    }
+  });
+
+  it("never reports negative room on a page filled past the boundary", () => {
+    const { pages } = paginate({
+      blocks: [],
+      contentHeight: USABLE + 0.3,
+      usableHeight: USABLE,
+      tolerance: 0.5,
+    });
+
+    expect(pages).toHaveLength(1);
+    expect(pages[0].free).toBe(0);
   });
 });
 
@@ -308,7 +426,7 @@ describe("prose breaks land where the prose can break (§18.2)", () => {
 
   it("paginates identically to before when no runs are supplied", () => {
     const withNone = paginate({ blocks: [], contentHeight: 900, usableHeight: USABLE });
-    expect(withNone).toEqual({ breaks: [USABLE], pageCount: 2 });
+    expect(withNone).toMatchObject({ breaks: [USABLE], pageCount: 2 });
     expect(
       paginate({ blocks: [], proseRuns: [], contentHeight: 900, usableHeight: USABLE }),
     ).toEqual(withNone);

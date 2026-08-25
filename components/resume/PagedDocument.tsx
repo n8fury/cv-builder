@@ -62,14 +62,56 @@ import { usePaginationListener } from "./pagination-context";
  */
 const TOLERANCE_PT = 0.5;
 
-const EMPTY: Pagination = { breaks: [], pageCount: 1 };
+/**
+ * A document that has not been measured yet: one page, holding nothing.
+ *
+ * Run through `paginate` rather than written out, so the empty reading is the
+ * same shape the real one is — including a page fill of a whole empty page,
+ * which is what the editor's fit report shows before the first measurement
+ * lands.
+ */
+export const EMPTY_PAGINATION: Pagination = paginate({
+  blocks: [],
+  contentHeight: 0,
+  usableHeight: CONTENT_HEIGHT_PT,
+});
 
+/**
+ * Two readings that would draw the same sheets and report the same fit.
+ *
+ * The page fills are compared as well as the breaks, and they have to be: a
+ * one-page CV gains and loses lines without its break list ever changing, and
+ * that is exactly the movement the space-left gauge exists to show.
+ */
 function samePagination(a: Pagination, b: Pagination): boolean {
   return (
     a.pageCount === b.pageCount &&
     a.breaks.length === b.breaks.length &&
-    a.breaks.every((value, index) => Math.abs(value - b.breaks[index]) < 0.01)
+    a.breaks.every((value, index) => Math.abs(value - b.breaks[index]) < 0.01) &&
+    a.pages.every(
+      (page, index) =>
+        Math.abs(page.used - b.pages[index].used) < 0.01 &&
+        page.pushed === b.pages[index].pushed,
+    )
   );
+}
+
+/**
+ * What to call a block the editor has to name (SPEC §11.5).
+ *
+ * Read out of the document rather than declared on it: an entry is already
+ * headed by its title and a heading is already its own words, so there is no
+ * second copy to keep in step with the first. Truncated because these end up
+ * in one line of chrome, and an entry title can run to half a line of prose.
+ */
+const LABEL_SELECTOR = ".resume-entry-title, .resume-recommendation-name";
+const LABEL_MAX_CHARS = 48;
+
+function blockLabel(element: HTMLElement): string | undefined {
+  const source = element.querySelector<HTMLElement>(LABEL_SELECTOR) ?? element;
+  const text = (source.textContent ?? "").replace(/\s+/g, " ").trim();
+  if (text === "") return undefined;
+  return text.length > LABEL_MAX_CHARS ? `${text.slice(0, LABEL_MAX_CHARS - 1)}…` : text;
 }
 
 /**
@@ -164,7 +206,7 @@ function measure(flow: HTMLElement): Pagination {
   // Zero width means the document is not laid out yet — a freshly written
   // iframe, or a collapsed column. Nothing to measure, and dividing by it
   // would report Infinity as a page count.
-  if (flowRect.width === 0) return EMPTY;
+  if (flowRect.width === 0) return EMPTY_PAGINATION;
 
   // Derived from the box rather than assumed to be 96/72: it absorbs whatever
   // the browser rounded 502pt to, so the blocks and the page height are
@@ -195,6 +237,7 @@ function measure(flow: HTMLElement): Pagination {
     keepWithNext:
       item.element.matches(KEEP_WITH_NEXT_SELECTOR) &&
       gluedToNextBlock(item.element, found[index + 1]?.element),
+    label: blockLabel(item.element),
   }));
 
   return paginate({
@@ -210,8 +253,8 @@ function measure(flow: HTMLElement): Pagination {
 
 export function PagedDocument({ children }: { children: ReactNode }) {
   const firstFlow = useRef<HTMLDivElement>(null);
-  const [pagination, setPagination] = useState<Pagination>(EMPTY);
-  const latest = useRef<Pagination>(EMPTY);
+  const [pagination, setPagination] = useState<Pagination>(EMPTY_PAGINATION);
+  const latest = useRef<Pagination>(EMPTY_PAGINATION);
   const report = usePaginationListener();
 
   // Re-measures in place, and returns without touching state when nothing

@@ -13,6 +13,7 @@
 import { useCallback, useMemo, useState } from "react";
 
 import { PendingLink } from "@/app/(dashboard)/PendingLink";
+import { EMPTY_PAGINATION } from "@/components/resume/PagedDocument";
 import { ResumeDocument } from "@/components/resume/ResumeDocument";
 import { PaginationReporter } from "@/components/resume/pagination-context";
 import { resolveVariant } from "@/lib/data/resolve";
@@ -21,7 +22,7 @@ import type { Pagination } from "@/lib/render/pagination";
 
 import { EditorStoreProvider, useEditor } from "./EditorStoreProvider";
 import { FontWarning } from "./FontWarning";
-import { PageCount } from "./PageCount";
+import { PageFit } from "./PageFit";
 import { PreviewFrame } from "./PreviewFrame";
 import { SaveControls } from "./SaveControls";
 import { VariantForm } from "./VariantForm";
@@ -60,7 +61,7 @@ function Preview({
     );
   }
 
-  // Context reaches the resume through the portal, so the page-count reading
+  // Context reaches the resume through the portal, so the pagination reading
   // crosses out of the iframe without either side knowing about the other.
   return (
     <PaginationReporter value={onPaginate}>
@@ -91,7 +92,7 @@ function Status() {
 }
 
 export function EditorShell({ snapshot, css }: { snapshot: EditorSnapshot; css: string }) {
-  const [pagination, setPagination] = useState<Pagination>({ breaks: [], pageCount: 1 });
+  const [pagination, setPagination] = useState<Pagination>(EMPTY_PAGINATION);
   const [fontProblems, setFontProblems] = useState<string[]>([]);
   // Stable: the preview re-runs its reporting effect whenever this changes.
   const onPaginate = useCallback((next: Pagination) => setPagination(next), []);
@@ -124,7 +125,6 @@ export function EditorShell({ snapshot, css }: { snapshot: EditorSnapshot; css: 
             Library
           </PendingLink>
           <div className="ml-auto flex items-center gap-3">
-            <PageCount pagination={pagination} />
             <Status />
             <SaveControls />
           </div>
@@ -136,6 +136,9 @@ export function EditorShell({ snapshot, css }: { snapshot: EditorSnapshot; css: 
           </div>
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
             <FontWarning problems={fontProblems} />
+            {/* Above the sheets it describes: every figure in it is a reading
+                of the same pagination those sheets are windowed with. */}
+            <PageFit pagination={pagination} />
             <Preview css={css} onPaginate={onPaginate} onFontProblems={onFontProblems} />
           </div>
         </div>
