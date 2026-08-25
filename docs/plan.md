@@ -1097,9 +1097,51 @@ and completion state.
 
 ## Phase 9 — Polish
 
-- [ ] Task 9.1: Complete the §13 error-handling table end to end
+- [x] Task 9.1: Complete the §13 error-handling table end to end
   - Verification: each of the five rows in §13 is exercised manually or by test
     and behaves as specified; failures surface as toasts, never silently.
+  - Result: all five rows exercised, all green. `npm run check:errors` reports
+    **15/15** against a running dev server (rows 1, 2, 4, 5 in the browser);
+    `app/api/generate-pdf/route.test.ts` adds 11 route-level cases for rows 1,
+    2 and 4; `npm test` is 251/251 across 25 files, `eslint` and `tsc --noEmit`
+    both clean, and `npm run harness:export` still exits 0 (84/84 lines within
+    ±2pt, text and faces identical) — the behaviour under test is unchanged.
+  - Row 1 (Puppeteer fails): the route returns 500 with the reason in `{error}`
+    on both a failed launch and a render that dies mid-`goto`, closes Chromium
+    on the failing path, and the dashboard shows it verbatim — the driven
+    click produced the toast `PDF generation failed: Failed to launch the
+    browser process`.
+  - Row 2 (fonts): the export never reaches `page.pdf()` when a face is
+    unusable and names every failing face in the 500. With `*.woff2` blocked at
+    the browser, the preview showed the amber warning naming all four faces,
+    set `resume-fallback-fonts`, painted `Jordan A. Rivera` in `serif`, and
+    left the editor and its Save control fully usable — §13's split, both
+    halves, from one shared check.
+  - Row 3 (empty section): already covered exactly by
+    `ResumeSectionBody.test.tsx`, which renders all ten section types curated
+    down to nothing and asserts heading-without-body. Not duplicated in the
+    browser script — ten types beats one live click.
+  - Row 4 (bad ids): 404 for an unknown profile, an unknown variant and an id
+    the store rejects; the export endpoint 404s with a message rather than a
+    blank body, and resolves before launching Chromium, so a typo costs a file
+    read. A file that exists but does not parse stays a 500 — only *missing*
+    maps to 404.
+  - Row 5 (export in progress): idle → `{disabled: false, aria-busy: false,
+    spinner: false}`, in flight → `{"Generating…", disabled, aria-busy,
+    spinner}`, then back to rest; a second click while disabled issued **no**
+    second request to `/api/generate-pdf`.
+  - Faults are injected client-side — the export request answered by a stub,
+    the woff2s blocked via CDP — so the script runs against an ordinary
+    `npm run dev` with no test-only branch in production code, and nothing is
+    left renamed on disk afterwards the way the Task 5.5 check needed.
+  - The route's failure branches are unreachable from a live server without a
+    browser that breaks on demand, hence `vi.mock("puppeteer")` for rows 1 and
+    2 rather than a second harness flag. `vitest.config.mts` now includes
+    `app/**/*.test.ts?(x)`, which nothing matched before.
+  - Noted, not changed: a 404 from the export endpoint carries the absolute
+    path of the missing variant file into the toast. Harmless on a
+    localhost-only, no-auth tool (§9) and useful while working, but it is the
+    one place the UI shows a filesystem path.
 
 - [ ] Task 9.2: Add loading states across dashboard, editor, and library manager
   - Verification: every async action shows a pending state and no action can be
