@@ -95,6 +95,8 @@ export interface EditorState {
   setHeaderShowTitle(index: number, showTitle: boolean): void;
   setAboutMeId(index: number, aboutMeId: string): void;
   setRecommendationsMode(index: number, mode: RecommendationsMode): void;
+  /** §18.2, Experience and Projects only: may a long entry be cut in two? */
+  setSplitEntries(index: number, splitEntries: boolean): void;
   setCustomSectionId(index: number, customSectionId: string): void;
   /**
    * Entry-level curation (§6.2): an entry is in the variant's list or it is
@@ -940,6 +942,20 @@ export function createEditorStore({ profileId, variantId, ...document }: EditorS
             ...section,
             options: { mode },
           })),
+        },
+      })),
+
+    // `withSectionAny` rather than `withSection`: the option is shared by two
+    // section types, and the typed helper narrows to one.
+    setSplitEntries: (index, splitEntries) =>
+      set(({ draft }) => ({
+        draft: {
+          ...draft,
+          variant: withSectionAny(draft.variant, index, (section) =>
+            section.type === "experience" || section.type === "projects"
+              ? { ...section, options: { splitEntries } }
+              : section,
+          ),
         },
       })),
 

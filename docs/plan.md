@@ -1386,76 +1386,87 @@ the code, so the spec stays the source of truth for values:
 
 ### 10.2 — A long entry leaves a hole at the foot of the page
 
-- [ ] Task 10.2: Let a long entry split across a page break, opt-in (§11.5)
-  - Verification: a variant with `splitEntries` on, whose Experience entry
-    would overrun, splits after at least two bullets instead of migrating
-    whole; no bullet is cut mid-line, no entry head is left as the last thing
-    on a page, and no single bullet is carried over alone. With the flag off
+- [x] Task 10.2: Let a long entry split across a page break, opt-in (§11.5, §18.2)
+  - Verification (revised after the first attempt — see below): a variant with
+    `splitEntries` on, whose Experience entry would overrun, fills the page and
+    continues overleaf instead of migrating whole; a bullet breaks between its
+    own lines and never within one, never leaves or arrives as a single line,
+    and no entry head is left as the last thing on a page. With the flag off
     (the default) pagination is byte-identical to today, and both
     `npm run harness` and `npm run harness:export` still report 84/84.
-
-  `resume.css:502-503` marks `.resume-entry` `break-inside: avoid` per §11.5,
-  and an entry is `head + every bullet` in one `<article>`
-  (`ResumeEntry.tsx:47`) — so the whole entry is one indivisible atom. When
-  `pagination.ts:100-103` finds `block.bottom` overruns, it pushes the entire
-  block. A 7-bullet entry needing 160pt with 140pt left on page 1 moves all
-  160pt to page 2 and the 140pt becomes a hole. With a section heading
-  attached it is worse: `break-after: avoid` glues the heading to that entry,
-  so both migrate and the hole grows.
-
-  §11.5 asks for `break-inside: avoid` "so a single entry's title and bullets
-  don't get split **awkwardly**". The intent is to prevent *bad* splits;
-  `break-inside: avoid` forbids *all* splits. Amend §11.5 accordingly.
-
-  **Fix — demote the atom from "the entry" to "the head plus its first
-  bullets":**
-
-  ```css
-  .resume-entry { }                                        /* no longer an atom */
-  .resume-entry-head { break-inside: avoid; break-after: avoid; }
-  .resume-bullet { break-inside: avoid; }                  /* never cut mid-bullet */
-  .resume-bullet:first-child { break-after: avoid; }       /* head keeps >= 2 bullets */
-  .resume-bullet:nth-last-child(2) { break-after: avoid; } /* never a lone final bullet */
-  ```
-
-  Two implementation notes that are easy to get wrong:
-  - **`orphans` / `widows` will not work here.** They are the natural first
-    reach, but Chromium applies them to line boxes *within* a block, not to
-    sibling `<li>` elements. The `break-after: avoid` pair above is what
-    actually does the job.
-  - **Use `:nth-last-child(2) { break-after: avoid }`, not
-    `:last-child { break-before: avoid }`.** They render identically, but
-    `FlowBlock` (`pagination.ts:31`) models only backward glue, via
-    `keepWithNext`; there is no forward-glue concept. The `break-after`
-    phrasing fits the existing model with **zero changes to `pagination.ts`**,
-    where `break-before` would force a whole new glue direction into it.
-
-  The preview must move in lockstep: `UNBREAKABLE_SELECTOR` and
-  `KEEP_WITH_NEXT_SELECTOR` (`page-blocks.ts:12-17`) become the new selectors.
-  `page-blocks.test.ts` already holds those against the stylesheet, so drift
-  between CSS and model fails a test rather than silently desyncing the
-  preview from the printer.
-
-  **Why opt-in, and why the default must stay atomic.** Both goldens are two
-  pages. In `harness/golden.json` page 1 ends on the last Experience bullet
-  and page 2 opens with the `Projects` heading — a clean section boundary.
-  That is less safe than it looks: today the heading + first project entry
-  form one glued chain too tall for page 1's remainder, so it is pushed
-  whole. Relax the entry atom and that chain shrinks to
-  `heading + head + 2 bullets`, which may now *fit* at the foot of page 1,
-  pulling content up and breaking the 84/84 line match. So:
-  - Add `splitEntries: boolean` (default `false`) as a variant option on the
-    Experience and Projects sections.
-  - When on, emit `data-split="true"` on the section and scope the new rules
-    to `[data-split="true"] .resume-entry …`.
-  - The goldens carry no such flag, so the harness stays 84/84 **by
-    construction** — no re-baselining, and no argument about whether the
-    reference PDF is ground truth.
-
-  Pair it with Task 10.3: when an entry is pushed, say so in the left column
-  — "Experience 2 moved to page 2 — 140pt left unused. Allow this entry to
-  split?" — with the toggle right there, so the gap becomes a one-click
-  decision instead of a mystery.
+  - **The first implementation was wrong, and the spec was wrong with it.**
+    §18.2 originally made each bullet an atom and glued the second-to-last to
+    the last so no final bullet could travel alone. On a four-bullet entry
+    whose last bullet ran to nine lines, that rule sent the third bullet over
+    with the fourth and left ~130pt of blank paper — the exact hole the task
+    exists to close, reached by a different route. Refusing to strand a
+    nine-line "widow" is not typography. Rewritten: a bullet is prose, with
+    `orphans: 2` / `widows: 2`, and the last-bullet glue is gone.
+  - Result: verified against real Chromium fragmentation, printing the real
+    stylesheet at the real page size:
+    - **off** — the whole entry migrates, page 1 left blank below the filler.
+    - **on** — heading, head, three bullets and the first two lines of the
+      long fourth all stay on page 1, last baseline 59.5pt against a 55pt
+      margin. The page is full. B4's remaining lines open page 2.
+    - Sweeping the entry's start position, the point at which the head stops
+      staying is exactly **head + two lines** — below that the whole chain
+      moves rather than stranding the head. That is §18.2's rule, measured.
+  - `npm run harness` **84/84** and `npm run harness:export` **84/84**, ±2pt,
+    59 exact, 25 reflowed, text and faces identical. `npm test` **334/334**,
+    `tsc --noEmit`, `lint` all clean.
+  - One thing the plan did not foresee, found by a failing test rather than in
+    review: **with bullets as prose, the model could strand a head the printer
+    pushes.** `paginate` consults `keepWithNext` only when a following *block*
+    overruns, and a split entry has only prose below its head — so nothing
+    fired. Fixed in measurement, not in the model: `PagedDocument` reads a
+    split head's box as reaching down over the two lines its `orphans` oblige
+    it to keep, capped at the first bullet's bottom, which turns the case into
+    an ordinary overrun. `pagination.ts` is still untouched, and gained no
+    second glue direction.
+  - The final rule set is two CSS rules, not four — the head is an unbreakable
+    block glued forward, and a bullet carries `orphans`/`widows`. Simpler than
+    the plan proposed, and it is the simplification that fixes the bug.
+  - **Second correction, from the preview rather than the PDF.** With bullets
+    as prose, the preview's page window cut a line of text in half — the top of
+    the glyphs on one sheet, the bottom on the next. That is `pagination.ts`'s
+    long-standing "a prose break is accurate to within one line's leading",
+    which was invisible until §18.2 made prose common. Fixed by measuring: the
+    preview now reads each split bullet's line boxes and hands `paginate` the
+    offsets that bullet may legally break at, with `orphans`/`widows` already
+    applied, so the sheet stack cuts exactly where the printer does. A bullet
+    of fewer than four lines reports no legal offset at all, which is how the
+    model reproduces the printer moving a short bullet whole.
+  - **Third correction, and the worst of the three.** Switching the flag on
+    threw the whole document onto page two. `break-after: avoid` glues an
+    element to whatever immediately follows it *in the flow*, but `chainTop`
+    read any run of glued blocks as one chain — so About Me's heading, glued
+    to its own paragraph, was treated as glued to Competencies' heading, and
+    so on down. The chain ran from the first heading to the last, and the
+    first overrun anywhere pushed everything. Latent before this task, since
+    entries carried no glue and terminated every chain; immediate once entry
+    heads became glued blocks with only prose between them.
+    `FlowBlock.keepWithNext` now means *glued to the next block*, decided in
+    `PagedDocument` by asking whether that block sits inside the element's own
+    next sibling. Pinned by a test that fails on the old semantics.
+  - `paginate` gained one optional input and no new concept: called without
+    prose runs it behaves exactly as before, which is what keeps every
+    flag-off document's preview unchanged.
+  - Verified in a browser this time, not only in the model — a second checkout
+    with its own dev server, so the running one was left alone:
+    - flag **off**: 3 pages, page 1's window ends at 455.3pt of 682 — a 227pt
+      hole. flag **on**: 2 pages, window ends at 678.6pt. The page is full and
+      the document is a page shorter.
+    - no line box of any bullet, paragraph or competency run straddles the
+      page-1 window in either state.
+    - the exported PDF agrees: 3 pages off, 2 on, with the long bullet's last
+      two lines opening page 2 — `widows: 2`, as specified.
+  - Known limitation, pre-existing and unchanged by this task: a section
+    heading whose body is a paragraph is glued to prose, and the model cannot
+    see prose, so the preview may show such a heading at a page foot where the
+    printer would push it. §18.2's head extension covers the entry case only.
+  - Both editors are unaffected apart from one checkbox on Experience and
+    Projects. Saving a variant now materialises `options.splitEntries: false`,
+    as `showTitle` did.
 
 ### Tier 1 — the things that actually hurt right now
 

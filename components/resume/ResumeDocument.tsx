@@ -32,8 +32,14 @@ export function ResumeDocument({ model }: { model: RenderModel }) {
         }
         const title =
           section.type === "custom" ? section.section.title : SECTION_TITLE[section.type];
+        // Only Experience and Projects carry the flag (§18.2); every other
+        // section type keeps §11.5's entry atom with nothing to say about it.
+        const split =
+          section.type === "experience" || section.type === "projects"
+            ? section.splitEntries
+            : false;
         return (
-          <ResumeSection key={key} type={section.type} title={title}>
+          <ResumeSection key={key} type={section.type} title={title} split={split}>
             <ResumeSectionBody section={section} />
           </ResumeSection>
         );

@@ -84,7 +84,7 @@ const variant = {
     {
       type: "experience",
       visible: true,
-      options: {},
+      options: { splitEntries: false },
       entries: [{ id: "exp-1", bullets: ["b1", "b2"] }],
     },
     {

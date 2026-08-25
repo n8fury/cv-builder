@@ -22,8 +22,8 @@ function markup(section: Exclude<ResolvedSection, { type: "header" }>): string {
 const empty: Exclude<ResolvedSection, { type: "header" }>[] = [
   { type: "aboutMe", id: "about-empty", text: "" },
   { type: "competencies", items: [] },
-  { type: "experience", entries: [] },
-  { type: "projects", entries: [] },
+  { type: "experience", splitEntries: false, entries: [] },
+  { type: "projects", splitEntries: false, entries: [] },
   { type: "education", entries: [] },
   { type: "skills", groups: [] },
   { type: "certifications", entries: [] },
@@ -69,5 +69,27 @@ describe("a visible section with nothing resolved under it (§13)", () => {
 
     expect(html).toContain("resume-body");
     expect(html).toContain("REST APIs");
+  });
+});
+
+describe("data-split (§18.2)", () => {
+  it("is absent unless the section opted in", () => {
+    // The whole basis for the default being safe: an untouched variant's
+    // markup is character-for-character what it was before the option
+    // existed, so its pagination — and §11.2's goldens — cannot move.
+    const off = renderToStaticMarkup(<ResumeSection type="experience" title="Experience" />);
+    expect(off).toBe(
+      renderToStaticMarkup(
+        <ResumeSection type="experience" title="Experience" split={false} />,
+      ),
+    );
+    expect(off).not.toContain("data-split");
+  });
+
+  it("is emitted on the section when it did", () => {
+    const on = renderToStaticMarkup(
+      <ResumeSection type="experience" title="Experience" split />,
+    );
+    expect(on).toContain('data-split="true"');
   });
 });

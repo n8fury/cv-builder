@@ -81,8 +81,8 @@ export type ResolvedSection =
   | { type: "header"; mode: HeaderMode; showTitle: boolean; header: Header }
   | { type: "aboutMe"; id: string; text: string }
   | { type: "competencies"; items: ResolvedBullet[] }
-  | { type: "experience"; entries: ResolvedExperience[] }
-  | { type: "projects"; entries: ResolvedProject[] }
+  | { type: "experience"; splitEntries: boolean; entries: ResolvedExperience[] }
+  | { type: "projects"; splitEntries: boolean; entries: ResolvedProject[] }
   | { type: "education"; entries: ResolvedEducation[] }
   | { type: "skills"; groups: ResolvedSkillGroup[] }
   | { type: "certifications"; entries: Certification[] }
@@ -143,6 +143,7 @@ function resolveSection(library: ContentLibrary, section: VariantSection): Resol
       const entries = index(library.experience);
       return {
         type: "experience",
+        splitEntries: section.options.splitEntries,
         entries: section.entries.map((ref) => {
           const entry = pick(entries, ref.id, "experience entry");
           return {
@@ -161,6 +162,7 @@ function resolveSection(library: ContentLibrary, section: VariantSection): Resol
       const entries = index(library.projects);
       return {
         type: "projects",
+        splitEntries: section.options.splitEntries,
         entries: section.entries.map((ref) => {
           const entry = pick(entries, ref.id, "project");
           return {

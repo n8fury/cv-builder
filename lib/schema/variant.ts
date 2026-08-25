@@ -67,17 +67,34 @@ export const competenciesSectionSchema = z.strictObject({
   items: itemIds,
 });
 
+/**
+ * Whether a long entry may be cut across a page break (§11.5, §18.2).
+ *
+ * Defaults rather than being required, for `showTitle`'s reason: every variant
+ * on disk was written without it, and a strict object would reject them all.
+ * The default is `false` — the §11.5 atom, unchanged — so an untouched variant
+ * paginates exactly as before, which is also what keeps the §11.2 goldens
+ * valid without re-baselining.
+ *
+ * Offered on Experience and Projects only: they are the two sections whose
+ * entries carry enough bullets to be worth splitting. Education is a head and
+ * one description bullet, and Recommendations has its own atom.
+ */
+const splitEntries = z
+  .strictObject({ splitEntries: z.boolean().default(false) })
+  .default({ splitEntries: false });
+
 export const experienceSectionSchema = z.strictObject({
   type: z.literal("experience"),
   visible: z.boolean(),
-  options: noOptions,
+  options: splitEntries,
   entries: z.array(entryWithBulletsSchema).default([]),
 });
 
 export const projectsSectionSchema = z.strictObject({
   type: z.literal("projects"),
   visible: z.boolean(),
-  options: noOptions,
+  options: splitEntries,
   entries: z.array(entryWithBulletsSchema).default([]),
 });
 

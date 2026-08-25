@@ -33,15 +33,25 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import {
   CONTENT_HEIGHT_PT,
   CONTENT_WIDTH_PT,
+  BODY_LEADING_PT,
 } from "@/lib/render/metrics";
 import {
   pageWindows,
   paginate,
   type FlowBlock,
+  type ProseRun,
   type Pagination,
 } from "@/lib/render/pagination";
 
-import { KEEP_WITH_NEXT_SELECTOR, UNBREAKABLE_SELECTOR } from "./page-blocks";
+import {
+  KEEP_WITH_NEXT_SELECTOR,
+  SPLIT_BULLET_ORPHANS,
+  SPLIT_BULLET_SELECTOR,
+  SPLIT_BULLET_WIDOWS,
+  SPLIT_ENTRY_HEAD_SELECTOR,
+  SPLIT_HEAD_KEEPS_LINES,
+  UNBREAKABLE_SELECTOR,
+} from "./page-blocks";
 import { usePaginationListener } from "./pagination-context";
 
 /**
@@ -62,6 +72,92 @@ function samePagination(a: Pagination, b: Pagination): boolean {
   );
 }
 
+/**
+ * How far down a split entry's head really reaches, in viewport pixels
+ * (SPEC §18.2), or `undefined` for any other element.
+ *
+ * `break-after: avoid` on the head means content must follow it on the same
+ * page, and under §18.2 what follows is prose. `paginate` only consults
+ * `keepWithNext` when a following *block* overruns, so with only bullets below
+ * it the head would model as sitting contentedly at the foot of a page the
+ * printer would never produce. Extending the head's box down over the lines it
+ * is obliged to keep turns that into an ordinary overrun, which the model
+ * already handles — no new glue direction, and nothing to keep in step.
+ *
+ * Two lines, matching the bullet's `orphans`. Capped at the first bullet's own
+ * bottom: a one-line bullet cannot satisfy `orphans: 2` at all, so Chromium
+ * declines to break after the head and keeps the whole bullet instead, which
+ * is exactly where the cap lands.
+ */
+function keptBottom(element: HTMLElement, pxPerPt: number): number | undefined {
+  if (!element.matches(SPLIT_ENTRY_HEAD_SELECTOR)) return undefined;
+  const bullet = element.parentElement?.querySelector<HTMLElement>(".resume-bullet");
+  if (!bullet) return undefined;
+  const rect = bullet.getBoundingClientRect();
+  return Math.min(rect.top + SPLIT_HEAD_KEEPS_LINES * BODY_LEADING_PT * pxPerPt, rect.bottom);
+}
+
+/**
+ * Is `element`'s `break-after: avoid` actually gluing it to `next`?
+ *
+ * The rule glues an element to whatever immediately follows it in the flow.
+ * That is `next` only when `next` sits inside the element's own next sibling —
+ * a heading and the entry beneath it, or a heading and the head of the first
+ * entry when the section is split. When the next sibling is prose instead (an
+ * About Me paragraph, a bullet list under an entry head), the element is glued
+ * to text that carries no block at all, and reporting it as glued to the next
+ * *block* is how a chain ends up spanning the whole document.
+ */
+function gluedToNextBlock(element: HTMLElement, next: HTMLElement | undefined): boolean {
+  const sibling = element.nextElementSibling;
+  if (next === undefined || sibling === null) return false;
+  return sibling === next || sibling.contains(next);
+}
+
+/**
+ * Every split bullet as a prose run, with the offsets it may break at (§18.2).
+ *
+ * A Range over the element's contents yields one client rect per inline box.
+ * That is a line box wherever the text is plain, and more than one wherever it
+ * is not — an italic span, the bullet marker — so the tops are deduplicated
+ * before they are counted. Counting matters here: the legal offsets are
+ * derived from the line *index*, and a line seen twice would shift them.
+ *
+ * A break before line `i` leaves `i` lines above and `n - i` below, so it is
+ * legal exactly while both sides clear the bullet's `orphans` and `widows`.
+ * A bullet too short to satisfy both has no legal offset at all, which is the
+ * model's way of saying the printer will move it whole.
+ *
+ * This is the only place the preview looks at line boxes. It is worth it here
+ * because the alternative is visible: a page window cutting a line of prose in
+ * half shows the top of the glyphs on one sheet and the bottom on the next.
+ */
+function proseRuns(flow: HTMLElement, origin: number, pxPerPt: number): ProseRun[] {
+  const runs: ProseRun[] = [];
+  const range = document.createRange();
+
+  for (const bullet of flow.querySelectorAll<HTMLElement>(SPLIT_BULLET_SELECTOR)) {
+    range.selectNodeContents(bullet);
+
+    const tops: number[] = [];
+    for (const rect of range.getClientRects()) {
+      const top = (rect.top - origin) / pxPerPt;
+      // Same line, second inline box: within a point of one already seen.
+      if (!tops.some((seen) => Math.abs(seen - top) < 1)) tops.push(top);
+    }
+    tops.sort((a, b) => a - b);
+
+    const rect = bullet.getBoundingClientRect();
+    runs.push({
+      top: (rect.top - origin) / pxPerPt,
+      bottom: (rect.bottom - origin) / pxPerPt,
+      breaks: tops.slice(SPLIT_BULLET_ORPHANS, Math.max(tops.length - SPLIT_BULLET_WIDOWS + 1, 0)),
+    });
+  }
+
+  return runs;
+}
+
 /** Reads page one's flow and runs the §11.5 model over it. */
 function measure(flow: HTMLElement): Pagination {
   const flowRect = flow.getBoundingClientRect();
@@ -78,7 +174,9 @@ function measure(flow: HTMLElement): Pagination {
   // at the top of the flow, so this element's own top edge is that origin.
   const origin = flowRect.top;
 
-  const blocks: FlowBlock[] = [];
+  // Collected with their elements: whether a block is glued to the next one is
+  // a question about the pair, so it cannot be answered inside the loop.
+  const found: { element: HTMLElement; top: number; bottom: number }[] = [];
   let previousBottom = Number.NEGATIVE_INFINITY;
   for (const element of flow.querySelectorAll<HTMLElement>(UNBREAKABLE_SELECTOR)) {
     const rect = element.getBoundingClientRect();
@@ -87,16 +185,21 @@ function measure(flow: HTMLElement): Pagination {
     // inside another is already covered by the outer one, and would otherwise
     // read as a block that starts before the previous one ended.
     if (top < previousBottom) continue;
-    previousBottom = (rect.bottom - origin) / pxPerPt;
-    blocks.push({
-      top,
-      bottom: previousBottom,
-      keepWithNext: element.matches(KEEP_WITH_NEXT_SELECTOR),
-    });
+    previousBottom = ((keptBottom(element, pxPerPt) ?? rect.bottom) - origin) / pxPerPt;
+    found.push({ element, top, bottom: previousBottom });
   }
+
+  const blocks: FlowBlock[] = found.map((item, index) => ({
+    top: item.top,
+    bottom: item.bottom,
+    keepWithNext:
+      item.element.matches(KEEP_WITH_NEXT_SELECTOR) &&
+      gluedToNextBlock(item.element, found[index + 1]?.element),
+  }));
 
   return paginate({
     blocks,
+    proseRuns: proseRuns(flow, origin, pxPerPt),
     // The flow's own height, not the sheet's: the sheet is clipped to one
     // page, while the flow inside it is the whole document.
     contentHeight: flowRect.height / pxPerPt,

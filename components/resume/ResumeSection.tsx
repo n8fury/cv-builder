@@ -7,6 +7,10 @@
  *
  * The heading renders even when the body is empty (§13): a visible section
  * with nothing resolved under it is a curation state, not an error.
+ *
+ * `data-split` carries §18.2's opt-in, and is emitted only when it is on: the
+ * whole point of the default is that an untouched variant's markup — and so
+ * its pagination — is exactly what it was before the option existed.
  */
 import type { ReactNode } from "react";
 
@@ -20,14 +24,21 @@ export function sectionKey(type: SectionType): string {
 export function ResumeSection({
   type,
   title,
+  split,
   children,
 }: {
   type: SectionType;
   title: string;
+  /** §18.2: this section's entries may be cut across a page break. */
+  split?: boolean;
   children?: ReactNode;
 }) {
   return (
-    <section className="resume-section" data-section={sectionKey(type)}>
+    <section
+      className="resume-section"
+      data-section={sectionKey(type)}
+      data-split={split ? "true" : undefined}
+    >
       <h2 className="resume-section-heading">{title}</h2>
       {children}
     </section>

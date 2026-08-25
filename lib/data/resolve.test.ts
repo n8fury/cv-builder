@@ -105,14 +105,19 @@ describe("dangling references", () => {
     ["competency", { type: "competencies", visible: true, options: {}, items: ["comp-nope"] }],
     [
       "experience entry",
-      { type: "experience", visible: true, options: {}, entries: [{ id: "nope", bullets: [] }] },
+      {
+        type: "experience",
+        visible: true,
+        options: { splitEntries: false },
+        entries: [{ id: "nope", bullets: [] }],
+      },
     ],
     [
       "experience bullet",
       {
         type: "experience",
         visible: true,
-        options: {},
+        options: { splitEntries: false },
         entries: [{ id: "northwind", bullets: ["nw-nope"] }],
       },
     ],

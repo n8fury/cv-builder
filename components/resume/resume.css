@@ -499,8 +499,45 @@ body {
 /* Entries (§4.4, §5.4, §11.5). The head is two columns: title and company at
    the left margin, dates and location flush right. The right column is lifted
    by its measured amount — it does not share a baseline with the left. */
-.resume-entry {
+
+/* The default: the whole entry is one atom, pushed whole rather than cut
+   (§11.5). Scoped to unsplit sections so §18.2's opt-in can demote it without
+   an `auto` override — and so `UNBREAKABLE_SELECTOR` can name the same
+   condition the stylesheet does. */
+.resume-section:not([data-split="true"]) .resume-entry {
   break-inside: avoid;
+}
+
+/* Opted in (§18.2): the entry stops being an atom, so a long one fills the
+   foot of the page and continues overleaf instead of migrating whole.
+
+   Two rules, and they are deliberately not four. An earlier draft made each
+   bullet an atom and glued the second-to-last to the last, to stop a lone
+   final bullet travelling by itself. Both backfired on the case they were
+   written for: a nine-line final bullet is not a widow, and refusing to
+   strand it dragged a second bullet along and left ~130pt of blank paper —
+   the exact hole this section exists to close.
+
+   So a bullet is ordinary breakable prose, and stranding is handled the way
+   prose handles it. orphans/widows *do* work here: they govern line boxes
+   within one block, and a bullet is one block. (They do not work across
+   sibling <li> elements, which is why the entry-level glue above is a
+   break-after rule and not a widows count.) Two lines minimum on either side
+   of the cut — so a bullet never leaves or arrives as a single line, and the
+   head never keeps less than two lines of its first bullet.
+
+   The head stays an atom, and stays glued forward: a head alone at the foot
+   of a page is the one split that reads as a mistake rather than as prose
+   continuing. break-inside as well as break-after, per §15.11 — break-after
+   alone lets Chromium satisfy the rule by breaking inside the head. */
+.resume-section[data-split="true"] .resume-entry-head {
+  break-inside: avoid;
+  break-after: avoid;
+}
+
+.resume-section[data-split="true"] .resume-bullet {
+  orphans: 2;
+  widows: 2;
 }
 
 .resume-section-heading + .resume-entry {

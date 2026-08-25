@@ -510,7 +510,10 @@ regardless of later library edits, since export is a snapshot.
   when content crosses a page boundary (informational, not blocking).
 - Each entry (Experience/Project/Education item) uses `break-inside:
   avoid` in the PDF/print CSS so a single entry's title and bullets don't
-  get split awkwardly across a page break.
+  get split awkwardly across a page break. **Amended by §18.2**: that rule
+  forbids every split, where this sentence asks only to prevent the
+  awkward ones. Experience and Projects can opt in to a split governed by
+  rules about *where*; the default stays exactly as written here.
 
 ---
 
@@ -982,3 +985,100 @@ does not follow it: the contact line is measured against the source PDF,
 which has no underline anywhere in it, and adding one would be a visible
 change against the document §11.2 gates on. The href is live; the ink is
 identical. Where the two rules disagree, the source wins (§16).
+
+### 18.2 A long entry may split, on request
+
+§11.5 asks for `break-inside: avoid` "so a single entry's title and
+bullets don't get split **awkwardly**". The rule delivered is stronger
+than the sentence: it forbids *all* splits, awkward or not. An entry is
+one `<article>` holding its head and every bullet, so a 7-bullet entry
+needing 160pt with 140pt left on the page moves all 160pt to the next one
+and the 140pt becomes blank paper. With a section heading attached
+(§15.11's `break-after: avoid`) both migrate and the hole grows. On a
+two-page CV that hole is most of what separates a tight document from a
+loose one.
+
+**The atom is demoted, not removed.** "Do not split awkwardly" is a rule
+about *where* a split falls, so the fix is to say where:
+
+| Rule | What it prevents |
+|---|---|
+| the head is unbreakable, and glued to what follows | a head stranded as the last thing on a page |
+| each bullet keeps `orphans: 2` / `widows: 2` | a single line of a bullet left behind or carried over |
+
+**A bullet is prose, not an atom.** This is the correction that matters,
+and it was reached the hard way. The first version of this section made
+each bullet unbreakable and glued the second-to-last to the last, so that
+no final bullet could travel alone. Both rules backfired on the first
+real entry they met — four bullets, the last of them nine lines long:
+the entry could not put its final bullet on the next page by itself, so
+it sent the third bullet along too, and left roughly 130pt of blank paper
+behind. Refusing to strand a nine-line "widow" is not typography; it is
+the same hole this section exists to close, arrived at by a different
+route.
+
+So a long bullet breaks like any other paragraph, between its own lines
+and never within one, and stranding is handled the way prose handles it.
+`orphans`/`widows` **do** work for this: they govern line boxes inside a
+single block, and a bullet is a single block. They do *not* work across
+sibling `<li>` elements, which is why the head's rule above is
+`break-after: avoid` and not a `widows` count — that distinction is the
+whole reason the two halves are written differently.
+
+**What this costs the preview.** Three things, all settled in measurement
+rather than by teaching `pagination.ts` new rules:
+
+- `break-after: avoid` glues an element to whatever immediately follows
+  it *in the flow*, which is very often prose rather than the next block.
+  `chainTop` reads a run of glued blocks as one chain, so reporting a
+  heading as glued when its body is a paragraph builds a single chain
+  from a document's first heading to its last, and the first overrun
+  anywhere pushes everything onto page two. Latent before this section —
+  entries carried no glue, so every chain was terminated by one — and
+  immediate once entry heads became glued blocks with only prose between
+  them. `FlowBlock.keepWithNext` therefore means *glued to the next
+  block*, which the preview decides by asking whether that block sits
+  inside the element's own next sibling.
+
+- `paginate` consults `keepWithNext` only when a following *block*
+  overruns, and what follows a head here is prose, contributing no block
+  at all — so the head would model as sitting contentedly at the foot of
+  a page the printer never produces. The preview reads a split head's box
+  as reaching down over the two lines its `orphans` oblige it to keep,
+  capped at the first bullet's own bottom, which turns the case into an
+  ordinary overrun.
+- A prose break has always been reported at the page's full height, off
+  by up to one line's leading. That was invisible while the only prose
+  was a paragraph or two; with bullets as prose it shows as a line sliced
+  in half by the page window — the top of the glyphs on one sheet, the
+  bottom on the next. So the preview now measures each split bullet's
+  line boxes and hands `paginate` the offsets that bullet may legally
+  break at, `orphans` and `widows` already applied. A boundary landing
+  inside a bullet moves to the last legal offset at or above it, or to
+  the bullet's top when it has none — a bullet of fewer than four lines
+  cannot leave two and carry two, and the printer moves it whole.
+
+Neither adds a glue direction, and neither fires for a document with the
+flag off: `paginate` without prose runs behaves exactly as it did.
+
+**Opt-in, per section, defaulting off.** Experience and Projects take
+`options.splitEntries` (default `false`), which emits `data-split="true"`
+on the section and scopes every rule above to it. Two reasons, and the
+second is the binding one:
+- It is an editorial decision. A split entry reads differently, and which
+  page a job's bullets finish on is a judgement call about the document,
+  not something that should happen to a CV silently.
+- **The harness stays 84/84 by construction.** In `harness/golden.json`
+  page one ends on the last Experience bullet and page two opens with the
+  `Projects` heading. That boundary looks safe and is not: today the
+  heading plus the first project form one glued chain too tall for page
+  one's remainder, so it is pushed whole. Relax the entry atom and that
+  chain shrinks to `heading + head + two lines`, which may now fit — and
+  pulls content up across the boundary the golden was measured at. The
+  goldens carry no flag, so with the default off nothing about them can
+  move, and no re-baselining question arises.
+
+**The preview moves with it.** `page-blocks.ts` names the same selectors
+the stylesheet marks, and `page-blocks.test.ts` holds the two against
+each other, so a rule changed in one and not the other fails a test
+rather than silently desyncing the on-screen sheets from the printer.

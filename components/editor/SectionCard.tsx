@@ -409,6 +409,7 @@ function SectionOptions({
   const setHeaderShowTitle = useEditor((state) => state.setHeaderShowTitle);
   const setAboutMeId = useEditor((state) => state.setAboutMeId);
   const setRecommendationsMode = useEditor((state) => state.setRecommendationsMode);
+  const setSplitEntries = useEditor((state) => state.setSplitEntries);
   const setCustomSectionId = useEditor((state) => state.setCustomSectionId);
 
   if (section.type === "header") {
@@ -473,6 +474,29 @@ function SectionOptions({
           )}
         </select>
       </label>
+    );
+  }
+
+  // §18.2: off by default, and worded as what it permits rather than what it
+  // does — the split only happens where an entry would otherwise leave a hole.
+  if (section.type === "experience" || section.type === "projects") {
+    return (
+      <div className="flex flex-wrap items-center gap-4 px-3 pb-2 text-xs text-gray-600">
+        <label className="flex items-center gap-2">
+          <input
+            checked={section.options.splitEntries}
+            name={`split-entries-${index}`}
+            onChange={(event) => setSplitEntries(index, event.target.checked)}
+            type="checkbox"
+          />
+          Allow entries to split across pages
+        </label>
+        <span className="text-gray-500">
+          {section.options.splitEntries
+            ? "A long entry fills the page and continues overleaf, never leaving a bullet's single line behind."
+            : "A long entry moves whole to the next page, even if that leaves a gap."}
+        </span>
+      </div>
     );
   }
 
