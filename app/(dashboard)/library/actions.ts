@@ -15,6 +15,12 @@
  */
 import { revalidatePath } from "next/cache";
 
+import {
+  HEADER_FIELDS,
+  setHeaderLinks,
+  updateHeaderFields,
+  type HeaderFieldName,
+} from "@/lib/data/header-edit";
 import { generateId, libraryIds } from "@/lib/data/ids";
 import {
   deleteItem,
@@ -97,6 +103,38 @@ export async function updateItemAction(
   const tags = parseTags(field(form, "tags"));
 
   return mutate(profileId, (library) => setItemTags(updateItemFields(library, id, values), id, tags));
+}
+
+/**
+ * Rewrites the header — name, title, contact fields and extra links (§5.1, §16.6).
+ *
+ * One action for the whole block rather than one per field: the header is a
+ * single record, so there is nothing to address a per-field save at, and the
+ * form is short enough to read as one thing. Unlike an item edit this does not
+ * propagate through an ID — every variant renders `library.header` directly,
+ * so rewriting it *is* the change everywhere at once.
+ *
+ * Links post as parallel `link.id` / `link.text` lists, positionally paired.
+ * A blank text drops its row, which is how the form deletes one.
+ */
+export async function updateHeaderAction(
+  _state: ActionState,
+  form: FormData,
+): Promise<ActionState> {
+  const profileId = field(form, "profileId").trim();
+
+  const values: Partial<Record<HeaderFieldName, string>> = {};
+  for (const declared of HEADER_FIELDS) {
+    values[declared.name] = field(form, `field.${declared.name}`);
+  }
+
+  const ids = form.getAll("link.id").map(String);
+  const texts = form.getAll("link.text").map(String);
+  const links = texts.map((text, index) => ({ id: ids[index], text }));
+
+  return mutate(profileId, (library) =>
+    setHeaderLinks(updateHeaderFields(library, values), links),
+  );
 }
 
 /** Every variant on disk, which is what "referenced by no variant" means (§7). */

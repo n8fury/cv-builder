@@ -9,7 +9,8 @@
  * to the library, not the variant (§6.2), so those fields edit the library
  * draft — exactly the propagating edit §11.4 describes, staged until Save.
  */
-import { NEW_BULLET, NEW_ENTRY } from "@/lib/data/new-items";
+import { headerFieldValues } from "@/lib/data/header-edit";
+import { NEW_BULLET, NEW_ENTRY, NEW_HEADER_LINK } from "@/lib/data/new-items";
 import { SECTION_TITLE } from "@/lib/render/section-titles";
 import type { ContentLibrary } from "@/lib/schema/library";
 import type { VariantSection } from "@/lib/schema/variant";
@@ -22,6 +23,9 @@ import { SkillCuration } from "./SkillCuration";
 import { ordered } from "./ordering";
 
 const SELECT = "rounded border border-gray-300 px-1.5 py-0.5 text-xs text-gray-900";
+const FIELD =
+  "w-full rounded border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-500 focus:outline-none";
+const GHOST = "rounded px-2 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800";
 
 function sectionTitle(section: VariantSection, library: ContentLibrary): string {
   if (section.type === "header") return "Header";
@@ -41,6 +45,138 @@ function MissingRef({ id }: { id: string }) {
   );
 }
 
+/**
+ * The header's own content, edited in the editor (SPEC §5.1, §16.6).
+ *
+ * The header is library content — one record shared by every variant — so
+ * these fields write the library draft and propagate exactly as a bullet's
+ * text does (§11.4). It is edited here rather than only in the library manager
+ * because the header is the one block on the page the editor could show but
+ * not fix; the propagation warning below is what the manager's separate screen
+ * used to say implicitly by being somewhere else.
+ *
+ * Values are trimmed on blur, not on every keystroke: these all print inside a
+ * pipe-separated contact line where a stray space shifts a centered line, but
+ * trimming as you type would make the space bar appear broken.
+ */
+function HeaderFields({ library }: { library: ContentLibrary }) {
+  const setHeaderField = useEditor((state) => state.setHeaderField);
+  const setHeaderLinkText = useEditor((state) => state.setHeaderLinkText);
+  const removeHeaderLink = useEditor((state) => state.removeHeaderLink);
+  const addHeaderLink = useEditor((state) => state.addHeaderLink);
+
+  return (
+    <div className="space-y-2 border-t border-gray-100 px-3 py-2">
+      <p className="text-xs text-gray-500">
+        One header per profile — editing it changes every variant.
+      </p>
+
+      <div className="grid grid-cols-2 gap-2">
+        {headerFieldValues(library).map((field) => (
+          <label className="block space-y-0.5" key={field.name}>
+            <span className="text-xs font-medium text-gray-600">{field.label}</span>
+            <input
+              className={FIELD}
+              data-header-field={field.name}
+              name={`header-${field.name}`}
+              onBlur={(event) => setHeaderField(field.name, event.target.value.trim())}
+              onChange={(event) => setHeaderField(field.name, event.target.value)}
+              value={field.value}
+            />
+          </label>
+        ))}
+      </div>
+
+      {/* Extra links ride the same printed line as LinkedIn and GitHub, in
+          this order (§16.6) — hence a list rather than more named boxes. */}
+      <div className="space-y-1">
+        <span className="text-xs font-medium text-gray-600">
+          Other links
+          <span className="ml-2 font-normal text-gray-500">printed after GitHub</span>
+        </span>
+        {library.header.links.map((link) => (
+          <div className="flex items-center gap-2" key={link.id}>
+            <input
+              aria-label="Link"
+              className={FIELD}
+              data-header-link={link.id}
+              onBlur={(event) => setHeaderLinkText(link.id, event.target.value.trim())}
+              onChange={(event) => setHeaderLinkText(link.id, event.target.value)}
+              value={link.text}
+            />
+            <button
+              className={GHOST}
+              data-remove-link={link.id}
+              onClick={() => removeHeaderLink(link.id)}
+              type="button"
+            >
+              Remove
+            </button>
+          </div>
+        ))}
+        <NewItemForm spec={NEW_HEADER_LINK} onAdd={addHeaderLink} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A custom section's own text (§12.4). Title and paragraph belong to the
+ * library item this section points at, so they are fields rather than
+ * toggles — as its bullets already are, for the same reason.
+ */
+function CustomFields({
+  entry,
+  index,
+}: {
+  entry: ContentLibrary["customSections"][number];
+  index: number;
+}) {
+  const setBulletText = useEditor((state) => state.setBulletText);
+  const setCustomSectionTitle = useEditor((state) => state.setCustomSectionTitle);
+  const setCustomSectionParagraph = useEditor((state) => state.setCustomSectionParagraph);
+  const addBullet = useEditor((state) => state.addBullet);
+
+  return (
+    <div className="space-y-1 border-t border-gray-100 px-3 py-2">
+      <label className="block space-y-0.5">
+        <span className="text-xs font-medium text-gray-600">Title</span>
+        <input
+          className={FIELD}
+          data-custom-title={entry.id}
+          onChange={(event) => setCustomSectionTitle(entry.id, event.target.value)}
+          value={entry.title}
+        />
+      </label>
+      <label className="block space-y-0.5">
+        <span className="text-xs font-medium text-gray-600">
+          Paragraph <span className="font-normal text-gray-400">(optional)</span>
+        </span>
+        <textarea
+          className={`${FIELD} resize-y`}
+          data-custom-paragraph={entry.id}
+          onChange={(event) => setCustomSectionParagraph(entry.id, event.target.value)}
+          rows={2}
+          value={entry.paragraph ?? ""}
+        />
+      </label>
+      {/* A custom section's bullets are not curated per variant — the library
+          item is the unit (§12.4) — so they get fields, not toggles. */}
+      {entry.bullets.map((bullet) => (
+        <textarea
+          key={bullet.id}
+          className={`${FIELD} resize-y`}
+          data-bullet={bullet.id}
+          rows={2}
+          value={bullet.text}
+          onChange={(event) => setBulletText("customSections", entry.id, bullet.id, event.target.value)}
+        />
+      ))}
+      <NewItemForm spec={NEW_BULLET} onAdd={(values) => addBullet(index, entry.id, values)} />
+    </div>
+  );
+}
+
 function SectionBody({
   section,
   index,
@@ -50,11 +186,14 @@ function SectionBody({
   index: number;
   library: ContentLibrary;
 }) {
-  const setBulletText = useEditor((state) => state.setBulletText);
   const addEntry = useEditor((state) => state.addEntry);
-  const addBullet = useEditor((state) => state.addBullet);
 
   switch (section.type) {
+    // The header's text, not a curation list: it is one library record every
+    // variant renders (§5.1), so the editor edits it in place.
+    case "header":
+      return <HeaderFields library={library} />;
+
     case "competencies":
       return (
         <EntryCuration
@@ -203,6 +342,9 @@ function SectionBody({
       const entry = library.customSections.find(
         (item) => item.id === section.options.customSectionId,
       );
+      // The pointer is broken, so there is nothing to edit — §13 names it, and
+      // the form here repoints *this* section at a replacement rather than
+      // adding a further one (which is what the list's own button does).
       if (!entry) {
         return (
           <div className="space-y-1 border-t border-gray-100 px-3 py-2">
@@ -211,30 +353,7 @@ function SectionBody({
           </div>
         );
       }
-      return (
-        <div className="space-y-1 border-t border-gray-100 px-3 py-2">
-          {/* A custom section's bullets are not curated per variant — the
-              library item is the unit (§12.4) — so they get fields, not
-              toggles. */}
-          {entry.bullets.map((bullet) => (
-            <textarea
-              key={bullet.id}
-              className="w-full resize-y rounded border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-500 focus:outline-none"
-              data-bullet={bullet.id}
-              rows={2}
-              value={bullet.text}
-              onChange={(event) =>
-                setBulletText("customSections", entry.id, bullet.id, event.target.value)
-              }
-            />
-          ))}
-          <NewItemForm
-            spec={NEW_BULLET}
-            onAdd={(values) => addBullet(index, entry.id, values)}
-          />
-          <NewItemForm spec={NEW_ENTRY.custom} onAdd={(values) => addEntry(index, values)} />
-        </div>
-      );
+      return <CustomFields entry={entry} index={index} />;
     }
 
     default:
@@ -253,24 +372,50 @@ function SectionOptions({
   library: ContentLibrary;
 }) {
   const setHeaderMode = useEditor((state) => state.setHeaderMode);
+  const setHeaderShowTitle = useEditor((state) => state.setHeaderShowTitle);
   const setAboutMeId = useEditor((state) => state.setAboutMeId);
   const setRecommendationsMode = useEditor((state) => state.setRecommendationsMode);
   const setCustomSectionId = useEditor((state) => state.setCustomSectionId);
 
   if (section.type === "header") {
+    // The title's text is library content, edited once per profile — in the
+    // fields directly below — while whether *this* CV prints it stays a
+    // variant decision (§16.6). Disabled with the reason shown rather than
+    // hidden, so "why is there no title" has an answer on the screen.
+    const title = library.header.title.trim();
+
     return (
-      <label className="flex items-center gap-2 px-3 pb-2 text-xs text-gray-600">
-        Mode
-        <select
-          className={SELECT}
-          name={`header-mode-${index}`}
-          value={section.options.mode}
-          onChange={(event) => setHeaderMode(index, event.target.value === "minimal" ? "minimal" : "full")}
-        >
-          <option value="full">full</option>
-          <option value="minimal">minimal</option>
-        </select>
-      </label>
+      <div className="flex flex-wrap items-center gap-4 px-3 pb-2 text-xs text-gray-600">
+        <label className="flex items-center gap-2">
+          Mode
+          <select
+            className={SELECT}
+            name={`header-mode-${index}`}
+            value={section.options.mode}
+            onChange={(event) =>
+              setHeaderMode(index, event.target.value === "minimal" ? "minimal" : "full")
+            }
+          >
+            <option value="full">full</option>
+            <option value="minimal">minimal</option>
+          </select>
+        </label>
+
+        <label className="flex items-center gap-2">
+          <input
+            checked={section.options.showTitle}
+            disabled={title === ""}
+            name={`header-show-title-${index}`}
+            onChange={(event) => setHeaderShowTitle(index, event.target.checked)}
+            type="checkbox"
+          />
+          Show title
+        </label>
+
+        {title === "" ? (
+          <span className="text-gray-500">Fill in Title below to switch it on.</span>
+        ) : null}
+      </div>
     );
   }
 
@@ -356,6 +501,7 @@ export function SectionCard({
   sortId: string;
 }) {
   const setSectionVisible = useEditor((state) => state.setSectionVisible);
+  const removeSection = useEditor((state) => state.removeSection);
   const { ref, style, dragging, handleProps } = useSortableRow(sortId);
   const title = sectionTitle(section, library);
 
@@ -382,6 +528,20 @@ export function SectionCard({
           />
           Visible
         </label>
+        {/* Custom sections only: the fixed types are switched off with
+            `visible` and can be switched back on, so removing one would take
+            away a section the editor could not offer back. */}
+        {section.type === "custom" ? (
+          <button
+            className={GHOST}
+            data-remove-section={index}
+            onClick={() => removeSection(index)}
+            title="Remove this section from the variant"
+            type="button"
+          >
+            Remove
+          </button>
+        ) : null}
       </div>
       <SectionOptions section={section} index={index} library={library} />
       {/* Shown for hidden sections too: curation is often prepared before a

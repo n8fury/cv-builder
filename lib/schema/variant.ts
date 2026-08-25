@@ -37,10 +37,19 @@ export const headerModeSchema = z.enum(["full", "minimal"]);
 /** Recommendations display mode (§5.9). */
 export const recommendationsModeSchema = z.enum(["collapsed", "expanded"]);
 
+/**
+ * `showTitle` defaults rather than being required: every variant already on
+ * disk was written without it, and a strict object would reject them all. The
+ * default is `false`, so an untouched variant renders exactly as before —
+ * adding the title is a decision, never something that happens to a CV (§16.6).
+ */
 export const headerSectionSchema = z.strictObject({
   type: z.literal("header"),
   visible: z.boolean(),
-  options: z.strictObject({ mode: headerModeSchema }),
+  options: z.strictObject({
+    mode: headerModeSchema,
+    showTitle: z.boolean().default(false),
+  }),
 });
 
 /** References one of the library's About Me versions by ID (§5.2, §15.2). */

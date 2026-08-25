@@ -135,14 +135,42 @@ export const customSectionSchema = z.object({
   tags,
 });
 
-/** Contact block; minimal vs full display is a variant option, not data (§5.1). */
+/**
+ * One extra contact link — a portfolio, X, Dev.to, Scholar (§5.1, §16.6).
+ *
+ * `text` is what prints, not a URL: the header sets `linkedin` and `github` as
+ * display strings ("github.com/jordan-rivera-demo"), and a link that rendered as a full
+ * `https://` would sit on the same line looking like a different kind of
+ * thing. It carries an `id` so the manager can address one row of a list the
+ * person reorders and deletes from — the same reason every library item has
+ * one (§6.1), though no variant references it.
+ */
+export const headerLinkSchema = z.object({
+  id: idSchema,
+  text: z.string(),
+});
+
+/**
+ * Contact block; minimal vs full display is a variant option, not data (§5.1).
+ *
+ * `linkedin` and `github` stay named fields rather than folding into `links`.
+ * §5.1 lists them by name and §4.1's measured contact lines place them, so
+ * collapsing them into the array would rewrite every profile on disk to buy
+ * uniformity the render layer does not want. `links` is the open-ended tail
+ * of that same line (§16.6).
+ *
+ * `title` is content, but whether it prints is a variant option — the same
+ * split §5.1 already makes for full/minimal (see §16.6).
+ */
 export const headerSchema = z.object({
   name: z.string().default(""),
+  title: z.string().default(""),
   location: z.string().default(""),
   email: z.string().default(""),
   phone: z.string().default(""),
   linkedin: z.string().default(""),
   github: z.string().default(""),
+  links: z.array(headerLinkSchema).default([]),
 });
 
 /** Current on-disk schema version for `content-library.json` (§15.13). */
@@ -177,5 +205,6 @@ export type Certification = z.infer<typeof certificationSchema>;
 export type Recommendation = z.infer<typeof recommendationSchema>;
 export type Language = z.infer<typeof languageSchema>;
 export type CustomSection = z.infer<typeof customSectionSchema>;
+export type HeaderLink = z.infer<typeof headerLinkSchema>;
 export type Header = z.infer<typeof headerSchema>;
 export type ContentLibrary = z.infer<typeof contentLibrarySchema>;

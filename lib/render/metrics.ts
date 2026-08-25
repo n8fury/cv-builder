@@ -79,6 +79,20 @@ export const BODY_LEADING_PT = 12.0;
  */
 export const WIDE_LEADING_PT = 13.0;
 
+/**
+ * The optional title line — "Aspiring Backend Engineer" under the name
+ * (§5.1, §16.6).
+ *
+ * Set at body size in Charter's italic, so it needs no geometry of its own:
+ * it takes the first contact line's place in the rhythm (NAME_TO_CONTACT_PT)
+ * and pushes the contact lines down by one CONTACT_LINE_GAP_PT each. Neither
+ * source PDF contains a title, so inventing a size and a leading for it would
+ * be an unmeasured third set of numbers; reusing the contact line's is the one
+ * choice §4.1 already validates.
+ */
+export const TITLE_FONT_SIZE_PT = BODY_FONT_SIZE_PT;
+export const TITLE_LEADING_PT = BODY_LEADING_PT;
+
 const WIDE_LEADING_SECTIONS: ReadonlySet<SectionType> = new Set([
   "skills",
   "certifications",
@@ -143,20 +157,81 @@ const PROJECTS_SPACE_BEFORE_PT = 27.2;
 export const NAME_BASELINE_TO_ABOUT_ME_PT = 60.97;
 
 /**
- * About Me's space-before, derived per header mode from the measurement
- * above by subtracting the contact lines the mode draws (§5.1).
+ * One header layout: a display mode, and whether the title line prints (§16.6).
  *
- *   minimal  60.97 − 23.45          = 37.52  (exactly golden.json's 692.92 → 655.40)
- *   full     60.97 − 23.58 − 17.07  = 20.32  (golden-basic.json reads 20.09)
- *
- * Deriving rather than tabulating is what makes the two agree: a single
- * §4.2-style figure would be right for one mode and ~17pt wrong for the
- * other, since it is the header slot that is fixed, not the gap below it.
+ * Four combinations, and About Me's space-before differs across all of them,
+ * so this is the key the gap is tabulated under — not `HeaderMode` alone.
  */
-export const ABOUT_ME_SPACE_BEFORE_PT: Record<HeaderMode, number> = {
-  minimal: NAME_BASELINE_TO_ABOUT_ME_PT - NAME_TO_CONTACT_PT.minimal,
-  full: NAME_BASELINE_TO_ABOUT_ME_PT - NAME_TO_CONTACT_PT.full - CONTACT_LINE_GAP_PT,
-};
+export type HeaderSlot = `${HeaderMode}${"" | "-title"}`;
+
+/** Every slot, in the order the generated stylesheet emits them. */
+export const HEADER_SLOTS: readonly HeaderSlot[] = [
+  "minimal",
+  "full",
+  "minimal-title",
+  "full-title",
+];
+
+/** The slot a header renders in. */
+export function headerSlot(mode: HeaderMode, showTitle: boolean): HeaderSlot {
+  return showTitle ? `${mode}-title` : mode;
+}
+
+/**
+ * Name baseline → the header's last printed line, per slot.
+ *
+ * The title takes the first contact line's place in the rhythm, so every line
+ * after it steps down by one CONTACT_LINE_GAP_PT — one rule covering all four
+ * slots rather than four measurements that do not exist.
+ */
+function nameToLastHeaderLinePt(mode: HeaderMode, showTitle: boolean): number {
+  const lines = (mode === "full" ? 2 : 1) + (showTitle ? 1 : 0);
+  return NAME_TO_CONTACT_PT[mode] + (lines - 1) * CONTACT_LINE_GAP_PT;
+}
+
+/**
+ * The floor under About Me's space-before: the tightest gap either source
+ * document actually sets, which is the full header's 20.32.
+ *
+ * Needed because the fixed slot cannot pay for every layout. A full header
+ * with a title draws three lines below the name, 57.72 of the 60.97 — leaving
+ * 3.25, far less than the 12pt heading's 11.77 ascent, so the About Me heading
+ * would print through the last contact line.
+ */
+export const ABOUT_ME_MIN_SPACE_BEFORE_PT =
+  NAME_BASELINE_TO_ABOUT_ME_PT - NAME_TO_CONTACT_PT.full - CONTACT_LINE_GAP_PT;
+
+/**
+ * About Me's space-before, derived per slot from the measurement above by
+ * subtracting the lines the header draws below the name (§5.1) — then held at
+ * ABOUT_ME_MIN_SPACE_BEFORE_PT when the fixed slot cannot cover them.
+ *
+ *   minimal        60.97 − 23.45                  = 37.52  (exactly golden.json's 692.92 → 655.40)
+ *   full           60.97 − 23.58 − 17.07          = 20.32  (golden-basic.json reads 20.09)
+ *   minimal-title  60.97 − 23.45 − 17.07          = 20.45  (title lands in the slot; nothing below moves)
+ *   full-title     60.97 − 23.58 − 17.07 − 17.07  =  3.25 → 20.32, the floor
+ *
+ * Deriving rather than tabulating is what makes the first two agree: a single
+ * §4.2-style figure would be right for one mode and ~17pt wrong for the other,
+ * since it is the header slot that is fixed, not the gap below it. The floor
+ * is where that stops being true — `full-title` is the one layout whose header
+ * grows the page rather than filling a slot, and it is also the one layout
+ * neither source PDF contains.
+ */
+export const ABOUT_ME_SPACE_BEFORE_PT: Record<HeaderSlot, number> =
+  Object.fromEntries(
+    HEADER_SLOTS.map((slot) => {
+      const showTitle = slot.endsWith("-title");
+      const mode = (showTitle ? slot.slice(0, -"-title".length) : slot) as HeaderMode;
+      return [
+        slot,
+        Math.max(
+          NAME_BASELINE_TO_ABOUT_ME_PT - nameToLastHeaderLinePt(mode, showTitle),
+          ABOUT_ME_MIN_SPACE_BEFORE_PT,
+        ),
+      ];
+    }),
+  ) as Record<HeaderSlot, number>;
 
 /**
  * Previous section's last baseline → this heading's baseline.
@@ -504,22 +579,22 @@ export const SPACE_BEFORE_MARGIN_PT: Record<SectionType, number> =
   ) as Record<SectionType, number>;
 
 /**
- * About Me's space-before as a CSS top margin, per header mode.
+ * About Me's space-before as a CSS top margin, per header slot.
  *
  * `SPACE_BEFORE_MARGIN_PT.aboutMe` carries the minimal-header case, since
  * that is what the canonical document sets and what §11.2 gates on; this is
  * the pair, so the stylesheet can override it when the header ahead of About
  * Me is in full mode and draws a second contact line.
  */
-export const ABOUT_ME_SPACE_BEFORE_MARGIN_PT: Record<HeaderMode, number> =
+export const ABOUT_ME_SPACE_BEFORE_MARGIN_PT: Record<HeaderSlot, number> =
   Object.fromEntries(
-    Object.entries(ABOUT_ME_SPACE_BEFORE_PT).map(([mode, target]) => [
-      mode,
+    Object.entries(ABOUT_ME_SPACE_BEFORE_PT).map(([slot, target]) => [
+      slot,
       baselineGap(target, HEADING_FONT_SIZE_PT, HEADING_LINE_HEIGHT_PT, {
         previous: { fontSizePt: BODY_FONT_SIZE_PT, lineHeightPt: BODY_LEADING_PT },
       }),
     ]),
-  ) as Record<HeaderMode, number>;
+  ) as Record<HeaderSlot, number>;
 
 /**
  * A heading's baseline → the bottom edge of its box, rule included. What

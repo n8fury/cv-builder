@@ -15,12 +15,13 @@
  */
 import { createStore } from "zustand/vanilla";
 
+import { generateLinkId, type HeaderFieldName } from "@/lib/data/header-edit";
 import { generateId, libraryIds } from "@/lib/data/ids";
 import { build, type NewItemValues } from "@/lib/data/new-items";
 
 import { moved, movedById, movedIds } from "./ordering";
 
-import type { Bullet, ContentLibrary } from "@/lib/schema/library";
+import type { Bullet, ContentLibrary, Header } from "@/lib/schema/library";
 import type {
   HeaderMode,
   RecommendationsMode,
@@ -58,12 +59,39 @@ export interface EditorState {
    */
   setBulletText(owner: BulletOwner, entryId: string, bulletId: string, text: string): void;
   /**
+   * The header block's own text (§5.1, §16.6). It is library content, like a
+   * bullet's text, so it is edited here and propagates to every variant — the
+   * editor simply stops being the one screen that could show the header
+   * without being able to fix a typo in it.
+   *
+   * Addressed by field name rather than by index: the header is one record,
+   * not a list, and `HEADER_FIELDS` is already the checked list of what can be
+   * written to it.
+   */
+  setHeaderField(name: HeaderFieldName, value: string): void;
+  /** One extra contact link (§16.6) — appended, with a fresh ID. */
+  addHeaderLink(values: NewItemValues): void;
+  setHeaderLinkText(id: string, text: string): void;
+  removeHeaderLink(id: string): void;
+  /**
+   * A custom section's own text (§12.4). The title and paragraph belong to the
+   * library item, not to the section that points at it, so editing them here
+   * reaches every variant using it — the same propagation as a bullet (§11.4).
+   *
+   * A blanked paragraph is stored as `null`, which is the absence the renderer
+   * checks for; an empty string would print an empty paragraph box.
+   */
+  setCustomSectionTitle(id: string, title: string): void;
+  setCustomSectionParagraph(id: string, paragraph: string): void;
+  /**
    * Section-level curation (§12.2). Sections are addressed by array position,
    * because that is their only identity — there is no `order` field and a
    * variant may hold several custom sections (§15.3, §12.4).
    */
   setSectionVisible(index: number, visible: boolean): void;
   setHeaderMode(index: number, mode: HeaderMode): void;
+  /** Whether this variant prints the library's header title (§16.6). */
+  setHeaderShowTitle(index: number, showTitle: boolean): void;
   setAboutMeId(index: number, aboutMeId: string): void;
   setRecommendationsMode(index: number, mode: RecommendationsMode): void;
   setCustomSectionId(index: number, customSectionId: string): void;
@@ -98,6 +126,22 @@ export interface EditorState {
    */
   addEntry(index: number, values: NewItemValues): void;
   addBullet(index: number, ownerId: string, values: NewItemValues): void;
+  /**
+   * A whole new custom section (§12.4). Writes the library item and appends
+   * the section that points at it, so the editor can grow a variant a section
+   * it did not start with — the one section type §12.4 says a person invents.
+   * It lands at the end, where drag-reorder then takes over (§15.3).
+   */
+  addCustomSection(values: NewItemValues): void;
+  /**
+   * Drops one section from this variant. Offered for custom sections only: the
+   * fixed types are switched off with `visible` and can be switched back on,
+   * whereas a custom section removed here is simply no longer part of the CV.
+   * The library item it referenced is left alone — it is reusable by other
+   * variants (§12.4), and cleaning up genuinely unreferenced items is the
+   * library manager's orphan pass (§7).
+   */
+  removeSection(index: number): void;
   /**
    * Adopt what a save just wrote as the new clean baseline (§7).
    *
@@ -182,6 +226,50 @@ function withBulletText(
         customSections: editBullets(library.customSections, entryId, bulletId, text),
       };
   }
+}
+
+/** Rewrites the header record on the library draft (§5.1). */
+function withHeader(library: ContentLibrary, header: Header): ContentLibrary {
+  return { ...library, header };
+}
+
+/**
+ * Rewrites one custom-section library item. Written against the collection
+ * rather than through `setBulletText`'s owner union, because the title and the
+ * paragraph are fields of the item itself, not of a bullet inside it.
+ */
+function withCustomSection(
+  library: ContentLibrary,
+  id: string,
+  update: (item: ContentLibrary["customSections"][number]) => ContentLibrary["customSections"][number],
+): ContentLibrary {
+  return {
+    ...library,
+    customSections: library.customSections.map((item) => (item.id === id ? update(item) : item)),
+  };
+}
+
+/**
+ * Adds a custom section: the library item first, then the variant reference
+ * (§6.3, §12.4). Appended, like every other new item — it is new, so there is
+ * no earlier position to restore it to.
+ */
+function addCustomSectionTo(document: EditorDocument, values: NewItemValues): EditorDocument {
+  const { library, variant } = document;
+  const id = generateId("customSection", libraryIds(library));
+  return {
+    library: {
+      ...library,
+      customSections: [...library.customSections, build.customSection(id, values)],
+    },
+    variant: {
+      ...variant,
+      sections: [
+        ...variant.sections,
+        { type: "custom", visible: true, options: { customSectionId: id } },
+      ],
+    },
+  };
 }
 
 /**
@@ -718,6 +806,74 @@ export function createEditorStore({ profileId, variantId, ...document }: EditorS
         draft: { ...draft, library: withBulletText(draft.library, owner, entryId, bulletId, text) },
       })),
 
+    setHeaderField: (name, value) =>
+      set(({ draft }) => ({
+        draft: {
+          ...draft,
+          library: withHeader(draft.library, { ...draft.library.header, [name]: value }),
+        },
+      })),
+
+    addHeaderLink: (values) =>
+      set(({ draft }) => {
+        const text = (values.text ?? "").trim();
+        if (text === "") return {};
+        const links = draft.library.header.links;
+        const id = generateLinkId(new Set(links.map((link) => link.id)));
+        return {
+          draft: {
+            ...draft,
+            library: withHeader(draft.library, {
+              ...draft.library.header,
+              links: [...links, { id, text }],
+            }),
+          },
+        };
+      }),
+
+    setHeaderLinkText: (id, text) =>
+      set(({ draft }) => ({
+        draft: {
+          ...draft,
+          library: withHeader(draft.library, {
+            ...draft.library.header,
+            links: draft.library.header.links.map((link) =>
+              link.id === id ? { ...link, text } : link,
+            ),
+          }),
+        },
+      })),
+
+    removeHeaderLink: (id) =>
+      set(({ draft }) => ({
+        draft: {
+          ...draft,
+          library: withHeader(draft.library, {
+            ...draft.library.header,
+            links: draft.library.header.links.filter((link) => link.id !== id),
+          }),
+        },
+      })),
+
+    setCustomSectionTitle: (id, title) =>
+      set(({ draft }) => ({
+        draft: {
+          ...draft,
+          library: withCustomSection(draft.library, id, (item) => ({ ...item, title })),
+        },
+      })),
+
+    setCustomSectionParagraph: (id, paragraph) =>
+      set(({ draft }) => ({
+        draft: {
+          ...draft,
+          library: withCustomSection(draft.library, id, (item) => ({
+            ...item,
+            paragraph: paragraph.trim() === "" ? null : paragraph,
+          })),
+        },
+      })),
+
     setSectionVisible: (index, visible) =>
       set(({ draft }) => ({
         draft: { ...draft, variant: withVisible(draft.variant, index, visible) },
@@ -729,7 +885,21 @@ export function createEditorStore({ profileId, variantId, ...document }: EditorS
           ...draft,
           variant: withSection(draft.variant, index, "header", (section) => ({
             ...section,
-            options: { mode },
+            // Spread, not replace: the header has two options now, and writing
+            // a fresh object would switch the title off every time the mode
+            // changed (§16.6).
+            options: { ...section.options, mode },
+          })),
+        },
+      })),
+
+    setHeaderShowTitle: (index, showTitle) =>
+      set(({ draft }) => ({
+        draft: {
+          ...draft,
+          variant: withSection(draft.variant, index, "header", (section) => ({
+            ...section,
+            options: { ...section.options, showTitle },
           })),
         },
       })),
@@ -820,6 +990,23 @@ export function createEditorStore({ profileId, variantId, ...document }: EditorS
 
     addBullet: (index, ownerId, values) =>
       set(({ draft }) => ({ draft: addBulletTo(draft, index, ownerId, values) })),
+
+    addCustomSection: (values) =>
+      set(({ draft }) => ({ draft: addCustomSectionTo(draft, values) })),
+
+    removeSection: (index) =>
+      set(({ draft }) => {
+        if (draft.variant.sections[index] === undefined) return {};
+        return {
+          draft: {
+            ...draft,
+            variant: {
+              ...draft.variant,
+              sections: draft.variant.sections.filter((_, at) => at !== index),
+            },
+          },
+        };
+      }),
 
     markSaved: (document) =>
       set(({ draft }) => ({

@@ -11,7 +11,10 @@
  * position in the CV (§15.3), so reordering here rewrites nothing but the
  * array itself.
  */
+import { NEW_ENTRY } from "@/lib/data/new-items";
+
 import { useEditor } from "./EditorStoreProvider";
+import { NewItemForm } from "./NewItemForm";
 import { SectionCard } from "./SectionCard";
 import { SortableList } from "./Sortable";
 import { sectionKeys } from "./ordering";
@@ -27,6 +30,7 @@ export function VariantForm() {
   const setTag = useEditor((state) => state.setTag);
   const setLabel = useEditor((state) => state.setLabel);
   const moveSection = useEditor((state) => state.moveSection);
+  const addCustomSection = useEditor((state) => state.addCustomSection);
 
   // Keyed by type-and-occurrence rather than by index: an index changes under
   // the very drag that uses it, and would remount every row below the drop.
@@ -80,6 +84,13 @@ export function VariantForm() {
             </ul>
           </SortableList>
         )}
+
+        {/* The one section type a person invents (§12.4). It is added to the
+            variant here rather than inside an existing card, because a second
+            custom section is a second *section*, not a second pointer on the
+            first one — and it lands at the end, where the drag handles take
+            over (§15.3). */}
+        <NewItemForm spec={NEW_ENTRY.custom} onAdd={addCustomSection} />
       </section>
     </form>
   );

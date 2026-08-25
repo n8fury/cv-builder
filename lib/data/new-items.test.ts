@@ -105,7 +105,16 @@ describe("libraryIds", () => {
   it("collects nested IDs, not just top-level ones", () => {
     const ids = libraryIds({
       schemaVersion: 1,
-      header: { name: "", location: "", email: "", phone: "", linkedin: "", github: "" },
+      header: {
+        name: "",
+        title: "",
+        location: "",
+        email: "",
+        phone: "",
+        linkedin: "",
+        github: "",
+        links: [],
+      },
       aboutMe: [{ id: "about-1", key: "", text: "", tags: [] }],
       competencies: [],
       experience: [

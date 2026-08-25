@@ -30,8 +30,8 @@ candidate's content library, arranged in the order they should appear.
 You may ONLY:
 - select which library IDs to include;
 - order the sections, entries, bullets and skills you selected;
-- set each section's visibility and its options (header mode, About Me
-  version, recommendations mode).
+- set each section's visibility and its options (header mode and title,
+  About Me version, recommendations mode).
 
 You must NOT:
 - invent experience, employers, job titles, dates, projects, education,
@@ -62,7 +62,8 @@ Respond with JSON only, no prose and no code fence:
 Each section is one of the following shapes, and "type" must be one of:
 ${SECTION_TYPES.join(", ")}.
 
-  { "type": "header", "visible": true, "options": { "mode": "full" | "minimal" } }
+  { "type": "header", "visible": true,
+    "options": { "mode": "full" | "minimal", "showTitle": true | false } }
   { "type": "aboutMe", "visible": true, "options": { "aboutMeId": "<id>" } }
   { "type": "competencies", "visible": true, "options": {}, "items": ["<id>", ...] }
   { "type": "experience", "visible": true, "options": {},

@@ -37,7 +37,7 @@ const variant: Variant = {
   createdAt: "2026-08-22T11:00:00Z",
   updatedAt: "2026-08-22T11:00:00Z",
   sections: [
-    { type: "header", visible: true, options: { mode: "minimal" } },
+    { type: "header", visible: true, options: { mode: "minimal", showTitle: false } },
     { type: "aboutMe", visible: true, options: { aboutMeId: "about-default" } },
     { type: "competencies", visible: true, options: {}, items: ["comp-fullstack"] },
   ],

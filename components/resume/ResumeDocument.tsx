@@ -21,7 +21,14 @@ export function ResumeDocument({ model }: { model: RenderModel }) {
       {model.sections.map((section, index) => {
         const key = `${section.type}-${index}`;
         if (section.type === "header") {
-          return <ResumeHeader key={key} header={section.header} mode={section.mode} />;
+          return (
+            <ResumeHeader
+              header={section.header}
+              key={key}
+              mode={section.mode}
+              showTitle={section.showTitle}
+            />
+          );
         }
         const title =
           section.type === "custom" ? section.section.title : SECTION_TITLE[section.type];

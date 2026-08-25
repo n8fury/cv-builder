@@ -78,7 +78,7 @@ export interface ResolvedCustomSection {
 }
 
 export type ResolvedSection =
-  | { type: "header"; mode: HeaderMode; header: Header }
+  | { type: "header"; mode: HeaderMode; showTitle: boolean; header: Header }
   | { type: "aboutMe"; id: string; text: string }
   | { type: "competencies"; items: ResolvedBullet[] }
   | { type: "experience"; entries: ResolvedExperience[] }
@@ -121,7 +121,12 @@ function toBullets(
 function resolveSection(library: ContentLibrary, section: VariantSection): ResolvedSection {
   switch (section.type) {
     case "header":
-      return { type: "header", mode: section.options.mode, header: library.header };
+      return {
+        type: "header",
+        mode: section.options.mode,
+        showTitle: section.options.showTitle,
+        header: library.header,
+      };
 
     case "aboutMe": {
       const about = pick(index(library.aboutMe), section.options.aboutMeId, "aboutMe");

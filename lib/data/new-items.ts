@@ -127,6 +127,17 @@ export const NEW_BULLET: NewItemSpec = {
 
 export const NEW_SKILL: NewItemSpec = { noun: "skill", fields: [text("text", "Skill")] };
 
+/**
+ * One extra contact link on the header (§5.1, §16.6). It has no `build.*`
+ * entry: a link is not a library *item* — it carries an ID only so a form can
+ * address one row — so the store writes it directly rather than through the
+ * builder table (see `header-edit.ts`).
+ */
+export const NEW_HEADER_LINK: NewItemSpec = {
+  noun: "link",
+  fields: [text("text", "Link")],
+};
+
 /** Typed field values straight off the form. */
 export type NewItemValues = Record<string, string>;
 

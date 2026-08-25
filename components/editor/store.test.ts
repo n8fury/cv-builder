@@ -9,7 +9,16 @@ import { createEditorStore, isDirty, type EditorSnapshot } from "./store";
 
 const library = {
   schemaVersion: 1,
-  header: { name: "A", location: "", email: "", phone: "", linkedin: "", github: "" },
+  header: {
+    name: "A",
+    title: "Aspiring Backend Engineer",
+    location: "",
+    email: "",
+    phone: "",
+    linkedin: "",
+    github: "",
+    links: [],
+  },
   aboutMe: [
     { id: "about-default", key: "default", text: "Default about.", tags: [] },
     { id: "about-short", key: "short", text: "Short about.", tags: [] },
@@ -70,7 +79,7 @@ const variant = {
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
   sections: [
-    { type: "header", visible: true, options: { mode: "full" } },
+    { type: "header", visible: true, options: { mode: "full", showTitle: false } },
     { type: "aboutMe", visible: true, options: { aboutMeId: "about-default" } },
     {
       type: "experience",
@@ -141,6 +150,29 @@ describe("editor store", () => {
     const [header, aboutMe] = store.getState().draft.variant.sections;
     expect(header).toMatchObject({ type: "header", options: { mode: "minimal" } });
     expect(aboutMe).toMatchObject({ type: "aboutMe", options: { aboutMeId: "about-short" } });
+  });
+
+  it("toggles the header title without disturbing the mode", () => {
+    const store = open();
+    store.getState().setHeaderShowTitle(0, true);
+
+    expect(store.getState().draft.variant.sections[0]).toMatchObject({
+      type: "header",
+      options: { mode: "full", showTitle: true },
+    });
+  });
+
+  it("keeps the title switched on across a mode change (§16.6)", () => {
+    // setHeaderMode used to write a fresh options object, which would have
+    // switched the title off every time the mode was touched.
+    const store = open();
+    store.getState().setHeaderShowTitle(0, true);
+    store.getState().setHeaderMode(0, "minimal");
+
+    expect(store.getState().draft.variant.sections[0]).toMatchObject({
+      type: "header",
+      options: { mode: "minimal", showTitle: true },
+    });
   });
 
   it("ignores an option written at an index of the wrong type", () => {
@@ -431,5 +463,118 @@ describe("editor store", () => {
     store.getState().revert();
     expect(isDirty(store.getState())).toBe(false);
     expect(store.getState().draft).toEqual(store.getState().saved);
+  });
+});
+
+describe("header content", () => {
+  it("edits the header's own fields on the library draft", () => {
+    const store = open();
+    store.getState().setHeaderField("email", "a@example.com");
+    store.getState().setHeaderField("title", "Backend Engineer");
+
+    expect(store.getState().draft.library.header).toMatchObject({
+      email: "a@example.com",
+      title: "Backend Engineer",
+      // Untouched fields are left exactly as they were.
+      name: "A",
+    });
+    expect(isDirty(store.getState())).toBe(true);
+    // The header is one record shared by every variant (§5.1) — the variant
+    // itself must not have grown a copy of the text.
+    expect(store.getState().draft.variant).toEqual(store.getState().saved.variant);
+  });
+
+  it("adds, edits and removes extra contact links", () => {
+    const store = open();
+    store.getState().addHeaderLink({ text: "  portfolio.example.com  " });
+    store.getState().addHeaderLink({ text: "dev.to/jordan-rivera-demo" });
+
+    const links = store.getState().draft.library.header.links;
+    expect(links.map((link) => link.text)).toEqual([
+      "portfolio.example.com",
+      "dev.to/jordan-rivera-demo",
+    ]);
+    // Distinct IDs, so a form can address one row (§16.6).
+    expect(new Set(links.map((link) => link.id)).size).toBe(2);
+
+    store.getState().setHeaderLinkText(links[0].id, "portfolio.dev");
+    store.getState().removeHeaderLink(links[1].id);
+    expect(store.getState().draft.library.header.links).toEqual([
+      { id: links[0].id, text: "portfolio.dev" },
+    ]);
+  });
+
+  it("refuses to store a blank link", () => {
+    const store = open();
+    store.getState().addHeaderLink({ text: "   " });
+    expect(store.getState().draft.library.header.links).toEqual([]);
+    expect(isDirty(store.getState())).toBe(false);
+  });
+});
+
+describe("custom sections", () => {
+  it("adds the library item and the section that points at it", () => {
+    const store = open();
+    store.getState().addCustomSection({ title: "Open Source", paragraph: "Maintainer." });
+
+    const { library: draftLibrary, variant: draftVariant } = store.getState().draft;
+    expect(draftLibrary.customSections).toHaveLength(1);
+    const item = draftLibrary.customSections[0];
+    expect(item).toMatchObject({ title: "Open Source", paragraph: "Maintainer.", bullets: [] });
+
+    // Appended, and pointing at the item just written for it (§12.4).
+    const last = draftVariant.sections.at(-1);
+    expect(last).toEqual({
+      type: "custom",
+      visible: true,
+      options: { customSectionId: item.id },
+    });
+  });
+
+  it("gives a second custom section its own item rather than repointing the first", () => {
+    const store = open();
+    store.getState().addCustomSection({ title: "Open Source" });
+    store.getState().addCustomSection({ title: "Publications" });
+
+    const { library: draftLibrary, variant: draftVariant } = store.getState().draft;
+    const ids = draftLibrary.customSections.map((item) => item.id);
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(2);
+    expect(
+      draftVariant.sections
+        .filter((section) => section.type === "custom")
+        .map((section) => section.options.customSectionId),
+    ).toEqual(ids);
+  });
+
+  it("edits a custom section's title and paragraph, blanking to null", () => {
+    const store = open();
+    store.getState().addCustomSection({ title: "Open Source", paragraph: "Maintainer." });
+    const id = store.getState().draft.library.customSections[0].id;
+
+    store.getState().setCustomSectionTitle(id, "Community");
+    store.getState().setCustomSectionParagraph(id, "   ");
+    expect(store.getState().draft.library.customSections[0]).toMatchObject({
+      title: "Community",
+      // An empty string would print an empty paragraph; absence is null.
+      paragraph: null,
+    });
+  });
+
+  it("removes a section from the variant but leaves its library item alone", () => {
+    const store = open();
+    store.getState().addCustomSection({ title: "Open Source" });
+    const before = store.getState().draft.variant.sections.length;
+
+    store.getState().removeSection(before - 1);
+    expect(store.getState().draft.variant.sections).toHaveLength(before - 1);
+    // Reusable by other variants (§12.4) — orphan cleanup is the manager's job.
+    expect(store.getState().draft.library.customSections).toHaveLength(1);
+  });
+
+  it("ignores a remove aimed at no section", () => {
+    const store = open();
+    store.getState().removeSection(99);
+    expect(isDirty(store.getState())).toBe(false);
   });
 });

@@ -39,6 +39,8 @@
   --name-to-contact-margin-minimal: 11.288pt;
   --name-to-contact-margin-full: 11.418pt;
   --contact-line-gap: 17.07pt;
+  --font-size-title: 10pt;
+  --leading-title: 12pt;
 
   /* Per-section space-before (§4.2, §16.1) — measured target … */
   --space-before-header: 0;
@@ -52,7 +54,9 @@
   --space-before-languages: 27.2pt;
   --space-before-recommendations: 27.2pt;
   --space-before-custom: 27.2pt;
-  --space-before-about-me-full-header: 20.32pt;
+  --space-before-about-me-full: 20.32pt;
+  --space-before-about-me-minimal-title: 20.45pt;
+  --space-before-about-me-full-title: 20.32pt;
 
   /* … and the same target as a CSS top margin on the section */
   --space-before-margin-header: 0;
@@ -66,7 +70,9 @@
   --space-before-margin-languages: 13.065pt;
   --space-before-margin-recommendations: 13.065pt;
   --space-before-margin-custom: 13.065pt;
-  --space-before-margin-about-me-full-header: 6.185pt;
+  --space-before-margin-about-me-full: 6.185pt;
+  --space-before-margin-about-me-minimal-title: 6.315pt;
+  --space-before-margin-about-me-full-title: 6.185pt;
 
   /* Per-section heading → first content baseline (§4.3) — target … */
   --heading-to-content-header: 0;
@@ -304,10 +310,25 @@ body {
   margin-top: calc(var(--contact-line-gap) - var(--leading-body));
 }
 
+/* The optional title (§5.1, §16.6). Charter's italic, never Charis — §16.5
+   keeps Charis for company names, subtitles and degrees. It takes the first
+   contact line's place under the name, which is why it carries that line's
+   margin; the contact lines below then fall through to the plain
+   .resume-contact rule above, since .resume-name + .resume-contact no longer
+   matches once a title sits between them. */
+.resume-title {
+  text-align: center;
+  font-size: var(--font-size-title);
+  line-height: var(--leading-title);
+  font-style: italic;
+}
+
+.resume-header[data-mode="minimal"] .resume-name + .resume-title,
 .resume-header[data-mode="minimal"] .resume-name + .resume-contact {
   margin-top: var(--name-to-contact-margin-minimal);
 }
 
+.resume-header[data-mode="full"] .resume-name + .resume-title,
 .resume-header[data-mode="full"] .resume-name + .resume-contact {
   margin-top: var(--name-to-contact-margin-full);
 }
@@ -337,11 +358,26 @@ body {
   --section-heading-to-content: var(--heading-to-content-margin-about-me);
 }
 
-/* A full header draws a second contact line, and About Me's gap is measured
-   from the name baseline rather than from the last contact line (§4.2) — so
-   the extra line eats into the gap instead of pushing About Me down. */
-.resume-header[data-mode="full"] + .resume-section[data-section="about-me"] {
-  --section-space-before: var(--space-before-margin-about-me-full-header);
+/* About Me's gap is measured from the name baseline rather than from the last
+   contact line (§4.2), so every extra line the header draws eats into the gap
+   instead of pushing About Me down. The section-keyed default above is the
+   plain minimal header; the other three slots override it.
+
+   Both attributes are named on every rule so specificity is equal across them
+   and the match is decided by which slot the header is actually in, not by
+   source order. --space-before-margin-about-me-full-title is the one value
+   here that is a floor rather than the fixed slot: three lines below the name
+   do not fit the slot, so that layout grows the header (see metrics.ts). */
+.resume-header[data-mode="full"][data-title="false"] + .resume-section[data-section="about-me"] {
+  --section-space-before: var(--space-before-margin-about-me-full);
+}
+
+.resume-header[data-mode="minimal"][data-title="true"] + .resume-section[data-section="about-me"] {
+  --section-space-before: var(--space-before-margin-about-me-minimal-title);
+}
+
+.resume-header[data-mode="full"][data-title="true"] + .resume-section[data-section="about-me"] {
+  --section-space-before: var(--space-before-margin-about-me-full-title);
 }
 
 .resume-section[data-section="competencies"] {

@@ -25,6 +25,7 @@ import {
   ENTRY_GAP_MARGIN_PT,
   ENTRY_TO_NEXT_ENTRY_PT,
   HANGING_INDENT_PT,
+  HEADER_SLOTS,
   HEADING_FONT_SIZE_PT,
   HEADING_LINE_HEIGHT_PT,
   HEADING_RULE_PADDING_PT,
@@ -35,6 +36,8 @@ import {
   NAME_LINE_HEIGHT_PT,
   NAME_TO_CONTACT_MARGIN_PT,
   NAME_TO_CONTACT_PT,
+  TITLE_FONT_SIZE_PT,
+  TITLE_LEADING_PT,
   PAGE_HEIGHT_PT,
   PAGE_MARGIN_PT,
   PAGE_WIDTH_PT,
@@ -52,6 +55,13 @@ import {
 
 export const GENERATED_START = "/* generated from lib/render/metrics.ts — do not edit by hand */";
 export const GENERATED_END = "/* end generated */";
+
+/**
+ * The header slots needing a rule of their own. `minimal` is the section-keyed
+ * default that `SPACE_BEFORE_PT.aboutMe` already carries, so emitting it again
+ * under a second name would be two properties holding one number.
+ */
+const OTHER_HEADER_SLOTS = HEADER_SLOTS.filter((slot) => slot !== "minimal");
 
 /** `aboutMe` → `about-me`, so custom properties read as CSS, not TypeScript. */
 function kebab(sectionType: SectionType): string {
@@ -98,24 +108,31 @@ function declarations(): string[] {
   add("name-to-contact-margin-minimal", NAME_TO_CONTACT_MARGIN_PT.minimal);
   add("name-to-contact-margin-full", NAME_TO_CONTACT_MARGIN_PT.full);
   add("contact-line-gap", CONTACT_LINE_GAP_PT);
+  // The title reuses the contact line's size and leading (§16.6). Emitted
+  // under their own names anyway: the stylesheet should say what it is setting,
+  // and if the title ever stops matching the body it changes in metrics.ts
+  // alone rather than in a rule that had quietly borrowed --font-size-body.
+  add("font-size-title", TITLE_FONT_SIZE_PT);
+  add("leading-title", TITLE_LEADING_PT);
 
   group("Per-section space-before (§4.2, §16.1) — measured target …");
   for (const section of SECTION_TYPES) {
     add(`space-before-${kebab(section)}`, SPACE_BEFORE_PT[section]);
   }
-  // About Me's gap is measured to the name baseline, so it shrinks by the
-  // second contact line a full header draws (§4.2). The section-keyed value
-  // above is the minimal-header case.
-  add("space-before-about-me-full-header", ABOUT_ME_SPACE_BEFORE_PT.full);
+  // About Me's gap is measured to the name baseline, so it shrinks by every
+  // further line the header draws (§4.2, §16.6). The section-keyed value above
+  // is the plain minimal case; the other three slots are emitted by name.
+  for (const slot of OTHER_HEADER_SLOTS) {
+    add(`space-before-about-me-${slot}`, ABOUT_ME_SPACE_BEFORE_PT[slot]);
+  }
 
   group("… and the same target as a CSS top margin on the section");
   for (const section of SECTION_TYPES) {
     add(`space-before-margin-${kebab(section)}`, SPACE_BEFORE_MARGIN_PT[section]);
   }
-  add(
-    "space-before-margin-about-me-full-header",
-    ABOUT_ME_SPACE_BEFORE_MARGIN_PT.full,
-  );
+  for (const slot of OTHER_HEADER_SLOTS) {
+    add(`space-before-margin-about-me-${slot}`, ABOUT_ME_SPACE_BEFORE_MARGIN_PT[slot]);
+  }
 
   group("Per-section heading → first content baseline (§4.3) — target …");
   for (const section of SECTION_TYPES) {

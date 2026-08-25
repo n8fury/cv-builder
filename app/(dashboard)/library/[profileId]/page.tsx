@@ -12,14 +12,18 @@
 import { notFound } from "next/navigation";
 
 import { PendingLink } from "@/app/(dashboard)/PendingLink";
+import { HeaderForm } from "@/components/library/HeaderForm";
 import { LibraryBrowser } from "@/components/library/LibraryBrowser";
 import { TagFilter } from "@/components/library/TagFilter";
 import { VariantScope } from "@/components/library/VariantScope";
+import { headerFieldValues } from "@/lib/data/header-edit";
 import { allTags, filterByTag, flattenItems, indexLibrary } from "@/lib/data/library-index";
 import { NotFoundError, listVariants, readLibrary, readVariant } from "@/lib/data/store";
 import { findOrphans, indexReferences, type NamedVariant } from "@/lib/data/orphans";
 import { variantReferencedIds } from "@/lib/data/variant-refs";
 import { libraryPath } from "@/lib/routes";
+
+import { updateHeaderAction } from "../actions";
 
 /** The library is a file on disk that the editor rewrites between requests. */
 export const dynamic = "force-dynamic";
@@ -129,6 +133,18 @@ export default async function LibraryPage({
           selected={tag}
           tags={tags}
           variantId={scope.variantId}
+        />
+      </div>
+
+      {/* Above the browser, and outside the tag filter: the header carries no
+          tags and is not an item, so filtering must never hide the one block
+          every variant renders (§5.1, §16.6). */}
+      <div className="mt-6">
+        <HeaderForm
+          action={updateHeaderAction}
+          fields={headerFieldValues(library)}
+          links={library.header.links}
+          profileId={profileId}
         />
       </div>
 

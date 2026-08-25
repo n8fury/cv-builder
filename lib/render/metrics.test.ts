@@ -1,13 +1,22 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ABOUT_ME_MIN_SPACE_BEFORE_PT,
+  ABOUT_ME_SPACE_BEFORE_PT,
   ASCENT_RATIO,
   BODY_FONT_SIZE_PT,
   BODY_LEADING_PT,
   CONTENT_LEFT_PT,
   DESCENT_RATIO,
+  CONTACT_LINE_GAP_PT,
   CONTENT_RIGHT_PT,
+  HEADER_SLOTS,
   HEADING_FONT_SIZE_PT,
+  NAME_BASELINE_TO_ABOUT_ME_PT,
+  NAME_TO_CONTACT_PT,
+  TITLE_FONT_SIZE_PT,
+  TITLE_LEADING_PT,
+  headerSlot,
   RIGHT_BLOCK_OFFSET_PT,
   SPACE_BEFORE_PT,
   TITLE_TO_SUBTITLE_PT,
@@ -110,5 +119,67 @@ describe("baselineGap", () => {
   it("offsets a one-line right block the opposite way from a two-line one", () => {
     expect(RIGHT_BLOCK_OFFSET_PT.twoLine).toBeLessThan(0);
     expect(RIGHT_BLOCK_OFFSET_PT.oneLine).toBeGreaterThan(0);
+  });
+});
+
+describe("header slots (§5.1, §16.6)", () => {
+  it("names all four mode/title combinations", () => {
+    expect([...HEADER_SLOTS]).toEqual(["minimal", "full", "minimal-title", "full-title"]);
+    expect(headerSlot("minimal", false)).toBe("minimal");
+    expect(headerSlot("minimal", true)).toBe("minimal-title");
+    expect(headerSlot("full", false)).toBe("full");
+    expect(headerSlot("full", true)).toBe("full-title");
+  });
+
+  it("sets the title at the contact line's size and leading", () => {
+    // Neither source PDF contains a title, so a size of its own would be an
+    // unmeasured number; the contact line's is the one §4.1 validates.
+    expect(TITLE_FONT_SIZE_PT).toBe(BODY_FONT_SIZE_PT);
+    expect(TITLE_LEADING_PT).toBe(BODY_LEADING_PT);
+  });
+
+  it("leaves the two measured slots exactly where they were", () => {
+    // The regression that matters: golden.json renders `minimal`, and this
+    // whole change must not move it by so much as a hundredth of a point.
+    expect(ABOUT_ME_SPACE_BEFORE_PT.minimal).toBeCloseTo(
+      NAME_BASELINE_TO_ABOUT_ME_PT - NAME_TO_CONTACT_PT.minimal,
+      10,
+    );
+    expect(ABOUT_ME_SPACE_BEFORE_PT.full).toBeCloseTo(
+      NAME_BASELINE_TO_ABOUT_ME_PT - NAME_TO_CONTACT_PT.full - CONTACT_LINE_GAP_PT,
+      10,
+    );
+  });
+
+  it("pays for a title out of the fixed slot when the slot can cover it", () => {
+    // A minimal header draws one contact line, so the title lands in dead
+    // space: About Me stays on the same baseline and nothing below it moves.
+    expect(ABOUT_ME_SPACE_BEFORE_PT["minimal-title"]).toBeCloseTo(
+      NAME_BASELINE_TO_ABOUT_ME_PT - NAME_TO_CONTACT_PT.minimal - CONTACT_LINE_GAP_PT,
+      10,
+    );
+    expect(ABOUT_ME_SPACE_BEFORE_PT["minimal-title"]).toBeGreaterThan(
+      ABOUT_ME_MIN_SPACE_BEFORE_PT,
+    );
+  });
+
+  it("holds the floor for a full header with a title, which the slot cannot cover", () => {
+    // Three lines below the name leave 3.25pt — less than the 12pt heading's
+    // 11.77pt ascent, so About Me would print through the last contact line.
+    const unclamped =
+      NAME_BASELINE_TO_ABOUT_ME_PT -
+      NAME_TO_CONTACT_PT.full -
+      2 * CONTACT_LINE_GAP_PT;
+
+    expect(unclamped).toBeLessThan(HEADING_FONT_SIZE_PT);
+    expect(ABOUT_ME_SPACE_BEFORE_PT["full-title"]).toBe(ABOUT_ME_MIN_SPACE_BEFORE_PT);
+  });
+
+  it("never lets About Me come closer than the tightest measured gap", () => {
+    for (const slot of HEADER_SLOTS) {
+      expect(ABOUT_ME_SPACE_BEFORE_PT[slot]).toBeGreaterThanOrEqual(
+        ABOUT_ME_MIN_SPACE_BEFORE_PT,
+      );
+    }
   });
 });

@@ -178,11 +178,17 @@ Fixed section **types** (not all required per variant — see Curation
 Model). Order is **not** fixed — drag-to-reorder per variant.
 
 ### 5.1 Header
-Two supported display variants:
-- **Full**: Name / Location | Email | Phone / LinkedIn | GitHub
-- **Minimal**: Name / Email | LinkedIn | GitHub (no location/phone)
+Two supported display variants, each optionally carrying a title line
+under the name (§16.6):
+- **Full**: Name / *[Title]* / Location | Email | Phone / LinkedIn | GitHub | …links
+- **Minimal**: Name / *[Title]* / Email | LinkedIn | GitHub | …links (no location/phone)
 
-Fields: `name, location, email, phone, linkedin, github`
+Fields: `name, title, location, email, phone, linkedin, github, links[]`
+
+`links[]` is `{ id, text }` — extra contact lines past LinkedIn and GitHub
+(portfolio, X, Dev.to), printed on the same line, in library order.
+`title` is content; whether it prints is the variant option
+`options.showTitle`, alongside `mode`. See §16.6.
 
 ### 5.2 About Me
 Single paragraph text block. Stored as an array of versions
@@ -848,6 +854,70 @@ unified italic as earlier rounds assumed:
 Matched exactly rather than simplified — `Charter BT Italic.ttf` is
 already available locally, so this costs nothing extra to implement
 correctly. Corrected in §3.
+
+### 16.6 Header title line, extra links, and an editable header
+Three gaps, one block. Resolved together because they share geometry.
+
+**The title.** A line under the name — "Aspiring Backend Engineer",
+"Software Engineer" — set at body size (10pt) in **CharterBT-Italic**,
+per §16.5's split (Charis stays on company names, subtitles, degrees).
+Neither source PDF contains one, so it is given no geometry of its own:
+it takes the first contact line's place in the rhythm
+(§4.1's name → contact gap) and steps the contact lines down by one
+17.07 each. Reusing measured numbers rather than inventing a third set.
+
+**Where it fits.** §4.2 fixes the header slot at 60.97 from the name
+baseline to the About Me heading, with the contact lines filling it
+rather than pushing About Me down. A title consumes one more 17.07 of
+that slot:
+
+| Slot | Lines below name | About Me space-before |
+|---|---|---|
+| minimal | 23.45 | **37.52** (unchanged, §4.2) |
+| full | 23.45 + 17.07 | **20.32** (unchanged, §4.2) |
+| minimal-title | 23.45 + 17.07 | **20.45** — fits; nothing below the header moves |
+| full-title | 23.58 + 17.07 + 17.07 | 3.25 → **20.32**, floored |
+
+A minimal header pays for the title out of dead space — ~22pt of blank
+paper sits under its single contact line, and the rendered page is
+unchanged below the header, so §11.2's harness against `golden.json` is
+unaffected. A full header cannot: 3.25 is less than the 12pt heading's
+11.77 ascent, so About Me would print through the last contact line.
+That one slot therefore grows the header instead of filling the fixed
+one, floored at 20.32 — the tightest gap either source document sets.
+`full-title` is the only layout here with no source measurement behind
+it, and the only one that moves the page.
+
+**Split of content vs. option.** The title's text lives in the library
+(`header.title`), edited once per profile; whether a given CV prints it
+is `options.showTitle` on the header section — the same split §5.1
+already makes for full/minimal. `showTitle` defaults to `false` so every
+variant already on disk parses and renders exactly as before. A variant
+asking for a title the library has not been given renders no line rather
+than an empty one, for §5.1's reason: a blank line still occupies 12pt.
+
+**Extra links.** `header.links[]` is `{ id, text }`, printed on the same
+line as LinkedIn and GitHub, in library order. `text` is display text
+("x.com/jordan-rivera-demo"), not a URL — matching `linkedin`/`github`, which are
+already display strings, and unlike §6.4's nullable `z.url()` fields.
+A line of its own would cost 17.07 the slot has not got. `linkedin` and
+`github` stay named fields rather than folding into the array: §5.1 lists
+them by name and §4.1's measured lines place them, so collapsing them
+would rewrite every profile on disk to buy uniformity the render layer
+does not want. Links carry IDs only so a form can address one row — no
+variant references them, so they are not library items and never appear
+in orphan detection (§7).
+
+**Editing the header.** Until now nothing could change `name`, `email`,
+`phone` or the socials except hand-editing `content-library.json`. The
+library manager reaches items by ID through a collection (§12.7), and the
+header is a single record with neither, so `mapLibraryItems` never visits
+it and Fork and Delete are meaningless on it. It gets its own edit module
+and its own form above the browser, outside the tag filter — the header
+carries no tags, and filtering must never hide the one block every
+variant renders. The field list is held against `headerSchema` by a test,
+the same guard §12.7's `ITEM_FIELDS` carries: a header field no screen
+can reach would be stored, printed on every CV, and uneditable.
 
 ---
 
