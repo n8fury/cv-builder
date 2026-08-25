@@ -1207,6 +1207,47 @@ and completion state.
     since pointing it at a scratch copy is the difference between running
     `check:pending` and letting it near real profile data.
 
-- [ ] Task 9.4: Re-run the full harness and test suite as a release gate
+- [x] Task 9.4: Re-run the full harness and test suite as a release gate
   - Verification: `npm test` and `npm run harness` both exit 0 on a clean
     checkout after `npm install` followed by `node scripts/build-fonts.mjs`.
+  - Result: green — but only after two real defects the gate existed to find.
+    On a fresh clone: `npm install` 0, `build-fonts` 0 (4 faces), `npm test`
+    **251/251**, `harness` and `harness:export` both **84/84** within ±2pt with
+    text and faces identical, and every other check clean —
+    `lint`, `tsc --noEmit`, `validate:data`, `check:tailwind-scope`,
+    `check:errors` **15/15**, `check:pending` **19/19**, `next build` 0.
+  - **Defect 1 — a clean checkout failed `npm test`.** Git for Windows
+    defaults to `core.autocrlf=true` and the repo had no `.gitattributes`, so
+    a fresh clone arrives with CRLF while every generator here writes `
+`.
+    `css-variables.test.ts` compares the committed `resume.css` against
+    regenerated text byte for byte, so it failed with a diff of two lines that
+    look identical — the worst possible first impression, and invisible in
+    this working tree, whose files were written LF by hand. `.gitattributes`
+    now pins the checkout to `* text=auto eol=lf`, with the three binary types
+    excluded. Nothing else moved; the tree is already LF, so the change causes
+    no churn.
+  - **Defect 2 — `check:errors` was flaky, 12/15 on three runs in five.** Not
+    the app: the script clicked the Download button as soon as
+    `Page.loadEventFired` arrived, and the button is server-rendered, so
+    before hydration the click is inert. The whole sequence then measured the
+    *next* click — reporting an idle button "in flight" and a busy one
+    "afterwards", with a null toast. This is the same bug Task 9.2 fixed in
+    `check-pending.mjs`; `check-errors.mjs` never got the treatment. It now
+    waits for `window.next` and `readyState === "complete"`: five consecutive
+    15/15 runs after the fix.
+  - Noted, not changed: saving any library item rewrites the file through the
+    schema, which materialises defaulted `tags: []` on every item that omitted
+    it. Semantically identical and it round-trips, but the first save after
+    this turns a one-field edit into a 112-line diff. `check:pending` does
+    exactly that, which is why it wants `CV_PROFILES_DIR` pointed at a scratch
+    copy.
+  - Noted, not changed: `next build` warns that `readdir(profilesRoot())` is a
+    dynamic filesystem access and traces the whole project into the output.
+    That warning is about deployment bundle size; this app is self-hosted and
+    runs from its own checkout (§9), and the path is dynamic on purpose so
+    `CV_PROFILES_DIR` works.
+  - The gate ran against a real `git clone` of the repo, not this working
+    tree, with the two pending fixes applied and re-checked-out so the
+    `.gitattributes` conversion actually took effect. `data/profiles/` in this
+    tree was never in reach — the mutating checks ran inside the clone.

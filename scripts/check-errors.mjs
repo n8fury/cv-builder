@@ -55,6 +55,32 @@ async function evaluate(cdp, sessionId, expression) {
   return result.value;
 }
 
+/**
+ * `Page.loadEventFired` means the document arrived, not that React is listening.
+ * The Download button is server-rendered, so it is clickable — and inert —
+ * before hydration: the click does nothing, and the sequence that follows it
+ * measures the *next* click instead, reporting an idle button "in flight" and a
+ * busy one "afterwards". `window.next` appears with the client bundle, which is
+ * the earliest honest signal that the page will answer a click.
+ */
+async function waitForInteractive(cdp, sessionId, path) {
+  const ready = await evaluate(
+    cdp,
+    sessionId,
+    `(async () => {
+      const deadline = Date.now() + 30000;
+      while (Date.now() < deadline) {
+        if (window.next && document.readyState === "complete") return true;
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      return false;
+    })()`,
+  );
+  if (!ready) throw new Error(`page at ${path} never became interactive`);
+  // Hydration attaches handlers a tick after the bundle evaluates.
+  await evaluate(cdp, sessionId, `new Promise((resolve) => setTimeout(resolve, 300))`);
+}
+
 /* ------------------------------------------------------------------ row 4 */
 
 /**
@@ -174,6 +200,7 @@ async function checkDownloadFailure(cdp) {
   const loaded = cdp.once("Page.loadEventFired");
   await cdp.send("Page.navigate", { url: `${base}/` }, sessionId);
   await loaded;
+  await waitForInteractive(cdp, sessionId, "/");
 
   const state = await evaluate(cdp, sessionId, DRIVE_DOWNLOAD);
 

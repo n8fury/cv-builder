@@ -1,0 +1,12 @@
+# `core.autocrlf=true` is Git for Windows' default, so a fresh clone would
+# otherwise arrive with CRLF endings while every generator here writes "\n".
+# `npm test` compares committed files against regenerated text byte for byte
+# (components/resume/resume.css against lib/render/metrics.ts), so that
+# mismatch fails the suite on a clean checkout with a diff of two lines that
+# look identical. Pinning the checkout to LF keeps disk and generator agreed.
+* text=auto eol=lf
+
+# Never touch these, whatever they contain.
+*.woff2 binary
+*.ttf   binary
+*.pdf   binary
