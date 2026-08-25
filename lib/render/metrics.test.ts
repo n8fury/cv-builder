@@ -14,6 +14,7 @@ import {
   HEADING_FONT_SIZE_PT,
   NAME_BASELINE_TO_ABOUT_ME_PT,
   NAME_TO_CONTACT_PT,
+  NAME_TO_TITLE_PT,
   TITLE_FONT_SIZE_PT,
   TITLE_LEADING_PT,
   headerSlot,
@@ -131,10 +132,14 @@ describe("header slots (§5.1, §16.6)", () => {
     expect(headerSlot("full", true)).toBe("full-title");
   });
 
-  it("sets the title at the contact line's size and leading", () => {
-    // Neither source PDF contains a title, so a size of its own would be an
-    // unmeasured number; the contact line's is the one §4.1 validates.
-    expect(TITLE_FONT_SIZE_PT).toBe(BODY_FONT_SIZE_PT);
+  it("sets the title above the contact line, on the contact line's leading", () => {
+    // The size is a design choice (no source PDF contains a title): body size
+    // made the title indistinguishable from the contact line under it. It now
+    // outranks the section headings on size, so the two must not collide.
+    expect(TITLE_FONT_SIZE_PT).toBeGreaterThan(BODY_FONT_SIZE_PT);
+    expect(TITLE_FONT_SIZE_PT).not.toBe(HEADING_FONT_SIZE_PT);
+    // The leading is not a choice: it is what keeps every baseline below the
+    // header on the numbers §4.1 measured.
     expect(TITLE_LEADING_PT).toBe(BODY_LEADING_PT);
   });
 
@@ -155,7 +160,7 @@ describe("header slots (§5.1, §16.6)", () => {
     // A minimal header draws one contact line, so the title lands in dead
     // space: About Me stays on the same baseline and nothing below it moves.
     expect(ABOUT_ME_SPACE_BEFORE_PT["minimal-title"]).toBeCloseTo(
-      NAME_BASELINE_TO_ABOUT_ME_PT - NAME_TO_CONTACT_PT.minimal - CONTACT_LINE_GAP_PT,
+      NAME_BASELINE_TO_ABOUT_ME_PT - NAME_TO_TITLE_PT - CONTACT_LINE_GAP_PT,
       10,
     );
     expect(ABOUT_ME_SPACE_BEFORE_PT["minimal-title"]).toBeGreaterThan(
@@ -167,9 +172,7 @@ describe("header slots (§5.1, §16.6)", () => {
     // Three lines below the name leave 3.25pt — less than the 12pt heading's
     // 11.77pt ascent, so About Me would print through the last contact line.
     const unclamped =
-      NAME_BASELINE_TO_ABOUT_ME_PT -
-      NAME_TO_CONTACT_PT.full -
-      2 * CONTACT_LINE_GAP_PT;
+      NAME_BASELINE_TO_ABOUT_ME_PT - NAME_TO_TITLE_PT - 2 * CONTACT_LINE_GAP_PT;
 
     expect(unclamped).toBeLessThan(HEADING_FONT_SIZE_PT);
     expect(ABOUT_ME_SPACE_BEFORE_PT["full-title"]).toBe(ABOUT_ME_MIN_SPACE_BEFORE_PT);

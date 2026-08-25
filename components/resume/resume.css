@@ -39,7 +39,10 @@
   --name-to-contact-margin-minimal: 11.288pt;
   --name-to-contact-margin-full: 11.418pt;
   --contact-line-gap: 17.07pt;
-  --font-size-title: 10pt;
+  --name-to-title: 17pt;
+  --name-to-title-margin: 3.748pt;
+  --title-to-contact-margin: 6.161pt;
+  --font-size-title: 13pt;
   --leading-title: 12pt;
 
   /* Per-section space-before (§4.2, §16.1) — measured target … */
@@ -55,7 +58,7 @@
   --space-before-recommendations: 27.2pt;
   --space-before-custom: 27.2pt;
   --space-before-about-me-full: 20.32pt;
-  --space-before-about-me-minimal-title: 20.45pt;
+  --space-before-about-me-minimal-title: 26.9pt;
   --space-before-about-me-full-title: 20.32pt;
 
   /* … and the same target as a CSS top margin on the section */
@@ -71,7 +74,7 @@
   --space-before-margin-recommendations: 13.065pt;
   --space-before-margin-custom: 13.065pt;
   --space-before-margin-about-me-full: 6.185pt;
-  --space-before-margin-about-me-minimal-title: 6.315pt;
+  --space-before-margin-about-me-minimal-title: 12.765pt;
   --space-before-margin-about-me-full-title: 6.185pt;
 
   /* Per-section heading → first content baseline (§4.3) — target … */
@@ -315,20 +318,41 @@ body {
    contact line's place under the name, which is why it carries that line's
    margin; the contact lines below then fall through to the plain
    .resume-contact rule above, since .resume-name + .resume-contact no longer
-   matches once a title sits between them. */
+   matches once a title sits between them.
+
+   Regular weight, deliberately: fonts.css declares no bold-italic Charter
+   face (there is no such TTF to build one from), so anything at 600 or above
+   is Chrome synthesising the bold from italic 400 — algorithmic strokes next
+   to the genuinely drawn ones in the section headings. The size carries the
+   emphasis here instead. */
 .resume-title {
   text-align: center;
   font-size: var(--font-size-title);
   line-height: var(--leading-title);
   font-style: italic;
+  font-weight: 400;
 }
 
-.resume-header[data-mode="minimal"] .resume-name + .resume-title,
+/* The title sits closer to the name than a contact line does — it reads as
+   part of the name block, not as metadata under it — so it carries its own
+   gap rather than the mode-keyed contact one below. Mode does not enter into
+   it: the fraction of a point between minimal and full is two measurements
+   of one slot, and there is no third measurement of a title to split. */
+.resume-name + .resume-title {
+  margin-top: var(--name-to-title-margin);
+}
+
+/* The contact line under a title cannot use the plain .resume-contact margin:
+   that one subtracts a line height, which only lands the baseline when both
+   blocks share a font size, and the title no longer shares the body's. */
+.resume-title + .resume-contact {
+  margin-top: var(--title-to-contact-margin);
+}
+
 .resume-header[data-mode="minimal"] .resume-name + .resume-contact {
   margin-top: var(--name-to-contact-margin-minimal);
 }
 
-.resume-header[data-mode="full"] .resume-name + .resume-title,
 .resume-header[data-mode="full"] .resume-name + .resume-contact {
   margin-top: var(--name-to-contact-margin-full);
 }

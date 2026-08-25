@@ -68,6 +68,22 @@ export const NAME_TO_CONTACT_PT: Record<"full" | "minimal", number> = {
 /** Contact line 1 → contact line 2 (full header only). */
 export const CONTACT_LINE_GAP_PT = 17.07;
 
+/**
+ * Name baseline → title baseline, when a title prints (§5.1, §16.6).
+ *
+ * Not NAME_TO_CONTACT_PT, which the title used to borrow along with the rest
+ * of the first contact line's geometry. That gap is sized for a 24.9pt display
+ * line falling to a 10pt one; the title is larger than a contact line and
+ * belongs to the name rather than to the metadata under it, so it sits closer
+ * — tighter even than the header's own line-to-line rhythm.
+ *
+ * Chosen, not measured: no source PDF contains a title. It is deliberately
+ * short of the two faces' declared ascent and descent boxes, which is safe
+ * because those boxes are larger than the ink in them — but the margin is
+ * small, so a name carrying a g, j, p, q or y closes most of it.
+ */
+export const NAME_TO_TITLE_PT = 17;
+
 /* ── Leading (§4.5) ────────────────────────────────────────────────── */
 
 /** Body and bullets: 10pt × 1.2, confirmed exact (§3). */
@@ -83,14 +99,26 @@ export const WIDE_LEADING_PT = 13.0;
  * The optional title line — "Aspiring Backend Engineer" under the name
  * (§5.1, §16.6).
  *
- * Set at body size in Charter's italic, so it needs no geometry of its own:
- * it takes the first contact line's place in the rhythm (NAME_TO_CONTACT_PT)
- * and pushes the contact lines down by one CONTACT_LINE_GAP_PT each. Neither
- * source PDF contains a title, so inventing a size and a leading for it would
- * be an unmeasured third set of numbers; reusing the contact line's is the one
- * choice §4.1 already validates.
+ * Set well above body size in Charter's italic. At body size it was
+ * typographically identical to the contact line directly beneath it, which
+ * flattened "who I am" and "how to reach me" into one undifferentiated block.
+ *
+ * At 13pt it is also a point larger than the section headings, so the header
+ * carries three distinct display sizes rather than two — the title outranks
+ * EXPERIENCE on size and yields to it on weight. Neither source PDF contains
+ * a title, so this is a design choice, not a measurement, which is exactly
+ * why it is stated here rather than left implicit.
+ *
+ * The leading stays at the contact line's even though the type is now larger
+ * than it — a line box shorter than its own glyphs, which CSS allows and
+ * which nothing here clips. That is deliberate, because the geometry is: the
+ * title takes the first contact line's place in the rhythm (NAME_TO_CONTACT_PT)
+ * and pushes the contact lines down by one CONTACT_LINE_GAP_PT each. Holding
+ * TITLE_LEADING_PT at BODY_LEADING_PT keeps every baseline below the header
+ * exactly where §4.1 measured it — only the title's own baseline shifts,
+ * within its unchanged line box.
  */
-export const TITLE_FONT_SIZE_PT = BODY_FONT_SIZE_PT;
+export const TITLE_FONT_SIZE_PT = 13;
 export const TITLE_LEADING_PT = BODY_LEADING_PT;
 
 const WIDE_LEADING_SECTIONS: ReadonlySet<SectionType> = new Set([
@@ -180,13 +208,15 @@ export function headerSlot(mode: HeaderMode, showTitle: boolean): HeaderSlot {
 /**
  * Name baseline → the header's last printed line, per slot.
  *
- * The title takes the first contact line's place in the rhythm, so every line
- * after it steps down by one CONTACT_LINE_GAP_PT — one rule covering all four
- * slots rather than four measurements that do not exist.
+ * The title takes the first contact line's *place* in the rhythm but not its
+ * gap (NAME_TO_TITLE_PT); either way every line after the first steps down by
+ * one CONTACT_LINE_GAP_PT — one rule covering all four slots rather than four
+ * measurements that do not exist.
  */
 function nameToLastHeaderLinePt(mode: HeaderMode, showTitle: boolean): number {
   const lines = (mode === "full" ? 2 : 1) + (showTitle ? 1 : 0);
-  return NAME_TO_CONTACT_PT[mode] + (lines - 1) * CONTACT_LINE_GAP_PT;
+  const nameToFirstLine = showTitle ? NAME_TO_TITLE_PT : NAME_TO_CONTACT_PT[mode];
+  return nameToFirstLine + (lines - 1) * CONTACT_LINE_GAP_PT;
 }
 
 /**
@@ -208,8 +238,8 @@ export const ABOUT_ME_MIN_SPACE_BEFORE_PT =
  *
  *   minimal        60.97 − 23.45                  = 37.52  (exactly golden.json's 692.92 → 655.40)
  *   full           60.97 − 23.58 − 17.07          = 20.32  (golden-basic.json reads 20.09)
- *   minimal-title  60.97 − 23.45 − 17.07          = 20.45  (title lands in the slot; nothing below moves)
- *   full-title     60.97 − 23.58 − 17.07 − 17.07  =  3.25 → 20.32, the floor
+ *   minimal-title  60.97 − 17.07 − 17.07          = 26.83  (title lands in the slot; nothing below moves)
+ *   full-title     60.97 − 17.07 − 17.07 − 17.07  =  9.76 → 20.32, the floor
  *
  * Deriving rather than tabulating is what makes the first two agree: a single
  * §4.2-style figure would be right for one mode and ~17pt wrong for the other,
@@ -509,6 +539,35 @@ export function lineHeightForBaseline(
 export const NAME_LINE_HEIGHT_PT = lineHeightForBaseline(
   NAME_FONT_SIZE_PT,
   CONTENT_TOP_TO_NAME_BASELINE_PT,
+);
+
+/**
+ * Name baseline → title baseline, as a CSS margin.
+ *
+ * Mode-independent, unlike the contact gap below: minimal and full differ by
+ * 0.13pt because they are two separate measurements of the same slot, and
+ * there is no third measurement of a title to inherit that split from.
+ */
+export const NAME_TO_TITLE_MARGIN_PT = baselineGap(
+  NAME_TO_TITLE_PT,
+  TITLE_FONT_SIZE_PT,
+  TITLE_LEADING_PT,
+  { previous: { fontSizePt: NAME_FONT_SIZE_PT, lineHeightPt: NAME_LINE_HEIGHT_PT } },
+);
+
+/**
+ * Title baseline → first contact baseline, as a CSS margin.
+ *
+ * The plain `.resume-contact` margin cannot serve here. It converts
+ * CONTACT_LINE_GAP_PT by subtracting one line height, which is exact only
+ * while both blocks share a font size — true of two contact lines, false of a
+ * 11.5pt title above a 10pt one, where the ascents no longer cancel.
+ */
+export const TITLE_TO_CONTACT_MARGIN_PT = baselineGap(
+  CONTACT_LINE_GAP_PT,
+  BODY_FONT_SIZE_PT,
+  BODY_LEADING_PT,
+  { previous: { fontSizePt: TITLE_FONT_SIZE_PT, lineHeightPt: TITLE_LEADING_PT } },
 );
 
 /** Name baseline → first contact baseline, as a CSS margin, per header mode. */

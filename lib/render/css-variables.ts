@@ -35,6 +35,9 @@ import {
   NAME_FONT_SIZE_PT,
   NAME_LINE_HEIGHT_PT,
   NAME_TO_CONTACT_MARGIN_PT,
+  NAME_TO_TITLE_MARGIN_PT,
+  NAME_TO_TITLE_PT,
+  TITLE_TO_CONTACT_MARGIN_PT,
   NAME_TO_CONTACT_PT,
   TITLE_FONT_SIZE_PT,
   TITLE_LEADING_PT,
@@ -108,10 +111,13 @@ function declarations(): string[] {
   add("name-to-contact-margin-minimal", NAME_TO_CONTACT_MARGIN_PT.minimal);
   add("name-to-contact-margin-full", NAME_TO_CONTACT_MARGIN_PT.full);
   add("contact-line-gap", CONTACT_LINE_GAP_PT);
-  // The title reuses the contact line's size and leading (§16.6). Emitted
-  // under their own names anyway: the stylesheet should say what it is setting,
-  // and if the title ever stops matching the body it changes in metrics.ts
-  // alone rather than in a rule that had quietly borrowed --font-size-body.
+  add("name-to-title", NAME_TO_TITLE_PT);
+  add("name-to-title-margin", NAME_TO_TITLE_MARGIN_PT);
+  add("title-to-contact-margin", TITLE_TO_CONTACT_MARGIN_PT);
+  // The title no longer reuses the contact line's size or its gap under the
+  // name (§16.6), which is exactly why each is emitted under its own name: the
+  // stylesheet says what it is setting, and the title moves in metrics.ts alone
+  // rather than in a rule that had quietly borrowed --font-size-body.
   add("font-size-title", TITLE_FONT_SIZE_PT);
   add("leading-title", TITLE_LEADING_PT);
 
