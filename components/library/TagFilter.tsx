@@ -5,7 +5,7 @@
  * belongs in the URL — bookmarkable, reloadable, and shareable with the
  * variant scope beside it, which each link therefore carries through.
  */
-import Link from "next/link";
+import { PendingLink } from "@/app/(dashboard)/PendingLink";
 
 const CHIP = "rounded px-2 py-0.5 text-xs font-medium";
 
@@ -42,20 +42,20 @@ export function TagFilter({
   return (
     <div className="flex flex-wrap items-baseline gap-2">
       <span className="text-sm text-gray-600">Filter by tag</span>
-      <Link
+      <PendingLink
         className={`${CHIP} ${selected === null ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
         href={href(null)}
       >
         all
-      </Link>
+      </PendingLink>
       {tags.map((tag) => (
-        <Link
+        <PendingLink
           key={tag}
           className={`${CHIP} ${selected === tag ? "bg-blue-700 text-white" : "bg-blue-50 text-blue-700 hover:bg-blue-100"}`}
           href={href(tag)}
         >
           {tag}
-        </Link>
+        </PendingLink>
       ))}
       {selected ? (
         <span className="text-xs text-gray-500">

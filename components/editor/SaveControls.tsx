@@ -111,6 +111,7 @@ export function SaveControls() {
 
       <button
         type="button"
+        aria-busy={primaryPending}
         data-save
         className={PRIMARY}
         disabled={primaryDisabled}

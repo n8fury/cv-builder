@@ -10,9 +10,9 @@
  * re-renders that tree in place; nothing here launches Chromium, which §7
  * reserves for the explicit export action.
  */
-import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 
+import { PendingLink } from "@/app/(dashboard)/PendingLink";
 import { ResumeDocument } from "@/components/resume/ResumeDocument";
 import { PaginationReporter } from "@/components/resume/pagination-context";
 import { resolveVariant } from "@/lib/data/resolve";
@@ -112,17 +112,17 @@ export function EditorShell({ snapshot, css }: { snapshot: EditorSnapshot; css: 
             <span className="text-gray-400"> / </span>
             <span className="font-mono">{snapshot.variantId}</span>
           </h1>
-          <Link className="text-sm text-gray-600 underline hover:text-gray-900" href="/">
+          <PendingLink className="text-sm text-gray-600 underline hover:text-gray-900" href="/">
             Dashboard
-          </Link>
+          </PendingLink>
           {/* Carries the open variant, so the manager's Fork acts on this one
               — §11.4's "the currently open variant", made literal. */}
-          <Link
+          <PendingLink
             className="text-sm text-gray-600 underline hover:text-gray-900"
             href={`${libraryPath(snapshot.profileId)}?variant=${encodeURIComponent(snapshot.variantId)}`}
           >
             Library
-          </Link>
+          </PendingLink>
           <div className="ml-auto flex items-center gap-3">
             <PageCount pagination={pagination} />
             <Status />

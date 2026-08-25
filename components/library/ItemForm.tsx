@@ -84,6 +84,7 @@ export function ItemForm({
 
       <div className="flex items-baseline gap-3">
         <button
+          aria-busy={pending}
           className="rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
           disabled={pending}
           type="submit"

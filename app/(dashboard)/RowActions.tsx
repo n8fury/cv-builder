@@ -67,7 +67,7 @@ export function RenameForm({
         name="nextId"
         required
       />
-      <button className={BUTTON} disabled={pending} type="submit">
+      <button aria-busy={pending} className={BUTTON} disabled={pending} type="submit">
         {pending ? "Saving…" : "Save"}
       </button>
       <button className={BUTTON} onClick={() => setOpen(false)} type="button">
@@ -92,6 +92,7 @@ export function DeleteButton({
           confirmation is the only thing standing between a misclick and lost
           curation work. */}
       <button
+        aria-busy={pending}
         className={`${BUTTON} text-red-700 hover:bg-red-50`}
         disabled={pending}
         onClick={(event) => {

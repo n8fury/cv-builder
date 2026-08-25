@@ -47,7 +47,12 @@ export function ForkButton({
       <input name="profileId" type="hidden" value={profileId} />
       <input name="itemId" type="hidden" value={itemId} />
       <input name="variantId" type="hidden" value={variantId ?? ""} />
-      <button className={BUTTON} disabled={pending || blocked !== null} type="submit">
+      <button
+        aria-busy={pending}
+        className={BUTTON}
+        disabled={pending || blocked !== null}
+        type="submit"
+      >
         {pending ? "Forking…" : `Fork this ${noun}`}
       </button>
       {blocked === "choose a variant above" ? (

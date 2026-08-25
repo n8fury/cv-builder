@@ -34,6 +34,7 @@ export function DeleteItemButton({
       <input name="profileId" type="hidden" value={profileId} />
       <input name="itemId" type="hidden" value={itemId} />
       <button
+        aria-busy={pending}
         className="rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
         disabled={pending}
         onClick={(event) => {

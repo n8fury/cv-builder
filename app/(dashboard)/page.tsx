@@ -5,8 +5,6 @@
  * Download PDF, Rename, Delete) hang off these rows in the tasks that follow;
  * this is the inventory they attach to.
  */
-import Link from "next/link";
-
 import { listDashboard, type ProfileSummary, type VariantSummary } from "@/lib/data/dashboard";
 import { editPath, libraryPath, renderPath } from "@/lib/routes";
 import {
@@ -16,6 +14,7 @@ import {
   renameVariantAction,
 } from "./actions";
 import { DownloadButton } from "./DownloadButton";
+import { PendingLink } from "./PendingLink";
 import { NewProfileForm } from "./NewProfileForm";
 import { DeleteButton, RenameForm } from "./RowActions";
 
@@ -49,18 +48,18 @@ function VariantRow({ profileId, variant }: { profileId: string; variant: Varian
         <span className="font-mono text-xs text-gray-400">
           {profileId}/{variant.id}
         </span>
-        <Link
+        <PendingLink
           className="ml-auto rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
           href={renderPath(profileId, variant.id)}
         >
           View
-        </Link>
-        <Link
+        </PendingLink>
+        <PendingLink
           className="rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
           href={editPath(profileId, variant.id)}
         >
           Edit
-        </Link>
+        </PendingLink>
         <DownloadButton profileId={profileId} variantId={variant.id} />
         <RenameForm
           action={renameVariantAction}
@@ -87,12 +86,12 @@ function ProfileCard({ profile }: { profile: ProfileSummary }) {
         <span className="ml-auto text-xs text-gray-500">
           {profile.variants.length} variant{profile.variants.length === 1 ? "" : "s"}
         </span>
-        <Link
+        <PendingLink
           className="rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
           href={libraryPath(profile.id)}
         >
           Library
-        </Link>
+        </PendingLink>
         <RenameForm
           action={renameProfileAction}
           currentId={profile.id}

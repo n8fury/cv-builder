@@ -9,9 +9,9 @@
  * (§11.4). Browsing and editing stay library-wide, because an edit reaches
  * every variant referencing the item whatever is selected here.
  */
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { PendingLink } from "@/app/(dashboard)/PendingLink";
 import { LibraryBrowser } from "@/components/library/LibraryBrowser";
 import { TagFilter } from "@/components/library/TagFilter";
 import { VariantScope } from "@/components/library/VariantScope";
@@ -94,9 +94,9 @@ export default async function LibraryPage({
 
   return (
     <main className="mx-auto max-w-3xl p-8">
-      <Link className="text-sm text-blue-700 hover:underline" href="/">
+      <PendingLink className="text-sm text-blue-700 hover:underline" href="/">
         ← Dashboard
-      </Link>
+      </PendingLink>
       <h1 className="mt-2 text-2xl font-semibold text-gray-900">
         Content library
         <span className="ml-3 font-mono text-sm font-normal text-gray-500">{profileId}</span>

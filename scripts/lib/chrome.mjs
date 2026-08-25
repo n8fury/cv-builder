@@ -117,7 +117,21 @@ export async function connect(endpoint) {
       events.add(listener);
     });
 
-  return { send, once, close: () => socket.close() };
+  /**
+   * Subscribe to every occurrence of an event, not just the next one, and
+   * return the unsubscribe. `once` cannot count things — the pending-state
+   * check needs to know how many requests a click produced, not that one
+   * happened.
+   */
+  const on = (method, listener) => {
+    const wrapped = (message) => {
+      if (message.method === method) listener(message.params);
+    };
+    events.add(wrapped);
+    return () => events.delete(wrapped);
+  };
+
+  return { send, once, on, close: () => socket.close() };
 }
 
 /** Open `url` in a fresh tab, wait for load, and return its attached session. */

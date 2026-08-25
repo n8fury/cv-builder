@@ -1143,9 +1143,45 @@ and completion state.
     localhost-only, no-auth tool (§9) and useful while working, but it is the
     one place the UI shows a filesystem path.
 
-- [ ] Task 9.2: Add loading states across dashboard, editor, and library manager
+- [x] Task 9.2: Add loading states across dashboard, editor, and library manager
   - Verification: every async action shows a pending state and no action can be
     double-submitted.
+  - Result: `npm run check:pending` reports **19/19** driving a real server —
+    every action sampled mid-flight, every one of them locked, and every
+    "second click while busy" produced exactly **1 POST**. `npm test` 251/251,
+    `eslint` and `tsc --noEmit` clean, `npm run check:errors` still 15/15,
+    `npm run check:tailwind-scope` still passes, and the harness is unchanged
+    at 84/84 within ±2pt with identical text and faces.
+  - Server actions already had pending states from their own tasks; what was
+    missing was everything *navigational*. Every screen is `force-dynamic` and
+    reads off disk, so View, Edit, Library, the tag chips and the fork scope
+    were all real round trips that looked like clicks that did nothing.
+  - Two mechanisms, deliberately: `loading.tsx` for the dashboard, the editor
+    and the manager gives the destination's shape once the navigation commits;
+    `PendingLink` (`useLinkStatus`) covers the moment *before* that, which is
+    exactly when the impatient second click lands. The editor's skeleton
+    matches `EditorShell`'s two-column ratio and reserves a page-shaped block,
+    so nothing jumps when the real preview arrives.
+  - `VariantScope` became a client component: Apply now pushes through
+    `useTransition`, so it reads "Applying…" and is disabled until the new page
+    has rendered. It also carries `?tag=` through, which the old plain GET form
+    silently dropped — a bug found by writing the check, not by reading it.
+  - `aria-busy` added to every server-action submit (New profile, Rename,
+    Delete, item Save, Fork, item Delete, editor Save). The visual pending
+    state was already there; this is the half a screen reader gets.
+  - The check slows requests with CDP latency rather than a stubbed `fetch`, so
+    what is measured is the real navigation and the real server action, and
+    counts clicks from `Network.requestWillBeSent` — a double submit shows up
+    regardless of how the client sent it. `scripts/lib/chrome.mjs` gained an
+    `on()` subscription for that; `once()` cannot count.
+  - Mutating checks create, rename and delete a throwaway profile
+    (`pending-check-tmp`) and nothing else. Verified against a dev server run
+    with `CV_PROFILES_DIR` pointing at a scratch copy, so `data/profiles/` was
+    never in reach — `git status` confirms it untouched.
+  - Clicks fired before hydration submit the *form* — a plain GET that reloads
+    the page and measures nothing. The check waits for `window.next` and
+    `readyState === "complete"` first; without that the create step silently
+    did nothing and the run looked like a bug in the button.
 
 - [ ] Task 9.3: Write the project `README.md`
   - Verification: covers setup, the font build step, `npm run dev`,

@@ -18,7 +18,8 @@
     "extract:golden:basic": "node scripts/extract-golden.mjs --pdf \"data/reference/resume-reference-basic.pdf\" --out harness/golden-basic.json",
     "harness": "node scripts/harness.mjs",
     "harness:export": "node scripts/harness.mjs --export",
-    "check:errors": "node scripts/check-errors.mjs"
+    "check:errors": "node scripts/check-errors.mjs",
+    "check:pending": "node scripts/check-pending.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
