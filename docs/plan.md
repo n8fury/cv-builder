@@ -1864,11 +1864,71 @@ the code, so the spec stays the source of truth for values:
     `check:tailwind-scope`, and `npm run harness` **84/84**, text and faces
     identical. Nothing outside the editor's left column moved.
 
-- [ ] Task 10.10: Add a section jump rail and sticky section headers
+- [x] Task 10.10: Add a section jump rail and sticky section headers
   - Verification: every section is reachable in one click from the rail, and
     the toggling behaviour of §15.3's drag ordering is unaffected.
   - Keeps the deliberate no-collapse decision — which avoids the column
     shuffling on every toggle — while fixing the navigation cost it creates.
+  - Result: both hold, checked in a real browser (Puppeteer, 22/22) against
+    the real profile as well as in unit tests.
+    - **one click** is checked chip by chip, not by sampling: for each of the
+      eight chips the page is returned to the top, the chip pressed, and the
+      card's own box measured against the rail's — it must land within 8px
+      below the rail's bottom edge, or the page must already be scrolled to
+      its end and unable to bring it further up. `scroll-margin-top` is what
+      makes that true; without it a jump tucks the card's header under the
+      rail that was just pressed.
+    - a jump also moves the **keyboard**, asserted on every chip. A scroll
+      leaves focus where it was, so a Tab straight after a jump would walk
+      the section you had just left. The card takes `tabIndex={-1}` for it —
+      programmatic only, so the form's own Tab order is unchanged.
+    - **ordering is unaffected**: reordering still moves a section and the
+      rail follows it, and the move goes back the way it came. Driven from
+      the drag handle's keyboard sensor, which ends in the same
+      `moveSection` as a pointer drag; a pointer drag was then run
+      side-by-side against the pre-change build, and the two behave
+      identically (both need the pointer past the next card's centre before
+      dnd-kit swaps — a shorter travel moved nothing before this task
+      either).
+    - **toggling is unaffected**, including from the pinned header: Visible
+      still ticks and unticks there, and the header still names its section
+      while its rows scroll under it.
+    - and nothing is written: both files are hashed before and after, the
+      indicator still reads Saved, and there is no store action anywhere in
+      the rail.
+  - **The rail is derived, never stored.** Its order *is* the sections array
+    (§15.3), its labels are the headings the CV prints, and its chips are the
+    cards the form is currently showing — so 10.8's filter narrows the rail
+    with the column rather than leaving chips that jump nowhere. A chip is a
+    jump and nothing else: it cannot toggle, reorder, or dirty the draft.
+  - A card is addressed by the `sectionKeys` key the drag already uses,
+    turned into a DOM id (`section-experience-0`). Sections have no id of
+    their own and a bare index changes under every reorder, so the key is the
+    one handle that survives a drag between the rail being drawn and a chip
+    being pressed — pinned by a test that reorders and re-derives.
+  - `sectionTitle` moved out of `SectionCard` into `rail.ts` as
+    `sectionLabel` rather than being copied: what a section is called is one
+    answer, and a second copy would drift the first time a custom section's
+    title rule changed.
+  - **The sticky header stops at the rail, not at the viewport.** The rail
+    measures itself with a `ResizeObserver` and the form publishes the figure
+    as `--rail-top`; the headers and the scroll margin both read it. Measured
+    rather than hardcoded because a narrow column gives the chip row a
+    horizontal scrollbar, and that scrollbar has real height.
+  - The header lets go of `sticky` while its card is being dragged: dnd-kit
+    moves the row with a transform, and a header pinned to the viewport
+    inside a row that is following the cursor tears away from it.
+  - No "current section" highlight. Answering it means watching the scroll
+    position, and every answer re-renders the form — the expensive tree, with
+    the whole library in it — on a wheel tick. The sticky header already
+    names where you are, permanently and without a listener.
+  - Silent below two chips, for `TagActions`' reason: a rail with one place
+    to go is not a shortcut.
+  - `npm test` **456/456** (up from 441 — 15 cases over the labels for every
+    section type, the ids across a reorder, the filtered rail and the drawn
+    chips), `tsc --noEmit`, `lint`, `check:tailwind-scope`, and
+    `npm run harness` **84/84**, text and faces identical. Nothing outside
+    the editor's left column moved.
 
 ### Tier 3 — writing comfort
 

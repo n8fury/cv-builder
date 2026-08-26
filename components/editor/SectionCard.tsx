@@ -9,6 +9,11 @@
  * to the library, not the variant (§6.2), so those fields edit the library
  * draft — exactly the propagating edit §11.4 describes, staged until Save.
  *
+ * The card's own header row is sticky: it names the section, and carries its
+ * Visible box, for as long as any part of the card is on screen. It stops at
+ * the jump rail rather than at the viewport (`--rail-top`, `./rail`), and lets
+ * go while the card is being dragged.
+ *
  * The card is also where the form's text filter lands. It arrives as a pair of
  * ID sets (`filter.ts`) and is applied to the lists this file builds, not
  * inside the curation components: those two already take "the entries" and
@@ -18,7 +23,6 @@
  */
 import { headerFieldValues, normalizeLinkUrl } from "@/lib/data/header-edit";
 import { NEW_BULLET, NEW_ENTRY, NEW_HEADER_LINK } from "@/lib/data/new-items";
-import { SECTION_TITLE } from "@/lib/render/section-titles";
 import type { ContentLibrary } from "@/lib/schema/library";
 import type { VariantSection } from "@/lib/schema/variant";
 
@@ -31,21 +35,13 @@ import { SkillCuration, type SkillGroupChoice } from "./SkillCuration";
 import { TagActions } from "./TagActions";
 import { SHOW_ALL, filterNote, type SectionFilter } from "./filter";
 import { ordered } from "./ordering";
+import { sectionLabel } from "./rail";
 import { useLinkHover } from "./preview-link";
 
 const SELECT = "rounded border border-gray-300 px-1.5 py-0.5 text-xs text-gray-900";
 const FIELD =
   "w-full rounded border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-500 focus:outline-none";
 const GHOST = "rounded px-2 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800";
-
-function sectionTitle(section: VariantSection, library: ContentLibrary): string {
-  if (section.type === "header") return "Header";
-  if (section.type === "custom") {
-    const found = library.customSections.find((item) => item.id === section.options.customSectionId);
-    return found?.title ?? "Custom section";
-  }
-  return SECTION_TITLE[section.type];
-}
 
 /** A reference the library cannot satisfy is named, not hidden (§13). */
 function MissingRef({ id }: { id: string }) {
@@ -662,6 +658,8 @@ export function SectionCard({
   index,
   library,
   sortId,
+  /** Where the jump rail lands (`./rail`). Absent outside the form's list. */
+  domId,
   /** Defaults to the whole section, which is what an unfiltered form asks for. */
   filter = SHOW_ALL,
 }: {
@@ -669,23 +667,44 @@ export function SectionCard({
   index: number;
   library: ContentLibrary;
   sortId: string;
+  domId?: string;
   filter?: SectionFilter;
 }) {
   const setSectionVisible = useEditor((state) => state.setSectionVisible);
   const removeSection = useEditor((state) => state.removeSection);
   const { ref, style, dragging, handleProps } = useSortableRow(sortId);
-  const title = sectionTitle(section, library);
+  const title = sectionLabel(section, library);
   const note = filterNote(library, section, filter);
 
   return (
     <li
       ref={ref}
-      style={style}
+      // `--rail-top` is the sticky rail's measured height, published by the
+      // form (`VariantForm`). Without the scroll margin a jump would tuck the
+      // card's own header underneath the rail it was pressed on.
+      style={{ ...style, scrollMarginTop: "var(--rail-top, 0px)" }}
       data-section={section.type}
       data-index={index}
-      className={`${section.visible ? "bg-white" : "bg-gray-50"} ${dragging ? "shadow-lg" : ""}`}
+      id={domId}
+      // A jump moves the keyboard here as well as the window (`SectionRail`),
+      // and a card is not otherwise focusable. Programmatic only: it must not
+      // become a stop in the Tab order the form already has.
+      tabIndex={-1}
+      className={`${section.visible ? "bg-white" : "bg-gray-50"} ${dragging ? "shadow-lg" : ""} focus:outline-none`}
     >
-      <div className="flex items-baseline gap-2 px-3 py-2">
+      {/* Sticky, so the section you are inside keeps saying which one it is —
+          and keeps its Visible box within reach — however far down its own
+          rows you have scrolled. It stops at the rail, not at the viewport.
+
+          Released while the card is being dragged: dnd-kit moves the row with
+          a transform, and a header pinned to the viewport inside a row that is
+          following the cursor would tear away from it. `bg-inherit` takes the
+          card's own white or grey, which is what makes it opaque over the rows
+          it passes. */}
+      <div
+        className={`flex items-baseline gap-2 bg-inherit px-3 py-2 ${dragging ? "" : "sticky z-10"}`}
+        style={dragging ? undefined : { top: "var(--rail-top, 0px)" }}
+      >
         <DragHandle label={`Reorder ${title} section`} handleProps={handleProps} />
         <span className={`text-sm ${section.visible ? "text-gray-900" : "text-gray-400"}`}>
           {title}

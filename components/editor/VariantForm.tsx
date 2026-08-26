@@ -11,13 +11,19 @@
  * position in the CV (§15.3), so reordering here rewrites nothing but the
  * array itself.
  *
- * The filter box above it narrows what the list shows (`filter.ts`). The term
+ * Above the list, the jump rail (`SectionRail`): one chip per card, sticky at
+ * the top of the column, because the cards never collapse and the column is
+ * therefore long. Its measured height is published to the cards as
+ * `--rail-top`, which is where their own sticky headers stop and where a jump
+ * lands them.
+ *
+ * The filter box below it narrows what the list shows (`filter.ts`). The term
  * is React state, not store state: filtering is a way of looking at the draft,
  * so it must not make the draft dirty, must not push an undo step, and must
  * not survive into the file. The variant's own tag and label sit outside it —
  * they are this document's identity, not content to search.
  */
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState, type CSSProperties } from "react";
 
 import { NEW_ENTRY } from "@/lib/data/new-items";
 
@@ -25,9 +31,11 @@ import { FilterBox } from "./FilterBox";
 import { useEditor } from "./EditorStoreProvider";
 import { NewItemForm } from "./NewItemForm";
 import { SectionCard } from "./SectionCard";
+import { SectionRail } from "./SectionRail";
 import { SortableList } from "./Sortable";
 import { filterTerms, matchSections } from "./filter";
 import { sectionKeys } from "./ordering";
+import { railItems, sectionDomId } from "./rail";
 
 const FIELD =
   "w-full rounded border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-500 focus:outline-none";
@@ -43,6 +51,13 @@ export function VariantForm() {
   const addCustomSection = useEditor((state) => state.addCustomSection);
 
   const [term, setTerm] = useState("");
+  // The rail's measured height, published to the cards below as `--rail-top`
+  // so their sticky headers stop at the rail rather than under it, and a jump
+  // lands the card clear of it. Stable callback: it is a ResizeObserver's
+  // effect dependency, and a new function each render would rebind the
+  // observer on every keystroke.
+  const [railHeight, setRailHeight] = useState(0);
+  const onRailHeight = useCallback((px: number) => setRailHeight(px), []);
 
   // Keyed by type-and-occurrence rather than by index: an index changes under
   // the very drag that uses it, and would remount every row below the drop.
@@ -61,7 +76,19 @@ export function VariantForm() {
     .filter(({ index }) => matches[index] !== null);
 
   return (
-    <form className="space-y-6" onSubmit={(event) => event.preventDefault()}>
+    <form
+      className="space-y-6"
+      onSubmit={(event) => event.preventDefault()}
+      style={{ "--rail-top": `${railHeight}px` } as CSSProperties}
+    >
+      {/* Above the filter box, and sticky: it names the sections rather than
+          searching them, and it is the one control that must stay reachable
+          from the bottom of a five-screen column. */}
+      <SectionRail
+        items={railItems(shown, keys, library)}
+        onHeight={onRailHeight}
+      />
+
       <FilterBox
         onChange={setTerm}
         shown={shown.length}
@@ -115,6 +142,7 @@ export function VariantForm() {
             <ul className="divide-y divide-gray-100 rounded border border-gray-200">
               {shown.map(({ section, index }) => (
                 <SectionCard
+                  domId={sectionDomId(keys[index])}
                   key={keys[index]}
                   sortId={keys[index]}
                   section={section}
