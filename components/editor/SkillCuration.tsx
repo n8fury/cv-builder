@@ -21,6 +21,7 @@ import { useEditor } from "./EditorStoreProvider";
 import { NewItemForm } from "./NewItemForm";
 import { DragHandle, SortableList, useSortableRow } from "./Sortable";
 import { ordered } from "./ordering";
+import { useLinkHover } from "./preview-link";
 
 export interface SkillGroupChoice {
   group: SkillGroup;
@@ -37,9 +38,13 @@ interface SkillProps {
 
 function SkillCheckbox({ sectionIndex, groupId, skill, included }: SkillProps) {
   const setBulletIncluded = useEditor((state) => state.setBulletIncluded);
+  const hover = useLinkHover("bullet", skill.id);
 
   return (
-    <label className={`flex items-center gap-1 text-xs ${included ? "text-gray-700" : "text-gray-400"}`}>
+    <label
+      {...hover}
+      className={`flex items-center gap-1 text-xs ${included ? "text-gray-700" : "text-gray-400"}`}
+    >
       <input
         type="checkbox"
         data-bullet-toggle={skill.id}
@@ -155,10 +160,12 @@ function SortableGroupRow({
   choice: SkillGroupChoice;
 }) {
   const { ref, style, dragging, handleProps } = useSortableRow(choice.group.id);
+  const hover = useLinkHover("entry", choice.group.id);
   return (
     <div
       ref={ref}
       style={style}
+      {...hover}
       data-entry={choice.group.id}
       className={`space-y-1 px-3 py-2 ${dragging ? "bg-white shadow-lg" : ""}`}
     >
@@ -180,8 +187,9 @@ function StaticGroupRow({
   sectionIndex: number;
   choice: SkillGroupChoice;
 }) {
+  const hover = useLinkHover("entry", choice.group.id);
   return (
-    <div data-entry={choice.group.id} className="space-y-1 px-3 py-2">
+    <div data-entry={choice.group.id} className="space-y-1 px-3 py-2" {...hover}>
       <GroupBody
         sectionIndex={sectionIndex}
         choice={choice}

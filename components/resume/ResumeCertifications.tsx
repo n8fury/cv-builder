@@ -14,6 +14,7 @@
  */
 import { InlineText } from "./InlineText";
 import { linkLabel } from "./ResumeProjectLinks";
+import { linkTarget } from "./link-targets";
 
 import type { Certification } from "@/lib/schema/library";
 
@@ -23,7 +24,7 @@ export function ResumeCertifications({ entries }: { entries: Certification[] }) 
   return (
     <div className="resume-body">
       {entries.map((entry) => (
-        <div className="resume-certification" key={entry.id}>
+        <div className="resume-certification" key={entry.id} {...linkTarget("entry", entry.id)}>
           <span className="resume-certification-text">
             <InlineText text={entry.text} />
             {entry.credentialUrl === null ? null : (

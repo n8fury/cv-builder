@@ -18,6 +18,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
+import { usePreviewLink } from "./preview-link";
+
 import {
   FALLBACK_FONTS_CLASS,
   findFontProblems,
@@ -42,6 +44,7 @@ export function PreviewFrame({
   const [body, setBody] = useState<HTMLElement | null>(null);
   const [height, setHeight] = useState(1056);
   const [scale, setScale] = useState(1);
+  const link = usePreviewLink();
 
   useEffect(() => {
     const doc = frame.current?.contentDocument;
@@ -53,6 +56,11 @@ export function PreviewFrame({
     doc.close();
     setBody(doc.body);
   }, [css]);
+
+  // §7's second direction: the document becomes clickable, and stays that way
+  // only while this frame owns it. Re-run on every rewrite — `document.write`
+  // replaces the body, and with it every listener anything hung off the old one.
+  useEffect(() => link.attach(body), [body, link]);
 
   // The iframe cannot size itself: track the document's own height so the page
   // scrolls in the editor column instead of inside a fixed-height box.

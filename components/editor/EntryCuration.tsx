@@ -27,6 +27,7 @@ import { useEditor } from "./EditorStoreProvider";
 import { NewItemForm } from "./NewItemForm";
 import { DragHandle, SortableList, useSortableRow } from "./Sortable";
 import { ordered } from "./ordering";
+import { useLinkHover } from "./preview-link";
 import type { BulletOwner } from "./store";
 
 const TEXTAREA =
@@ -90,10 +91,12 @@ function BulletControls({ sectionIndex, entryId, bullet, included, owner }: Bull
 
 function SortableBulletRow(props: BulletProps) {
   const { ref, style, dragging, handleProps } = useSortableRow(props.bullet.id);
+  const hover = useLinkHover("bullet", props.bullet.id);
   return (
     <div
       ref={ref}
       style={style}
+      {...hover}
       className={`flex items-start gap-1 ${dragging ? "bg-white shadow" : ""}`}
     >
       <DragHandle
@@ -107,8 +110,9 @@ function SortableBulletRow(props: BulletProps) {
 }
 
 function StaticBulletRow(props: BulletProps) {
+  const hover = useLinkHover("bullet", props.bullet.id);
   return (
-    <div className="flex items-start gap-1">
+    <div className="flex items-start gap-1" {...hover}>
       <HandleSpacer className="mt-1.5 text-xs" />
       <BulletControls {...props} />
     </div>
@@ -207,10 +211,12 @@ function EntryBody({
 
 function SortableEntryRow({ sectionIndex, entry }: { sectionIndex: number; entry: EntryChoice }) {
   const { ref, style, dragging, handleProps } = useSortableRow(entry.id);
+  const hover = useLinkHover("entry", entry.id);
   return (
     <div
       ref={ref}
       style={style}
+      {...hover}
       data-entry={entry.id}
       className={`space-y-1 px-3 py-2 ${dragging ? "bg-white shadow-lg" : ""}`}
     >
@@ -224,8 +230,9 @@ function SortableEntryRow({ sectionIndex, entry }: { sectionIndex: number; entry
 }
 
 function StaticEntryRow({ sectionIndex, entry }: { sectionIndex: number; entry: EntryChoice }) {
+  const hover = useLinkHover("entry", entry.id);
   return (
-    <div data-entry={entry.id} className="space-y-1 px-3 py-2">
+    <div data-entry={entry.id} className="space-y-1 px-3 py-2" {...hover}>
       <EntryBody sectionIndex={sectionIndex} entry={entry} handle={<HandleSpacer />} />
     </div>
   );

@@ -29,6 +29,7 @@ export function ResumeEducation({ entries }: { entries: ResolvedEducation[] }) {
       {entries.map((entry) => (
         <ResumeEntry
           key={entry.id}
+          id={entry.id}
           kind="education"
           title={entry.institution}
           subtitle={entry.degree}

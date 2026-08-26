@@ -11,6 +11,7 @@
  * delta and its last line carries none.
  */
 import { InlineText } from "./InlineText";
+import { linkTarget } from "./link-targets";
 
 import type { ResolvedBullet } from "@/lib/data/resolve";
 
@@ -21,7 +22,7 @@ export function ResumeBullets({ bullets }: { bullets: ResolvedBullet[] }) {
   return (
     <ul className="resume-bullets">
       {bullets.map((bullet) => (
-        <li className="resume-bullet" key={bullet.id}>
+        <li className="resume-bullet" key={bullet.id} {...linkTarget("bullet", bullet.id)}>
           <span className="resume-bullet-marker" aria-hidden="true">
             {MARKER}
           </span>

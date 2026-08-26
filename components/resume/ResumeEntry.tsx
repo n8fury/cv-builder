@@ -19,11 +19,13 @@
 import type { ReactNode } from "react";
 
 import { ResumeBullets } from "./ResumeBullets";
+import { linkTarget } from "./link-targets";
 
 import type { ResolvedBullet } from "@/lib/data/resolve";
 import type { EntryKind } from "@/lib/render/metrics";
 
 export function ResumeEntry({
+  id,
   kind,
   title,
   subtitle,
@@ -33,6 +35,8 @@ export function ResumeEntry({
   bullets,
   children,
 }: {
+  /** The library entry this renders — what the form's row is keyed by. */
+  id: string;
   kind: EntryKind;
   title: string;
   subtitle: ReactNode;
@@ -43,7 +47,7 @@ export function ResumeEntry({
   children?: ReactNode;
 }) {
   return (
-    <article className="resume-entry" data-entry={kind}>
+    <article className="resume-entry" data-entry-kind={kind} {...linkTarget("entry", id)}>
       <div className="resume-entry-head">
         <div className="resume-entry-left">
           <div className="resume-entry-title">{title}</div>

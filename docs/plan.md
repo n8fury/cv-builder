@@ -1512,20 +1512,111 @@ the code, so the spec stays the source of truth for values:
     space-left gauge on the last page. §11.5 forbids blocking the export on
     overflow; all of this stays informational.
 
-- [ ] Task 10.4: Link the form and the preview in both directions
+- [x] Task 10.4: Link the form and the preview in both directions
   - Verification: hovering a bullet's field highlights that bullet in the
     preview; clicking a block in the preview scrolls to and focuses its field.
+  - Result: both hold, driven in a real browser against a dev server started
+    after the stylesheet changed (the editor preview caches resume.css per
+    server process, so the running one would have shown the old rules).
+    - **hover** — pointing at a bullet's textarea puts `resume-focus` on that
+      bullet in the preview, computing to `rgb(253, 234, 168)` with a
+      `pointer` cursor, and leaving the row clears it. Two copies are marked,
+      not one, which is correct: the stack renders the whole document into
+      every sheet and windows it, so the block exists once per sheet and only
+      its own page shows it.
+    - **click** — clicking that bullet in the preview focuses the TEXTAREA
+      carrying the same id, scrolled into view, with the row flashed. Clicking
+      an entry head focuses that entry's include checkbox. Clicking
+      Education's description — a bullet with no field of its own — focuses
+      its entry instead of doing nothing.
+    - clicking a real link in the preview no longer takes the iframe to
+      `mailto:`/GitHub and leaves the editor previewless.
+  - The two sides already shared a vocabulary and nobody had written it down:
+    `data-entry` and `data-bullet` are what `EntryCuration` has always put on
+    its rows and fields, and the document now carries the same two with the
+    same library ids. `components/resume/link-targets.ts` is that vocabulary,
+    plus the selector escaping and the reader both sides use.
+  - One rename fell out of it: `.resume-entry`'s `data-entry` held the entry
+    *kind* (`experience`), which is what resume.css selects the per-section
+    bullet indents through. It is now `data-entry-kind`, freeing `data-entry`
+    for the id, and a test holds the markup and the stylesheet together so a
+    half-done rename cannot quietly change §4.4's measured geometry.
+  - Neither direction goes through React state, and that is deliberate:
+    `PagedDocument` re-measures on every render, so a hover that re-rendered
+    the resume would re-measure the whole document — line boxes included — on
+    every pointer move down a long form. The highlight is a class toggled on
+    the preview's own nodes, and React never runs for it.
+  - Competencies and skills gave up one piece of markup: their separator moved
+    out of the item's span and became a sibling text node, so a highlight
+    covers the competency and not the pipe in front of it. Same text, same
+    order — `harness` and `harness:export` both still report 84/84, document
+    text identical.
+  - The preview's affordances are gated twice: `@media screen`, and a
+    `resume-linked` class the editor sets on its own iframe root. `/render` is
+    screen media too, and must keep a document that is only ever printed.
+  - Section headings are not linked. A heading has no control of its own —
+    what it would jump to is the section card, which is Task 10.10's jump rail
+    — and matching one would need a section index threaded through the render
+    model, since the resolver drops hidden sections and renumbers.
+  - `npm test` **368/368** (up from 358 — 10 new cases over the attributes,
+    the selectors and the class names), `tsc --noEmit`, `lint`,
+    `npm run harness` **84/84** and `npm run harness:export` **84/84**, text
+    and faces identical.
   - The left column is long and controls are currently found by eye. The
     preview is the same React tree fed from the same draft, so the ids to
     match on already exist on both sides.
 
-- [ ] Task 10.5: Stop losing the draft on a refresh
+- [x] Task 10.5: Stop losing the draft on a refresh
   - Verification: with unsaved changes, a reload prompts before leaving; after
     a forced reload the editor offers to restore the draft, and declining
     leaves the on-disk variant untouched.
-  - The draft lives only in memory, there is no `beforeunload` guard, and a
-    refresh silently loses everything. Add the guard plus a `localStorage`
-    snapshot keyed by `profileId/variantId`. Closer to a bug than a feature.
+  - Result: all three hold, driven in a real browser (Puppeteer) against a dev
+    server, eleven checks in all:
+    - **the prompt** — typing in a field and reloading raises a genuine
+      `beforeunload` dialog; the reload only proceeds because the driver
+      accepts it.
+    - **the offer** — the forced reload comes up on the *file*, with the
+      recovered draft offered above both columns rather than applied. Restore
+      puts the typed text back, still unsaved, with nothing written to disk.
+    - **declining** — Discard removes the copy, does not offer it again on the
+      next reload, and leaves `detailed.json` and the content library byte-for
+      -byte as they were (both hashed before and after the whole run).
+    - and the copy is removed the moment the draft is clean again: Revert
+      leaves no key behind for the next session to trip over.
+  - The copy is a copy, never a second truth. It is written only while the
+    draft is dirty; it is read back through `variantSchema` and
+    `contentLibrarySchema`, so corrupt or older-shaped JSON is dropped rather
+    than loaded; and it carries the `updatedAt` it was taken against. A copy
+    whose base no longer matches disk — n8n wrote, a hand edit landed, another
+    tab saved — is discarded unread, because restoring it would silently undo
+    that on the next Save. A copy that says nothing the file does not is
+    discarded too: that is noise, not a recovery.
+  - Reading precedes writing, deliberately. The recovery read happens once on
+    mount and the persistence subscription does not start until it is
+    answered; the other order would open the editor clean, clear the key, and
+    destroy the draft it exists to recover.
+  - Persistence subscribes to the vanilla store rather than selecting through
+    React (`useEditorStore`, new alongside `useEditor`). A keystroke must not
+    re-render the preview, because `PagedDocument` re-measures on every render
+    — the same reason Task 10.4's highlight stays out of React state. Writes
+    are debounced 400ms.
+  - `restore(document)` is `revert`'s mirror: it replaces the draft and leaves
+    `saved` — the disk — alone, so the editor comes back dirty against exactly
+    the baseline the interrupted session was dirty against. `isDirty` now
+    reads through an exported `documentsDiffer`, which is what tells a stored
+    copy from the file it was taken against.
+  - Every storage failure is the same non-event: no `window`, storage disabled,
+    a privacy mode that throws on access, a full quota. The copy is lost, the
+    draft in memory is not, and the editor does not notice.
+  - Not covered: in-app navigation. `beforeunload` guards reloads and closed
+    tabs, but clicking Dashboard or Library is a client-side route change the
+    browser never sees. The draft survives it in `localStorage` and is offered
+    back on return, so nothing is lost — there is simply no prompt. A router
+    guard belongs with Task 10.12's shortcuts, not here.
+  - `npm test` **376/376** (up from 368 — 8 cases over the stored record, its
+    validation, its staleness rules and `restore`), `tsc --noEmit`, `lint`,
+    and `npm run harness` **84/84**, text and faces identical. Nothing outside
+    the editor's chrome moved.
 
 - [ ] Task 10.6: Add undo/redo (Ctrl+Z / Ctrl+Y)
   - Verification: every store mutation is undoable and redoable in order, and

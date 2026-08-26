@@ -10,6 +10,7 @@ export function ResumeProjects({ entries }: { entries: ResolvedProject[] }) {
       {entries.map((entry) => (
         <ResumeEntry
           key={entry.id}
+          id={entry.id}
           kind="projects"
           title={entry.title}
           subtitle={entry.subtitle}

@@ -27,7 +27,16 @@ export function EditorStoreProvider({
 }
 
 export function useEditor<T>(selector: (state: EditorState) => T): T {
+  return useStore(useEditorStore(), selector);
+}
+
+/**
+ * The store itself, for the rare reader that wants to *watch* it rather than
+ * render from it — the crash copy subscribes to every draft change and writes
+ * it away, which must not put the whole editor through a render.
+ */
+export function useEditorStore(): EditorStore {
   const store = useContext(EditorStoreContext);
   if (!store) throw new Error("useEditor must be used inside <EditorStoreProvider>");
-  return useStore(store, selector);
+  return store;
 }

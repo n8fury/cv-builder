@@ -20,9 +20,11 @@ import { resolveVariant } from "@/lib/data/resolve";
 import { libraryPath } from "@/lib/routes";
 import type { Pagination } from "@/lib/render/pagination";
 
+import { DraftRecovery } from "./DraftRecovery";
 import { EditorStoreProvider, useEditor } from "./EditorStoreProvider";
 import { FontWarning } from "./FontWarning";
 import { PageFit } from "./PageFit";
+import { PreviewLinkProvider } from "./preview-link";
 import { PreviewFrame } from "./PreviewFrame";
 import { SaveControls } from "./SaveControls";
 import { VariantForm } from "./VariantForm";
@@ -106,6 +108,9 @@ export function EditorShell({ snapshot, css }: { snapshot: EditorSnapshot; css: 
       key={`${snapshot.profileId}/${snapshot.variantId}`}
       snapshot={snapshot}
     >
+      {/* Both columns, since the link runs both ways: the form points into the
+          preview, and a click in the preview comes back out to the form. */}
+      <PreviewLinkProvider>
       <div className="mx-auto max-w-[1600px] px-6 py-6">
         <header className="mb-4 flex items-baseline gap-3">
           <h1 className="text-lg font-semibold text-gray-900">
@@ -130,6 +135,10 @@ export function EditorShell({ snapshot, css }: { snapshot: EditorSnapshot; css: 
           </div>
         </header>
 
+        {/* Above both columns: it speaks for the whole document, and its two
+            answers change what the form and the preview are showing. */}
+        <DraftRecovery />
+
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(320px,1fr)_minmax(0,2fr)]">
           <div className="rounded-lg border border-gray-200 p-4">
             <VariantForm />
@@ -143,6 +152,7 @@ export function EditorShell({ snapshot, css }: { snapshot: EditorSnapshot; css: 
           </div>
         </div>
       </div>
+      </PreviewLinkProvider>
     </EditorStoreProvider>
   );
 }

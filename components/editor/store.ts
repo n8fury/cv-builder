@@ -158,6 +158,15 @@ export interface EditorState {
   markSaved(document: EditorDocument): void;
   /** Throw the draft away and go back to the files on disk. */
   revert(): void;
+  /**
+   * Adopt a draft recovered from the crash copy (§7).
+   *
+   * The mirror image of `revert`: `saved` — the files on disk — is left
+   * untouched, so the editor comes up dirty against exactly the same baseline
+   * the interrupted session was dirty against, and nothing reaches disk until
+   * Save is pressed.
+   */
+  restore(document: EditorDocument): void;
 }
 
 export type EditorStore = ReturnType<typeof createEditorStore>;
@@ -185,7 +194,12 @@ function canonical(value: unknown): string {
  * the dirty state, because at that point Save would write the same bytes.
  */
 export function isDirty(state: EditorState): boolean {
-  return canonical(state.draft) !== canonical(state.saved);
+  return documentsDiffer(state.draft, state.saved);
+}
+
+/** The same content comparison, over two documents from anywhere. */
+export function documentsDiffer(a: EditorDocument, b: EditorDocument): boolean {
+  return canonical(a) !== canonical(b);
 }
 
 function editBullets<T extends { id: string; bullets: Bullet[] }>(
@@ -1051,5 +1065,7 @@ export function createEditorStore({ profileId, variantId, ...document }: EditorS
       })),
 
     revert: () => set((state) => ({ draft: state.saved })),
+
+    restore: (document) => set(() => ({ draft: document })),
   }));
 }

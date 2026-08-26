@@ -9,6 +9,7 @@ export function ResumeExperience({ entries }: { entries: ResolvedExperience[] })
       {entries.map((entry) => (
         <ResumeEntry
           key={entry.id}
+          id={entry.id}
           kind="experience"
           title={entry.title}
           subtitle={entry.company}

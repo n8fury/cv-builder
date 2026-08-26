@@ -296,6 +296,31 @@ body {
   }
 }
 
+/* Linked blocks (§7, §11.1). The editor sets `resume-linked` on the root of
+   its own iframe so these rules reach the preview and nothing else — /render
+   is screen media too, and must keep a document that is only ever printed.
+
+   Both rules are chosen for costing no layout: a background paints inside the
+   box the text already occupies, and a box-shadow spreads outside every box
+   without reserving room. A highlight that reflowed the page would make the
+   preview lie about the print for as long as a pointer rested on a field.
+
+   Confined to @media screen as well as to the class, on the same reasoning as
+   .resume-page-label above: the export renders under print media (§15.10), so
+   nothing here can reach an exported PDF even if the class somehow did. */
+@media screen {
+  .resume-linked [data-entry],
+  .resume-linked [data-bullet] {
+    cursor: pointer;
+  }
+
+  .resume-linked .resume-focus {
+    background-color: #fdeaa8;
+    box-shadow: 0 0 0 2px #fdeaa8;
+    border-radius: 1px;
+  }
+}
+
 /* Header (§5.1, §15.9). The name block sits flush against the top padding
    edge; --name-line-height is solved backwards from its measured baseline
    (see metrics.ts), so no margin is involved here. */
@@ -544,15 +569,15 @@ body {
   margin-top: var(--section-heading-to-content);
 }
 
-.resume-entry[data-entry="experience"] + .resume-entry {
+.resume-entry[data-entry-kind="experience"] + .resume-entry {
   margin-top: var(--entry-gap-margin-experience);
 }
 
-.resume-entry[data-entry="projects"] + .resume-entry {
+.resume-entry[data-entry-kind="projects"] + .resume-entry {
   margin-top: var(--entry-gap-margin-projects);
 }
 
-.resume-entry[data-entry="education"] + .resume-entry {
+.resume-entry[data-entry-kind="education"] + .resume-entry {
   margin-top: var(--entry-gap-margin-education);
 }
 
@@ -660,15 +685,15 @@ body {
   list-style: none;
 }
 
-.resume-entry[data-entry="experience"] .resume-bullets {
+.resume-entry[data-entry-kind="experience"] .resume-bullets {
   margin-top: var(--subtitle-to-bullets-margin-experience);
 }
 
-.resume-entry[data-entry="projects"] .resume-bullets {
+.resume-entry[data-entry-kind="projects"] .resume-bullets {
   margin-top: var(--subtitle-to-bullets-margin-projects);
 }
 
-.resume-entry[data-entry="education"] .resume-bullets {
+.resume-entry[data-entry-kind="education"] .resume-bullets {
   margin-top: var(--subtitle-to-bullets-margin-education);
 }
 

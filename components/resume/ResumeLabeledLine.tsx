@@ -12,12 +12,15 @@ import type { ReactNode } from "react";
 export function ResumeLabeledLine({
   label,
   children,
+  ...rest
 }: {
   label: string;
   children: ReactNode;
+  /** Link attributes, for the callers whose line is a curated unit (§7). */
+  [attribute: `data-${string}`]: string | undefined;
 }) {
   return (
-    <div className="resume-labeled-line">
+    <div className="resume-labeled-line" {...rest}>
       <span className="resume-label">{label}:</span> {children}
     </div>
   );

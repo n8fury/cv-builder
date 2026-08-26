@@ -14,6 +14,8 @@
  * measured: the lines are plain body leading, and the gap between entries is
  * borrowed (see RECOMMENDATION_GAP_MARGIN_PT).
  */
+import { linkTarget } from "./link-targets";
+
 import type { Recommendation } from "@/lib/schema/library";
 
 /** The collapsed mode's fixed text (§5.9). */
@@ -34,7 +36,7 @@ export function ResumeRecommendations({
   return (
     <div className="resume-body">
       {entries.map((entry) => (
-        <div className="resume-recommendation" key={entry.id}>
+        <div className="resume-recommendation" key={entry.id} {...linkTarget("entry", entry.id)}>
           {entry.name ? (
             <div className="resume-recommendation-name">{entry.name}</div>
           ) : null}

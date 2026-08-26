@@ -21,6 +21,7 @@ import { NewItemForm } from "./NewItemForm";
 import { DragHandle, useSortableRow } from "./Sortable";
 import { SkillCuration } from "./SkillCuration";
 import { ordered } from "./ordering";
+import { useLinkHover } from "./preview-link";
 
 const SELECT = "rounded border border-gray-300 px-1.5 py-0.5 text-xs text-gray-900";
 const FIELD =
@@ -154,6 +155,31 @@ function HeaderFields({ library }: { library: ContentLibrary }) {
   );
 }
 
+/** One custom-section bullet, pointing the preview at itself as it is edited. */
+function CustomBullet({
+  bullet,
+  entryId,
+}: {
+  bullet: ContentLibrary["customSections"][number]["bullets"][number];
+  entryId: string;
+}) {
+  const setBulletText = useEditor((state) => state.setBulletText);
+  const hover = useLinkHover("bullet", bullet.id);
+
+  return (
+    <textarea
+      className={`${FIELD} resize-y`}
+      data-bullet={bullet.id}
+      rows={2}
+      value={bullet.text}
+      onChange={(event) =>
+        setBulletText("customSections", entryId, bullet.id, event.target.value)
+      }
+      {...hover}
+    />
+  );
+}
+
 /**
  * A custom section's own text (§12.4). Title and paragraph belong to the
  * library item this section points at, so they are fields rather than
@@ -166,7 +192,6 @@ function CustomFields({
   entry: ContentLibrary["customSections"][number];
   index: number;
 }) {
-  const setBulletText = useEditor((state) => state.setBulletText);
   const setCustomSectionTitle = useEditor((state) => state.setCustomSectionTitle);
   const setCustomSectionParagraph = useEditor((state) => state.setCustomSectionParagraph);
   const addBullet = useEditor((state) => state.addBullet);
@@ -197,14 +222,7 @@ function CustomFields({
       {/* A custom section's bullets are not curated per variant — the library
           item is the unit (§12.4) — so they get fields, not toggles. */}
       {entry.bullets.map((bullet) => (
-        <textarea
-          key={bullet.id}
-          className={`${FIELD} resize-y`}
-          data-bullet={bullet.id}
-          rows={2}
-          value={bullet.text}
-          onChange={(event) => setBulletText("customSections", entry.id, bullet.id, event.target.value)}
-        />
+        <CustomBullet key={bullet.id} bullet={bullet} entryId={entry.id} />
       ))}
       <NewItemForm spec={NEW_BULLET} onAdd={(values) => addBullet(index, entry.id, values)} />
     </div>
