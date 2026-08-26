@@ -2002,10 +2002,58 @@ the code, so the spec stays the source of truth for values:
     **84/84**, text and faces identical — the print route renders the same
     document it did before.
 
-- [ ] Task 10.12: Add keyboard shortcuts
+- [x] Task 10.12: Add keyboard shortcuts
   - Verification: Ctrl+S saves, Ctrl+Shift+S opens Save As, `/` focuses the
     filter, and none of them fire while a text field has focus in a way that
     would swallow a keystroke.
+  - Result: all four hold.
+    - **Ctrl+S** runs whatever the primary button is currently offering —
+      Save, or Create while Save As is open — so the key and the button can
+      never disagree about what pressing them does. On a clean document it
+      does nothing, exactly as the disabled button does, but it still takes
+      the key: an unsaved-changes Ctrl+S must never fall through to the
+      browser's Save Page.
+    - **Ctrl+Shift+S** opens Save As with the parent's tag prefilled and the
+      cursor in the field. Pressed again on an open panel it only reselects
+      the tag — closing the panel out from under a half-typed name is not
+      what the key was pressed for.
+    - **`/`** selects the filter box rather than merely focusing it, because a
+      slash pressed over a box that already reads `kubernetes` is the start of
+      a new question.
+    - **the focus rule** splits the two kinds of key rather than applying one
+      guard to both, which is the whole of what makes this safe. Ctrl+S and
+      Ctrl+Shift+S are chords: they type nothing, so they are taken from a
+      focused field and swallow nothing. `/` is a character first — inside a
+      field it is being typed (`and/or`, a URL, a date range) — so it fires
+      only from outside anything editable.
+  - `matchShortcut` is a pure function over the six parts of a `KeyboardEvent`
+    that decide the question, so every rule above is settled in a node test
+    rather than in a browser: the Mac spellings, a capital `S`, `/` on layouts
+    that shift it, AltGr arriving as Ctrl+Alt, and an IME mid-composition
+    owning every key. `isTextEntry` is duck-typed on `tagName` and
+    `isContentEditable` rather than `instanceof`, which is what lets the guard
+    be tested at all under `environment: "node"`.
+  - `useShortcut(action, handler)` holds the handler in a ref, so the inline
+    closure every caller passes does not rebind a window listener on each
+    keystroke of the draft. It `preventDefault`s before the handler and
+    whether or not the handler acts — the declined Ctrl+S above depends on it.
+  - The keys are printed where they are pressed: `title` on both save buttons,
+    and a `/` key-cap inside the filter box that steps aside for Clear once
+    there is something to clear. Same reasoning as Task 10.6's buttons — a
+    shortcut nobody can see is a shortcut nobody uses.
+  - Not covered: the in-app router guard Task 10.5 parked here. It is not in
+    this task's verification and it is not a shortcut; it also changes what
+    clicking Dashboard does, which is a decision rather than a keybinding.
+    The draft still survives that navigation in `localStorage` and is offered
+    back on return, so nothing is lost meanwhile.
+  - `npm test` **483/483** (up from 472 — 11 cases over the matcher and the
+    focus guard), `tsc --noEmit`, `lint`, `check:tailwind-scope`, and
+    `npm run harness` **84/84**, text and faces identical. In a real browser
+    (Puppeteer, 16/16): `/` from the body, from the Label field, from inside
+    the filter box and from a bullet textarea; Ctrl+Shift+S from a textarea
+    and again on the open panel; Ctrl+S declined on a clean document and
+    firing on a dirty one — with every server action intercepted, so the run
+    proved the key without rewriting the profile on disk.
 
 ### Tier 4 — bigger swings
 

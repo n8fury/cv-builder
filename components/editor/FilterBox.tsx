@@ -16,7 +16,17 @@
  * The count is stated even when nothing is hidden, and especially when
  * everything is: a filter that empties the column has to say that it did, or
  * it reads as a library that has lost its contents.
+ *
+ * `/` puts the cursor here from anywhere on the page — but only from outside a
+ * text field, where the slash was a command rather than a character being
+ * typed (`shortcuts.ts`). The key is printed in the box while it is empty,
+ * because a shortcut nobody can see is a shortcut nobody uses, and it steps
+ * aside for Clear once there is something to clear.
  */
+import { useRef } from "react";
+
+import { useShortcut } from "./shortcuts";
+
 const FIELD =
   "w-full rounded border border-gray-300 py-1 pl-7 pr-16 text-sm text-gray-900 focus:border-gray-500 focus:outline-none";
 
@@ -33,6 +43,12 @@ export function FilterBox({
   total: number;
 }) {
   const active = value.trim() !== "";
+  const field = useRef<HTMLInputElement | null>(null);
+
+  // Select rather than merely focus: `/` on a box that already reads
+  // "kubernetes" is the start of a new question, and the old one goes when the
+  // next character lands — while Escape still puts it back.
+  useShortcut("focusFilter", () => field.current?.select());
 
   return (
     <section className="space-y-1">
@@ -47,6 +63,7 @@ export function FilterBox({
           name="filter"
           onChange={(event) => onChange(event.target.value)}
           placeholder="Filter entries, bullets and tags"
+          ref={field}
           type="search"
           value={value}
         />
@@ -59,7 +76,14 @@ export function FilterBox({
           >
             Clear
           </button>
-        ) : null}
+        ) : (
+          <kbd
+            aria-hidden
+            className="absolute right-2 top-1.5 rounded border border-gray-200 px-1 font-mono text-[10px] leading-4 text-gray-400"
+          >
+            /
+          </kbd>
+        )}
       </div>
 
       {active ? (

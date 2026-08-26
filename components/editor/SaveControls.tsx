@@ -11,9 +11,15 @@
  *
  * Everything the editor has done up to this point has been staged in memory,
  * so this is the only place in the editor that reaches disk.
+ *
+ * Both are on the keys as well (`shortcuts.ts`). Ctrl+S runs whichever action
+ * the primary button is currently offering, so the key and the button never
+ * disagree; Ctrl+Shift+S opens Save As and puts the cursor in the tag field,
+ * and pressing it again on an open panel only refocuses it — closing the panel
+ * out from under a half-typed tag is not what the key was pressed for.
  */
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { useToast } from "@/app/(dashboard)/Toaster";
 import {
@@ -25,6 +31,7 @@ import { saveAsVariantId } from "@/lib/data/variant-name";
 import { editPath } from "@/lib/routes";
 
 import { useEditor } from "./EditorStoreProvider";
+import { useShortcut } from "./shortcuts";
 import { isDirty } from "./store";
 
 const BUTTON =
@@ -55,6 +62,7 @@ export function SaveControls() {
   // `null` is closed; a string is the tag being typed, so an emptied field
   // stays open rather than snapping shut.
   const [tag, setTag] = useState<string | null>(null);
+  const tagField = useRef<HTMLInputElement | null>(null);
 
   const busy = pending !== null;
 
@@ -91,12 +99,34 @@ export function SaveControls() {
   const primaryPending = forking ? pending === "saveAs" : pending === "save";
   const primaryDisabled = busy || (forking ? derivedId === null : !dirty);
 
+  /** What the primary button does, from either the pointer or the key. */
+  function submit(): void {
+    if (primaryDisabled) return;
+    if (tag !== null) {
+      void run("saveAs", () => saveVariantAsAction({ profileId, variantId, tag, ...draft }));
+      return;
+    }
+    void run("save", () => saveVariantAction({ profileId, variantId, ...draft }));
+  }
+
+  useShortcut("save", submit);
+  useShortcut("saveAs", () => {
+    if (busy) return;
+    // Already open: leave the tag as typed and put the cursor back on it.
+    if (tag !== null) {
+      tagField.current?.select();
+      return;
+    }
+    setTag(draft.variant.tag);
+  });
+
   return (
     <div className="flex items-center gap-2">
       {tag === null ? null : (
         <span className="flex items-center gap-1">
           <input
             autoFocus
+            ref={tagField}
             name="saveAsTag"
             aria-label="Tag for the new variant"
             className="w-44 rounded border border-gray-300 px-2 py-1 text-xs text-gray-900 focus:border-gray-500 focus:outline-none"
@@ -115,15 +145,8 @@ export function SaveControls() {
         data-save
         className={PRIMARY}
         disabled={primaryDisabled}
-        onClick={() => {
-          if (tag !== null) {
-            void run("saveAs", () =>
-              saveVariantAsAction({ profileId, variantId, tag, ...draft }),
-            );
-            return;
-          }
-          void run("save", () => saveVariantAction({ profileId, variantId, ...draft }));
-        }}
+        onClick={submit}
+        title={forking ? "Create (Ctrl+S)" : "Save (Ctrl+S)"}
       >
         {primaryPending ? <Spinner /> : null}
         {forking ? (primaryPending ? "Creating…" : "Create") : primaryPending ? "Saving…" : "Save"}
@@ -135,6 +158,7 @@ export function SaveControls() {
         className={BUTTON}
         disabled={busy}
         onClick={() => setTag(forking ? null : draft.variant.tag)}
+        title={forking ? "Cancel" : "Save As (Ctrl+Shift+S)"}
       >
         {forking ? "Cancel" : "Save As…"}
       </button>
