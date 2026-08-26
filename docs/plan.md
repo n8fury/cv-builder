@@ -1723,9 +1723,85 @@ the code, so the spec stays the source of truth for values:
     `lint`, and `npm run harness` **84/84** and `npm run harness:export`
     **84/84**, text and faces identical. Nothing outside the editor moved.
 
-- [ ] Task 10.8: Add a filter box over the whole form
+- [x] Task 10.8: Add a filter box over the whole form
   - Verification: typing a term narrows every section to matching entries and
     bullets; clearing it restores the full list with curation unchanged.
+  - Result: both hold.
+    - **every section** is checked literally rather than by sampling: the
+      fixture's section list is asserted equal to `SECTION_TYPES`, and every
+      one of the eleven is then shown whole on a cleared box and dropped
+      entirely on a term nothing carries. A section type added later cannot
+      quietly go unfiltered.
+    - **curation unchanged** is checked as a negative, which is the real
+      claim: a store is opened, every keystroke's worth of work is run over
+      the whole draft — matched term, unmatched term, cleared box — and the
+      draft afterwards is asserted to be the *identical object*, with an
+      empty undo stack. Filtering cannot become an edit by accident.
+    - and in a real browser (Puppeteer, 15/15 — the sixteenth is a
+      pre-existing `favicon.ico` 404) against the real profile: `mongodb`
+      takes the column from 8 sections and 25 entries to 1 and 1, the counts
+      on screen agree with what is rendered, all 20 Add forms withdraw, no
+      checkbox changes state, the indicator stays Saved, `qwertyuiopzz`
+      empties the column and says so, Clear restores the form DOM-identical
+      to how it loaded, a tag (`backend`), an entry ID (`northwind`) and a
+      header field each find what they name, and both data files are hashed
+      before and after to confirm nothing reached disk.
+  - The filter is a *view*, not a draft field. The term is React state in
+    `VariantForm`, not store state: a draft that remembered how it had been
+    searched would be a draft differing from the file over nothing — dirty
+    indicator, crash copy and undo stack all included.
+  - Rows are narrowed in place rather than collected into a results list. A
+    match keeps its section, its position (§15.3), its checkbox, its drag
+    handle and its textarea; the column simply gets shorter. Nothing a person
+    knows how to do to a row stops working because the row is being shown
+    under a filter.
+  - Searching walks an item's string fields generically rather than listing
+    them per collection, and takes in `tags` and `id`. Tags because §6.1 makes
+    them the vocabulary tailoring is done in — the same word that drives Task
+    10.7's chips finds the rows here — and the ID because that is what a §13
+    "not in the library" message names. A new schema field is searchable the
+    day it is added, which is the point: a field no search can reach is a
+    field the person cannot find their own writing by.
+  - **A bullet inherits its entry's text.** `acme api` finds the API bullets
+    of the job at Acme — a question neither level can answer alone. Terms are
+    AND-ed, and a parent that matched on its own keeps *all* its children,
+    because that match was the job and not one sentence in it. A parent whose
+    child matched is kept showing only the children that matched — the rule
+    Task 7.4's tag filter already settled, for its reason: a bullet is only
+    reachable through its entry.
+  - Sections that curate no list — the header, About Me, Languages, a custom
+    section — are all-or-nothing. Their content is fields, not a list to
+    narrow, and a half-shown header would be a contact block missing a line
+    nobody could see was missing. A term naming the section itself
+    (`experience`, `Core Competencies`, a custom section's own title) shows
+    that card whole, which is what makes the box a way to *reach* a section
+    and not only to search inside one.
+  - Dragging keeps working while filtered, deliberately. Every move at all
+    three levels is addressed by a pair of IDs resolved against the *full*
+    array, so dropping one visible card onto another puts it exactly where the
+    screen says and the hidden rows between them keep their relative order.
+    There was nothing to disable.
+  - Every Add is withdrawn while a list is narrowed. A new item is empty, an
+    empty item matches no term, so adding one would create a row and hide it
+    in the same motion.
+  - Each narrowed card says what it is holding back (`Showing 1 of 7 entries,
+    1 of 37 bullets`), and the box says how many sections survived. A
+    shortened list read as the whole list is how someone rewords the one
+    bullet they can see believing it is the only one — and a filter that
+    empties the column has to say that it did, or it reads as a library that
+    has lost its contents.
+  - `childrenOf` moved out of `tags.ts` into shared use rather than being
+    copied: "what hangs off an entry" is one answer, and two of them would
+    drift the moment a section type gained a third shape.
+  - Known and pre-existing: a bullet inside an *excluded* entry has no field
+    in the form at all, so a match on one shows its entry row and nothing
+    below it. Ticking the entry reveals it. The card's count reports what the
+    filter matched in the library, which is the honest figure.
+  - `npm test` **424/424** (up from 402 — 22 cases over the terms, the two
+    levels, every section type, the counts and the not-an-edit guarantee),
+    `tsc --noEmit`, `lint`, `check:tailwind-scope`, and `npm run harness`
+    **84/84**, text and faces identical. Nothing outside the editor's left
+    column moved.
 
 - [ ] Task 10.9: Add bulk curation per section
   - Verification: include-all, include-none and invert each produce the same

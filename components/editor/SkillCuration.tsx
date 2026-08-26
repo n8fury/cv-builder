@@ -77,7 +77,15 @@ function SortableSkill(props: SkillProps) {
 }
 
 /** Only the included run has a position in the variant, so only it drags. */
-function SkillList({ sectionIndex, choice }: { sectionIndex: number; choice: SkillGroupChoice }) {
+function SkillList({
+  sectionIndex,
+  choice,
+  filtering,
+}: {
+  sectionIndex: number;
+  choice: SkillGroupChoice;
+  filtering: boolean;
+}) {
   const moveBullet = useEditor((state) => state.moveBullet);
   const addBullet = useEditor((state) => state.addBullet);
   const { group, includedSkillIds } = choice;
@@ -112,11 +120,13 @@ function SkillList({ sectionIndex, choice }: { sectionIndex: number; choice: Ski
           included={false}
         />
       ))}
-      <NewItemForm
-        className="basis-full"
-        spec={NEW_SKILL}
-        onAdd={(values) => addBullet(sectionIndex, group.id, values)}
-      />
+      {filtering ? null : (
+        <NewItemForm
+          className="basis-full"
+          spec={NEW_SKILL}
+          onAdd={(values) => addBullet(sectionIndex, group.id, values)}
+        />
+      )}
     </div>
   );
 }
@@ -125,10 +135,12 @@ function GroupBody({
   sectionIndex,
   choice,
   handle,
+  filtering,
 }: {
   sectionIndex: number;
   choice: SkillGroupChoice;
   handle: ReactNode;
+  filtering: boolean;
 }) {
   const setEntryIncluded = useEditor((state) => state.setEntryIncluded);
   const { group, included } = choice;
@@ -147,7 +159,9 @@ function GroupBody({
           {group.label}
         </span>
       </label>
-      {included ? <SkillList sectionIndex={sectionIndex} choice={choice} /> : null}
+      {included ? (
+        <SkillList sectionIndex={sectionIndex} choice={choice} filtering={filtering} />
+      ) : null}
     </>
   );
 }
@@ -155,9 +169,11 @@ function GroupBody({
 function SortableGroupRow({
   sectionIndex,
   choice,
+  filtering,
 }: {
   sectionIndex: number;
   choice: SkillGroupChoice;
+  filtering: boolean;
 }) {
   const { ref, style, dragging, handleProps } = useSortableRow(choice.group.id);
   const hover = useLinkHover("entry", choice.group.id);
@@ -172,6 +188,7 @@ function SortableGroupRow({
       <GroupBody
         sectionIndex={sectionIndex}
         choice={choice}
+        filtering={filtering}
         handle={
           <DragHandle label={`Reorder ${choice.group.label}`} handleProps={handleProps} />
         }
@@ -183,9 +200,11 @@ function SortableGroupRow({
 function StaticGroupRow({
   sectionIndex,
   choice,
+  filtering,
 }: {
   sectionIndex: number;
   choice: SkillGroupChoice;
+  filtering: boolean;
 }) {
   const hover = useLinkHover("entry", choice.group.id);
   return (
@@ -193,6 +212,7 @@ function StaticGroupRow({
       <GroupBody
         sectionIndex={sectionIndex}
         choice={choice}
+        filtering={filtering}
         handle={
           <span aria-hidden className="select-none px-1 text-transparent">
             ⠿
@@ -206,9 +226,12 @@ function StaticGroupRow({
 export function SkillCuration({
   sectionIndex,
   choices,
+  filtering = false,
 }: {
   sectionIndex: number;
   choices: SkillGroupChoice[];
+  /** Whether `choices` is a narrowed view — see `EntryCuration`'s own prop. */
+  filtering?: boolean;
 }) {
   const moveEntry = useEditor((state) => state.moveEntry);
   const addEntry = useEditor((state) => state.addEntry);
@@ -223,7 +246,12 @@ export function SkillCuration({
       >
         <div className="divide-y divide-gray-100">
           {included.map((choice) => (
-            <SortableGroupRow key={choice.group.id} sectionIndex={sectionIndex} choice={choice} />
+            <SortableGroupRow
+              key={choice.group.id}
+              sectionIndex={sectionIndex}
+              choice={choice}
+              filtering={filtering}
+            />
           ))}
         </div>
       </SortableList>
@@ -231,15 +259,22 @@ export function SkillCuration({
         <div className="divide-y divide-gray-100 border-t border-dashed border-gray-200 bg-gray-50">
           <p className="px-3 pt-2 text-xs font-medium text-gray-500">Not in this variant</p>
           {rest.map((choice) => (
-            <StaticGroupRow key={choice.group.id} sectionIndex={sectionIndex} choice={choice} />
+            <StaticGroupRow
+              key={choice.group.id}
+              sectionIndex={sectionIndex}
+              choice={choice}
+              filtering={filtering}
+            />
           ))}
         </div>
       ) : null}
-      <NewItemForm
-        className="border-t border-gray-100 px-3 py-2"
-        spec={NEW_ENTRY.skills}
-        onAdd={(values) => addEntry(sectionIndex, values)}
-      />
+      {filtering ? null : (
+        <NewItemForm
+          className="border-t border-gray-100 px-3 py-2"
+          spec={NEW_ENTRY.skills}
+          onAdd={(values) => addEntry(sectionIndex, values)}
+        />
+      )}
     </div>
   );
 }

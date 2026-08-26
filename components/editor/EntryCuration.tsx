@@ -123,10 +123,12 @@ function BulletList({
   sectionIndex,
   entryId,
   bullets,
+  filtering,
 }: {
   sectionIndex: number;
   entryId: string;
   bullets: NonNullable<EntryChoice["bullets"]>;
+  filtering: boolean;
 }) {
   const moveBullet = useEditor((state) => state.moveBullet);
   const addBullet = useEditor((state) => state.addBullet);
@@ -166,10 +168,12 @@ function BulletList({
           owner={bullets.owner}
         />
       ))}
-      <NewItemForm
-        spec={NEW_BULLET}
-        onAdd={(values) => addBullet(sectionIndex, entryId, values)}
-      />
+      {filtering ? null : (
+        <NewItemForm
+          spec={NEW_BULLET}
+          onAdd={(values) => addBullet(sectionIndex, entryId, values)}
+        />
+      )}
     </div>
   );
 }
@@ -178,10 +182,12 @@ function EntryBody({
   sectionIndex,
   entry,
   handle,
+  filtering,
 }: {
   sectionIndex: number;
   entry: EntryChoice;
   handle: ReactNode;
+  filtering: boolean;
 }) {
   const setEntryIncluded = useEditor((state) => state.setEntryIncluded);
 
@@ -203,13 +209,26 @@ function EntryBody({
       </label>
       {entry.subheading ? <p className="pl-11 text-xs text-gray-500">{entry.subheading}</p> : null}
       {entry.bullets && entry.included ? (
-        <BulletList sectionIndex={sectionIndex} entryId={entry.id} bullets={entry.bullets} />
+        <BulletList
+          sectionIndex={sectionIndex}
+          entryId={entry.id}
+          bullets={entry.bullets}
+          filtering={filtering}
+        />
       ) : null}
     </>
   );
 }
 
-function SortableEntryRow({ sectionIndex, entry }: { sectionIndex: number; entry: EntryChoice }) {
+function SortableEntryRow({
+  sectionIndex,
+  entry,
+  filtering,
+}: {
+  sectionIndex: number;
+  entry: EntryChoice;
+  filtering: boolean;
+}) {
   const { ref, style, dragging, handleProps } = useSortableRow(entry.id);
   const hover = useLinkHover("entry", entry.id);
   return (
@@ -223,17 +242,31 @@ function SortableEntryRow({ sectionIndex, entry }: { sectionIndex: number; entry
       <EntryBody
         sectionIndex={sectionIndex}
         entry={entry}
+        filtering={filtering}
         handle={<DragHandle label={`Reorder ${entry.heading}`} handleProps={handleProps} />}
       />
     </div>
   );
 }
 
-function StaticEntryRow({ sectionIndex, entry }: { sectionIndex: number; entry: EntryChoice }) {
+function StaticEntryRow({
+  sectionIndex,
+  entry,
+  filtering,
+}: {
+  sectionIndex: number;
+  entry: EntryChoice;
+  filtering: boolean;
+}) {
   const hover = useLinkHover("entry", entry.id);
   return (
     <div data-entry={entry.id} className="space-y-1 px-3 py-2" {...hover}>
-      <EntryBody sectionIndex={sectionIndex} entry={entry} handle={<HandleSpacer />} />
+      <EntryBody
+        sectionIndex={sectionIndex}
+        entry={entry}
+        filtering={filtering}
+        handle={<HandleSpacer />}
+      />
     </div>
   );
 }
@@ -242,11 +275,18 @@ export function EntryCuration({
   sectionIndex,
   entries,
   newEntry,
+  filtering = false,
 }: {
   sectionIndex: number;
   entries: EntryChoice[];
   /** What "add" means for this section, if anything (§6.3). */
   newEntry?: NewItemSpec;
+  /**
+   * Whether `entries` is a narrowed view of the section rather than all of it.
+   * The rows do not care — they are the same rows — but the Add forms are
+   * withdrawn, since a new item is empty and an empty item matches no term.
+   */
+  filtering?: boolean;
 }) {
   const moveEntry = useEditor((state) => state.moveEntry);
   const addEntry = useEditor((state) => state.addEntry);
@@ -261,7 +301,12 @@ export function EntryCuration({
       >
         <div className="divide-y divide-gray-100">
           {included.map((entry) => (
-            <SortableEntryRow key={entry.id} sectionIndex={sectionIndex} entry={entry} />
+            <SortableEntryRow
+              key={entry.id}
+              sectionIndex={sectionIndex}
+              entry={entry}
+              filtering={filtering}
+            />
           ))}
         </div>
       </SortableList>
@@ -269,11 +314,16 @@ export function EntryCuration({
         <div className="divide-y divide-gray-100 border-t border-dashed border-gray-200 bg-gray-50">
           <p className="px-3 pt-2 text-xs font-medium text-gray-500">Not in this variant</p>
           {rest.map((entry) => (
-            <StaticEntryRow key={entry.id} sectionIndex={sectionIndex} entry={entry} />
+            <StaticEntryRow
+              key={entry.id}
+              sectionIndex={sectionIndex}
+              entry={entry}
+              filtering={filtering}
+            />
           ))}
         </div>
       ) : null}
-      {newEntry ? (
+      {newEntry && !filtering ? (
         <NewItemForm
           className="border-t border-gray-100 px-3 py-2"
           spec={newEntry}

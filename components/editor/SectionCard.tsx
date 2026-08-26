@@ -8,6 +8,13 @@
  * bullets expose each curated bullet as a text field. A bullet's text belongs
  * to the library, not the variant (§6.2), so those fields edit the library
  * draft — exactly the propagating edit §11.4 describes, staged until Save.
+ *
+ * The card is also where the form's text filter lands. It arrives as a pair of
+ * ID sets (`filter.ts`) and is applied to the lists this file builds, not
+ * inside the curation components: those two already take "the entries" and
+ * "their bullets" as their input, so a filtered card is the same components
+ * fed a shorter library. Nothing about a row changes because it is being shown
+ * under a filter.
  */
 import { headerFieldValues, normalizeLinkUrl } from "@/lib/data/header-edit";
 import { NEW_BULLET, NEW_ENTRY, NEW_HEADER_LINK } from "@/lib/data/new-items";
@@ -15,12 +22,13 @@ import { SECTION_TITLE } from "@/lib/render/section-titles";
 import type { ContentLibrary } from "@/lib/schema/library";
 import type { VariantSection } from "@/lib/schema/variant";
 
-import { EntryCuration } from "./EntryCuration";
+import { EntryCuration, type EntryChoice } from "./EntryCuration";
 import { useEditor } from "./EditorStoreProvider";
 import { NewItemForm } from "./NewItemForm";
 import { DragHandle, useSortableRow } from "./Sortable";
-import { SkillCuration } from "./SkillCuration";
+import { SkillCuration, type SkillGroupChoice } from "./SkillCuration";
 import { TagActions } from "./TagActions";
+import { SHOW_ALL, filterNote, type SectionFilter } from "./filter";
 import { ordered } from "./ordering";
 import { useLinkHover } from "./preview-link";
 
@@ -230,16 +238,70 @@ function CustomFields({
   );
 }
 
+/**
+ * The entry rows this card shows, and the bullets inside each — the filter
+ * applied to a list the card has already built (`filter.ts`).
+ *
+ * `included` and `includedIds` are left alone throughout. They are the
+ * variant's own arrays, and narrowing them would turn a filter into a curation
+ * edit; `ordered` drops references it cannot resolve, so a hidden bullet is
+ * simply not rendered rather than treated as excluded.
+ */
+function narrowEntries(entries: EntryChoice[], filter: SectionFilter): EntryChoice[] {
+  const { entryIds, bulletIds } = filter;
+  if (entryIds === null) return entries;
+
+  return entries
+    .filter((entry) => entryIds.has(entry.id))
+    .map((entry) =>
+      entry.bullets && bulletIds
+        ? {
+            ...entry,
+            bullets: {
+              ...entry.bullets,
+              all: entry.bullets.all.filter((bullet) => bulletIds.has(bullet.id)),
+            },
+          }
+        : entry,
+    );
+}
+
+/** The same narrowing one level over: a group is an entry, a skill a bullet. */
+function narrowGroups(choices: SkillGroupChoice[], filter: SectionFilter): SkillGroupChoice[] {
+  const { entryIds, bulletIds } = filter;
+  if (entryIds === null) return choices;
+
+  return choices
+    .filter((choice) => entryIds.has(choice.group.id))
+    .map((choice) =>
+      bulletIds
+        ? {
+            ...choice,
+            group: {
+              ...choice.group,
+              skills: choice.group.skills.filter((skill) => bulletIds.has(skill.id)),
+            },
+          }
+        : choice,
+    );
+}
+
 function SectionBody({
   section,
   index,
   library,
+  filter,
 }: {
   section: VariantSection;
   index: number;
   library: ContentLibrary;
+  filter: SectionFilter;
 }) {
   const addEntry = useEditor((state) => state.addEntry);
+  // Every "Add" is withdrawn while the list is narrowed: a new item is empty,
+  // an empty item matches no term, so adding one would create a row and hide
+  // it in the same motion.
+  const filtering = filter.entryIds !== null;
 
   switch (section.type) {
     // The header's text, not a curation list: it is one library record every
@@ -250,14 +312,18 @@ function SectionBody({
     case "competencies":
       return (
         <EntryCuration
+          filtering={filtering}
           sectionIndex={index}
           newEntry={NEW_ENTRY.competencies}
-          entries={ordered(library.competencies, section.items).map((item) => ({
-            id: item.id,
-            heading: item.text,
-            subheading: "",
-            included: section.items.includes(item.id),
-          }))}
+          entries={narrowEntries(
+            ordered(library.competencies, section.items).map((item) => ({
+              id: item.id,
+              heading: item.text,
+              subheading: "",
+              included: section.items.includes(item.id),
+            })),
+            filter,
+          )}
         />
       );
 
@@ -267,19 +333,23 @@ function SectionBody({
       const includedIds = section.entries.map((ref) => ref.id);
       return (
         <EntryCuration
+          filtering={filtering}
           sectionIndex={index}
           newEntry={NEW_ENTRY.experience}
-          entries={ordered(library.experience, includedIds).map((entry) => ({
-            id: entry.id,
-            heading: entry.title,
-            subheading: entry.company,
-            included: includedIds.includes(entry.id),
-            bullets: {
-              all: entry.bullets,
-              includedIds: section.entries.find((ref) => ref.id === entry.id)?.bullets ?? [],
-              owner: "experience" as const,
-            },
-          }))}
+          entries={narrowEntries(
+            ordered(library.experience, includedIds).map((entry) => ({
+              id: entry.id,
+              heading: entry.title,
+              subheading: entry.company,
+              included: includedIds.includes(entry.id),
+              bullets: {
+                all: entry.bullets,
+                includedIds: section.entries.find((ref) => ref.id === entry.id)?.bullets ?? [],
+                owner: "experience" as const,
+              },
+            })),
+            filter,
+          )}
         />
       );
     }
@@ -288,19 +358,23 @@ function SectionBody({
       const includedIds = section.entries.map((ref) => ref.id);
       return (
         <EntryCuration
+          filtering={filtering}
           sectionIndex={index}
           newEntry={NEW_ENTRY.projects}
-          entries={ordered(library.projects, includedIds).map((entry) => ({
-            id: entry.id,
-            heading: entry.title,
-            subheading: entry.subtitle,
-            included: includedIds.includes(entry.id),
-            bullets: {
-              all: entry.bullets,
-              includedIds: section.entries.find((ref) => ref.id === entry.id)?.bullets ?? [],
-              owner: "projects" as const,
-            },
-          }))}
+          entries={narrowEntries(
+            ordered(library.projects, includedIds).map((entry) => ({
+              id: entry.id,
+              heading: entry.title,
+              subheading: entry.subtitle,
+              included: includedIds.includes(entry.id),
+              bullets: {
+                all: entry.bullets,
+                includedIds: section.entries.find((ref) => ref.id === entry.id)?.bullets ?? [],
+                owner: "projects" as const,
+              },
+            })),
+            filter,
+          )}
         />
       );
     }
@@ -311,14 +385,18 @@ function SectionBody({
       const includedIds = section.entries.map((ref) => ref.id);
       return (
         <EntryCuration
+          filtering={filtering}
           sectionIndex={index}
           newEntry={NEW_ENTRY.education}
-          entries={ordered(library.education, includedIds).map((entry) => ({
-            id: entry.id,
-            heading: entry.institution,
-            subheading: entry.degree,
-            included: includedIds.includes(entry.id),
-          }))}
+          entries={narrowEntries(
+            ordered(library.education, includedIds).map((entry) => ({
+              id: entry.id,
+              heading: entry.institution,
+              subheading: entry.degree,
+              included: includedIds.includes(entry.id),
+            })),
+            filter,
+          )}
         />
       );
     }
@@ -327,14 +405,18 @@ function SectionBody({
       const includedIds = section.entries.map((ref) => ref.id);
       return (
         <EntryCuration
+          filtering={filtering}
           sectionIndex={index}
           newEntry={NEW_ENTRY.certifications}
-          entries={ordered(library.certifications, includedIds).map((entry) => ({
-            id: entry.id,
-            heading: entry.text,
-            subheading: entry.dates,
-            included: includedIds.includes(entry.id),
-          }))}
+          entries={narrowEntries(
+            ordered(library.certifications, includedIds).map((entry) => ({
+              id: entry.id,
+              heading: entry.text,
+              subheading: entry.dates,
+              included: includedIds.includes(entry.id),
+            })),
+            filter,
+          )}
         />
       );
     }
@@ -343,14 +425,18 @@ function SectionBody({
       const includedIds = section.entries.map((ref) => ref.id);
       return (
         <EntryCuration
+          filtering={filtering}
           sectionIndex={index}
           newEntry={NEW_ENTRY.recommendations}
-          entries={ordered(library.recommendations, includedIds).map((entry) => ({
-            id: entry.id,
-            heading: entry.name,
-            subheading: [entry.role, entry.location].filter(Boolean).join(" — "),
-            included: includedIds.includes(entry.id),
-          }))}
+          entries={narrowEntries(
+            ordered(library.recommendations, includedIds).map((entry) => ({
+              id: entry.id,
+              heading: entry.name,
+              subheading: [entry.role, entry.location].filter(Boolean).join(" — "),
+              included: includedIds.includes(entry.id),
+            })),
+            filter,
+          )}
         />
       );
     }
@@ -359,12 +445,16 @@ function SectionBody({
       const includedIds = section.groups.map((ref) => ref.id);
       return (
         <SkillCuration
+          filtering={filtering}
           sectionIndex={index}
-          choices={ordered(library.skillGroups, includedIds).map((group) => ({
-            group,
-            included: includedIds.includes(group.id),
-            includedSkillIds: section.groups.find((ref) => ref.id === group.id)?.skills ?? [],
-          }))}
+          choices={narrowGroups(
+            ordered(library.skillGroups, includedIds).map((group) => ({
+              group,
+              included: includedIds.includes(group.id),
+              includedSkillIds: section.groups.find((ref) => ref.id === group.id)?.skills ?? [],
+            })),
+            filter,
+          )}
         />
       );
     }
@@ -571,16 +661,20 @@ export function SectionCard({
   index,
   library,
   sortId,
+  /** Defaults to the whole section, which is what an unfiltered form asks for. */
+  filter = SHOW_ALL,
 }: {
   section: VariantSection;
   index: number;
   library: ContentLibrary;
   sortId: string;
+  filter?: SectionFilter;
 }) {
   const setSectionVisible = useEditor((state) => state.setSectionVisible);
   const removeSection = useEditor((state) => state.removeSection);
   const { ref, style, dragging, handleProps } = useSortableRow(sortId);
   const title = sectionTitle(section, library);
+  const note = filterNote(library, section, filter);
 
   return (
     <li
@@ -624,10 +718,18 @@ export function SectionCard({
       {/* Above the list, not inside it: these act on the whole section, and
           the counts they show are read off the list below them (§6.1). */}
       <TagActions section={section} index={index} library={library} />
+      {/* What the filter is holding back, said on the card that is holding it
+          back. A shortened list read as the whole list is how someone rewords
+          the one bullet they can see believing it is the only one. */}
+      {note ? (
+        <p className="px-3 pb-2 text-xs text-amber-700" data-filter-note>
+          {note}
+        </p>
+      ) : null}
       {/* Shown for hidden sections too: curation is often prepared before a
           section is switched back on, and collapsing it would shuffle the
           whole column on every toggle. */}
-      <SectionBody section={section} index={index} library={library} />
+      <SectionBody section={section} index={index} library={library} filter={filter} />
     </li>
   );
 }

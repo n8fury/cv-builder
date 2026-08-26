@@ -112,8 +112,14 @@ function includedBulletIds(section: VariantSection, entryId: string): string[] {
   return [];
 }
 
-/** A library entry's own curated children — bullets, or a group's skills. */
-function childrenOf(item: Taggable): Taggable[] {
+/**
+ * A library entry's own curated children — bullets, or a group's skills.
+ *
+ * Exported because the editor's text filter walks the same two levels this
+ * does (`filter.ts`): "what hangs off an entry" is one answer, and two copies
+ * of it would drift the moment a section type gained a third shape.
+ */
+export function childrenOf(item: Taggable): Taggable[] {
   const source = item as Taggable & { bullets?: Taggable[]; skills?: Taggable[] };
   return source.bullets ?? source.skills ?? [];
 }
