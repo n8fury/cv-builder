@@ -2057,11 +2057,61 @@ the code, so the spec stays the source of truth for values:
 
 ### Tier 4 — bigger swings
 
-- [ ] Task 10.13: Add preview zoom and page-fit control
+- [x] Task 10.13: Add preview zoom and page-fit control
   - Verification: 100%, fit-width and fit-page each render correctly, and a
     one-page-at-a-time toggle pages through the sheet stack.
-  - `PreviewFrame.tsx:44` auto-scales to the column width with no user
-    control over it.
+  - Result: all four hold, measured in a real browser rather than eyeballed —
+    every figure below is read off the live frame's own transform matrix.
+    - **fit width** fills the column to the pixel: 718px of a 718px column,
+      and the control prints the 88% it resolved to.
+    - **fit page** takes the tighter of the two fits — 67% against fit width's
+      88% — and lands a whole 1056px sheet inside the 708px the window has
+      left below the preview's top edge.
+    - **100%** draws the page at its printed 816px whatever the column is, and
+      a column narrower than that scrolls rather than cropping the right
+      margin off the page.
+    - **one page at a time** clips the frame to one sheet's height and slides
+      it to that sheet's own offset; next and prev walk every sheet in the
+      stack, each landing within 2px of where the iframe actually laid that
+      sheet out, and disable themselves at the two ends.
+  - Three named sizes and no slider. A zoom slider on a document whose whole
+    point is fidelity invites a reading taken at 83%, where every measured
+    value is off by a number nobody is holding. Each of these three is instead
+    a question with an answer: what does the printed page look like, what is
+    on this page, where does the text sit in the column. None enlarges past
+    100% — a page shown bigger than it prints reads roomier than the paper
+    will be, which is the wrong direction to be wrong in here.
+  - Both settings are applied to the *frame*, never inside it: the scale is a
+    CSS transform on the iframe box, and one-sheet mode is that box clipped to
+    a sheet's height with the frame translated up by its offset. `resume.css`,
+    `PagedDocument` and the measurement all carry on at 1:1 — the thing being
+    looked at stays the thing that prints, and the harness agrees.
+  - That also avoids a trap worth naming. `PagedDocument` measures page one's
+    flow and derives the entire stack from it, so paging by `display: none` —
+    the obvious way — would take page one's own geometry away and collapse the
+    very stack the pager was walking. The browser check asserts the page count
+    is unchanged across every move, which is that failure's tripwire.
+  - The sheet offsets are *read* from the iframe rather than computed. The
+    34px gap between sheets and the 12px of desk above the first are screen
+    chrome `resume.css` is free to change, and a pager carrying copies of
+    those two numbers would slide to the wrong place the day either moved.
+  - `previewViewportHeight` measures from the preview's position in the
+    *document*, not on screen: the on-screen figure changes as the column
+    scrolls, and a fit that drifted while you scrolled past it would be
+    unusable.
+  - None of the three settings touches the store. How someone is looking at
+    the document is not something the document says, so zoom cannot make the
+    variant dirty, cannot push an undo step and cannot reach the file. The
+    pager is clamped on the way *out* rather than on the way in — the stack
+    shrinks under an untouched pager whenever an edit closes the last page —
+    and the whole control disappears for a one-page CV, which has nothing to
+    page through.
+  - `npm test` **499/499** (up from 483 — 11 cases over the three scales and
+    the clamp, 5 over the control as it is drawn), `tsc --noEmit`, `lint`,
+    `check:tailwind-scope`, and `npm run harness` **84/84**, text and faces
+    identical. Browser check **26/26**, run at a window narrow enough that the
+    three sizes are genuinely three sizes, with every server action
+    intercepted so nothing reached disk.
 
 - [ ] Task 10.14: Add a variant diff
   - Verification: two variants of one profile are compared entry by entry,

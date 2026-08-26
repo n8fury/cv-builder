@@ -25,21 +25,29 @@ import { EditorStoreProvider, useEditor } from "./EditorStoreProvider";
 import { FontWarning } from "./FontWarning";
 import { LineCountProvider } from "./line-counts";
 import { PageFit } from "./PageFit";
+import { PreviewControls } from "./PreviewControls";
 import { PreviewLinkProvider } from "./preview-link";
 import { PreviewFrame } from "./PreviewFrame";
 import { SaveControls } from "./SaveControls";
 import { UndoRedo } from "./UndoRedo";
 import { VariantForm } from "./VariantForm";
+import { clampPage, type ZoomMode } from "./zoom";
 import { isDirty, type EditorSnapshot } from "./store";
 
 function Preview({
   css,
   onPaginate,
   onFontProblems,
+  zoom,
+  page,
+  onScale,
 }: {
   css: string;
   onPaginate: (pagination: Pagination) => void;
   onFontProblems: (problems: string[]) => void;
+  zoom: ZoomMode;
+  page: number | null;
+  onScale: (scale: number) => void;
 }) {
   const draft = useEditor((state) => state.draft);
 
@@ -69,7 +77,13 @@ function Preview({
   // crosses out of the iframe without either side knowing about the other.
   return (
     <PaginationReporter value={onPaginate}>
-      <PreviewFrame css={css} onFontProblems={onFontProblems}>
+      <PreviewFrame
+        css={css}
+        onFontProblems={onFontProblems}
+        onScale={onScale}
+        page={page}
+        zoom={zoom}
+      >
         <ResumeDocument model={resolved.model!} />
       </PreviewFrame>
     </PaginationReporter>
@@ -98,9 +112,23 @@ function Status() {
 export function EditorShell({ snapshot, css }: { snapshot: EditorSnapshot; css: string }) {
   const [pagination, setPagination] = useState<Pagination>(EMPTY_PAGINATION);
   const [fontProblems, setFontProblems] = useState<string[]>([]);
+  // How the preview is being looked at, which is nobody's business but this
+  // component's: none of the three reaches the store, so none of them can
+  // make the variant dirty or end up in the file.
+  const [zoom, setZoom] = useState<ZoomMode>("fit-width");
+  const [single, setSingle] = useState(false);
+  const [wanted, setWanted] = useState(1);
+  const [scale, setScale] = useState(1);
   // Stable: the preview re-runs its reporting effect whenever this changes.
   const onPaginate = useCallback((next: Pagination) => setPagination(next), []);
   const onFontProblems = useCallback((next: string[]) => setFontProblems(next), []);
+  const onScale = useCallback((next: number) => setScale(next), []);
+
+  // Clamped on the way out rather than on the way in: the stack shrinks under
+  // an untouched pager whenever an edit closes the last page, and the sheet to
+  // show is a question about the pagination that arrived, not about the last
+  // button that was pressed.
+  const page = clampPage(wanted, pagination.pageCount);
 
   return (
     // Keyed by the open document: Save As navigates to a different variant
@@ -154,7 +182,27 @@ export function EditorShell({ snapshot, css }: { snapshot: EditorSnapshot; css: 
             {/* Above the sheets it describes: every figure in it is a reading
                 of the same pagination those sheets are windowed with. */}
             <PageFit pagination={pagination} />
-            <Preview css={css} onPaginate={onPaginate} onFontProblems={onFontProblems} />
+            {/* Below the report and above the sheets, because it sits between
+                them in meaning too: the report says what the document does,
+                this says how much of it is on screen. */}
+            <PreviewControls
+              onPage={setWanted}
+              onSingle={setSingle}
+              onZoom={setZoom}
+              page={page}
+              pageCount={pagination.pageCount}
+              scale={scale}
+              single={single}
+              zoom={zoom}
+            />
+            <Preview
+              css={css}
+              onFontProblems={onFontProblems}
+              onPaginate={onPaginate}
+              onScale={onScale}
+              page={single && pagination.pageCount > 1 ? page : null}
+              zoom={zoom}
+            />
           </div>
         </div>
       </div>
