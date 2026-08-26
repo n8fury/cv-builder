@@ -20,9 +20,21 @@ import type { ReactNode } from "react";
 
 import { ResumeBullets } from "./ResumeBullets";
 import { linkTarget } from "./link-targets";
+import type { BulletOwner } from "@/lib/schema/library";
 
 import type { ResolvedBullet } from "@/lib/data/resolve";
 import type { EntryKind } from "@/lib/render/metrics";
+
+/**
+ * Which library collection an entry kind's bullets live in, for the editor's
+ * in-place editing. Education is absent on purpose: its one bullet is the
+ * entry's `description` field rendered as a bullet (§16.4), not a library
+ * bullet, so there is nothing for a keystroke on it to write to.
+ */
+const BULLET_OWNER: Partial<Record<EntryKind, BulletOwner>> = {
+  experience: "experience",
+  projects: "projects",
+};
 
 export function ResumeEntry({
   id,
@@ -46,6 +58,7 @@ export function ResumeEntry({
   bullets: ResolvedBullet[];
   children?: ReactNode;
 }) {
+  const owner = BULLET_OWNER[kind];
   return (
     <article className="resume-entry" data-entry-kind={kind} {...linkTarget("entry", id)}>
       <div className="resume-entry-head">
@@ -62,7 +75,7 @@ export function ResumeEntry({
         </div>
       </div>
       {children}
-      <ResumeBullets bullets={bullets} />
+      <ResumeBullets bullets={bullets} source={owner && { owner, entryId: id }} />
     </article>
   );
 }

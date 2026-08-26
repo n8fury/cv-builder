@@ -22,6 +22,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
+import { EDITABLE_ATTRIBUTE } from "@/components/resume/editable";
 import {
   attributeSelector,
   FOCUS_CLASS,
@@ -86,6 +87,12 @@ export function createPreviewLink(): PreviewLink {
     // GitHub, leaving the editor with no preview at all. In here a click means
     // "show me this", so the href is suppressed rather than followed.
     if (element?.closest("a")) event.preventDefault();
+    // Except in text that is edited where it prints (`editable`): there a
+    // click means "put the caret here", and jumping to the field would focus
+    // the form and take the caret straight back out again. The blocks that
+    // cannot be typed into — an entry's head, a skill, Education's
+    // description — keep the jump, so nothing loses an affordance it had.
+    if (element?.closest(`[${EDITABLE_ATTRIBUTE}]`)) return;
     const targets = linkTargetsAt(element);
     if (targets.length > 0) pick?.(targets);
   };

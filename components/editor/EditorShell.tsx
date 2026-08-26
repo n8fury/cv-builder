@@ -15,6 +15,7 @@ import { useCallback, useMemo, useState } from "react";
 import { PendingLink } from "@/app/(dashboard)/PendingLink";
 import { EMPTY_PAGINATION } from "@/components/resume/PagedDocument";
 import { ResumeDocument } from "@/components/resume/ResumeDocument";
+import { TextEditProvider, type EditableBullet } from "@/components/resume/editable";
 import { PaginationReporter } from "@/components/resume/pagination-context";
 import { resolveVariant } from "@/lib/data/resolve";
 import { libraryPath } from "@/lib/routes";
@@ -30,6 +31,7 @@ import { PreviewLinkProvider } from "./preview-link";
 import { PreviewFrame } from "./PreviewFrame";
 import { SaveControls } from "./SaveControls";
 import { UndoRedo } from "./UndoRedo";
+import { VariantDiff } from "./VariantDiff";
 import { VariantForm } from "./VariantForm";
 import { clampPage, type ZoomMode } from "./zoom";
 import { isDirty, type EditorSnapshot } from "./store";
@@ -50,6 +52,17 @@ function Preview({
   onScale: (scale: number) => void;
 }) {
   const draft = useEditor((state) => state.draft);
+  const setBulletText = useEditor((state) => state.setBulletText);
+
+  // §7's third direction, after the highlight and the jump: the text on the
+  // page is typed on the page. It is the field's own action, so a bullet
+  // rewritten here and one rewritten on the left produce the same draft, the
+  // same undo step and the same line — see `components/resume/editable`.
+  const write = useCallback(
+    (target: EditableBullet, text: string) =>
+      setBulletText(target.owner, target.entryId, target.bulletId, text),
+    [setBulletText],
+  );
 
   // A draft can reference a library item that is gone — a hand-edited or
   // n8n-written file, or a library change under an open editor. §13: say so
@@ -84,7 +97,9 @@ function Preview({
         page={page}
         zoom={zoom}
       >
-        <ResumeDocument model={resolved.model!} />
+        <TextEditProvider value={write}>
+          <ResumeDocument model={resolved.model!} />
+        </TextEditProvider>
       </PreviewFrame>
     </PaginationReporter>
   );
@@ -172,6 +187,11 @@ export function EditorShell({ snapshot, css }: { snapshot: EditorSnapshot; css: 
         {/* Above both columns: it speaks for the whole document, and its two
             answers change what the form and the preview are showing. */}
         <DraftRecovery />
+
+        {/* Above both columns as well, and for the same reason: it speaks
+            about the whole document, and about a second one the columns are
+            not showing. */}
+        <VariantDiff />
 
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(320px,1fr)_minmax(0,2fr)]">
           <div className="rounded-lg border border-gray-200 p-4">

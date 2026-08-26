@@ -180,6 +180,16 @@ export const headerSchema = z.object({
   links: z.array(headerLinkSchema).default([]),
 });
 
+/**
+ * The collections whose entries own bullets (§5.4, §5.5, §5.11).
+ *
+ * Bullet IDs are unique only within their entry, so writing a bullet's text
+ * takes the collection and the entry as well as the bullet — and everything
+ * that addresses one that way, the editor's store and the preview alike,
+ * spells the address the same way by taking it from here.
+ */
+export type BulletOwner = "experience" | "projects" | "customSections";
+
 /** Current on-disk schema version for `content-library.json` (§15.13). */
 export const LIBRARY_SCHEMA_VERSION = 1;
 

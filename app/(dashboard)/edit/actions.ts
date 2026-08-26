@@ -15,12 +15,14 @@
  */
 import { revalidatePath } from "next/cache";
 
+import { summarizeProfile } from "@/lib/data/dashboard";
 import { resolveVariant } from "@/lib/data/resolve";
 import {
   ConflictError,
   createVariant,
   isValidSlug,
   readLibrary,
+  readVariant,
   writeLibrary,
   writeVariant,
 } from "@/lib/data/store";
@@ -141,4 +143,47 @@ export async function saveVariantAsAction(input: SaveInput & { tag: string }): P
 
   refresh(input.profileId, nextId);
   return { error: null, saved: { variantId: nextId, variant, library: checked.library } };
+}
+
+/** A variant this profile holds, as the compare picker lists it (§7). */
+export interface CompareTarget {
+  variantId: string;
+  tag: string;
+  label: string;
+  updatedAt: string;
+}
+
+/**
+ * The other variants of this profile, most recently edited first.
+ *
+ * Unreadable ones are simply not offered: the dashboard is where a broken file
+ * reports itself (§13), and a picker entry that can only fail is not a choice.
+ */
+export async function compareTargetsAction(
+  profileId: string,
+  exceptId: string,
+): Promise<CompareTarget[]> {
+  const summary = await summarizeProfile(profileId);
+  return summary.variants
+    .filter((variant) => variant.id !== exceptId)
+    .map(({ id, tag, label, updatedAt }) => ({ variantId: id, tag, label, updatedAt }));
+}
+
+/**
+ * Reads one variant off disk for the comparison — the file, not a draft.
+ *
+ * The other variant is never opened for editing here, so it is returned as it
+ * is stored; the open document supplies the library both sides are resolved
+ * against, since a comparison of two variants against two different libraries
+ * would report a stale text as a curation difference.
+ */
+export async function readVariantAction(
+  profileId: string,
+  variantId: string,
+): Promise<{ error: string | null; variant?: Variant }> {
+  try {
+    return { error: null, variant: await readVariant(profileId, variantId) };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : String(error) };
+  }
 }

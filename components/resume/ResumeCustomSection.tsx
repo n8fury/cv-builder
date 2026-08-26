@@ -22,7 +22,10 @@ export function ResumeCustomSection({ section }: { section: ResolvedCustomSectio
           <InlineText text={section.paragraph} />
         </p>
       )}
-      <ResumeBullets bullets={section.bullets} />
+      <ResumeBullets
+        bullets={section.bullets}
+        source={{ owner: "customSections", entryId: section.id }}
+      />
     </div>
   );
 }

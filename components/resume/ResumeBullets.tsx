@@ -10,14 +10,26 @@
  * Justified, like the source: each bullet's first lines carry a word-space
  * delta and its last line carries none.
  */
-import { InlineText } from "./InlineText";
+import { BulletText, type BulletSource } from "./editable";
 import { linkTarget } from "./link-targets";
 
 import type { ResolvedBullet } from "@/lib/data/resolve";
 
 const MARKER = "•";
 
-export function ResumeBullets({ bullets }: { bullets: ResolvedBullet[] }) {
+export function ResumeBullets({
+  bullets,
+  source,
+}: {
+  bullets: ResolvedBullet[];
+  /**
+   * Where these bullets live in the library, for the editor's preview to
+   * write back to (`editable`). Absent for a list that is not curated bullet
+   * by bullet — Education's lone description bullet, which is a field of its
+   * entry (§16.4) — which is what leaves those blocks uneditable in place.
+   */
+  source?: BulletSource;
+}) {
   if (bullets.length === 0) return null;
   return (
     <ul className="resume-bullets">
@@ -26,7 +38,7 @@ export function ResumeBullets({ bullets }: { bullets: ResolvedBullet[] }) {
           <span className="resume-bullet-marker" aria-hidden="true">
             {MARKER}
           </span>
-          <InlineText text={bullet.text} />
+          <BulletText id={bullet.id} source={source} text={bullet.text} />
         </li>
       ))}
     </ul>

@@ -2113,16 +2113,103 @@ the code, so the spec stays the source of truth for values:
     three sizes are genuinely three sizes, with every server action
     intercepted so nothing reached disk.
 
-- [ ] Task 10.14: Add a variant diff
+- [x] Task 10.14: Add a variant diff
   - Verification: two variants of one profile are compared entry by entry,
     naming what each includes that the other does not.
-  - Useful once a family of variants is being kept alive together.
+  - Result: it holds, and on real content rather than a fixture. Against a
+    trimmed copy of `detailed`, the panel names — by the words the CV prints —
+    the one bullet dropped from inside a kept entry, the whole Freelance entry
+    with its four bullets, the four certifications lost with a switched-off
+    section, and Projects held in a different order, while the 76 rows both
+    still share stay out of the way. The profile's two real variants come out
+    as 87 shared rows and one disagreement: the header is Minimal in one and
+    Full in the other.
+  - What is compared is the *resolved* pair, not the two files. Two lists of
+    library IDs cannot be read, and §13's "say what is wrong" has no force if
+    the answer is `exp-a1f3`. Resolving first also settles the hidden-section
+    question in passing: a section switched off is simply not in the model, so
+    it is reported as that side not having it — which is what it means for the
+    CV that prints.
+  - Matching is by ID and never by text. A bullet reworded in the library
+    propagates to every variant referencing it (§11.4), and a text comparison
+    would report that one edit as one side dropping a bullet and the other
+    adding one — a difference in curation that never happened. A test rewrites
+    every bullet in the library and asserts the comparison still reads clean.
+  - The open side is the draft, so unsaved curation is what gets checked —
+    that is the state someone is in when the question comes up. Both sides
+    resolve against the *draft's* library for the same reason the matching is
+    by ID: two libraries would let a staged text edit masquerade as curation.
+  - A merge cannot honour two orders at once, so the open variant's order is
+    the spine and the other one's extras are slotted in after the shared item
+    they follow there. Disagreement about order is then reported in its own
+    right — a badge on the list, a line in the tally — rather than being
+    smuggled into a layout where it cannot be seen.
+  - Differences only, by default. A real profile shares almost everything
+    between its variants: the untrimmed tree here is 87 rows and one of them
+    is the answer. "Show what they share" puts the other 86 back.
+  - Languages and custom sections are compared by presence alone. Neither is
+    curated item by item (§12.3, §12.4), so listing their contents would offer
+    rows that no variant can differ by.
+  - Nothing in the panel writes. It is a reading of two documents, so it stays
+    out of the store entirely — opening it cannot make the editor dirty, push
+    an undo step or reach a file, which the browser check asserts.
+  - `npm test` **524/524** (up from 499 — 18 over the comparison, 7 over the
+    report as it is drawn), `tsc --noEmit`, `lint`, `check:tailwind-scope`, and
+    `npm run harness` **84/84**, text and faces identical. Browser check
+    **8/8** against the real profile: the picker offers the other variant and
+    not the open one, the tally and the setting line read correctly, the
+    default view is the difference alone and the toggle restores all 87 rows,
+    and the document is still clean afterwards.
 
-- [ ] Task 10.15: Edit directly in the preview
+- [x] Task 10.15: Edit directly in the preview
   - Verification: editing text in the preview writes the same library draft
     the left-column field would, and the rendered result is unchanged from
     typing it in the form.
-  - `InlineText` and the resume tree are already client-rendered, so
-    `contentEditable` on text blocks writing back to the store is feasible.
-    Highest effort here, but it is the change that would make this feel like
-    a document editor rather than a form driving a document.
+  - Result: it holds literally. Five characters typed onto the page and the
+    same five typed into the field were driven in a real browser against the
+    real profile, and the two drafts the editor staged came out **identical —
+    12,133 characters, byte for byte** — read out of the crash copy rather
+    than inferred from the screen. The bullet renders the same line either
+    way, and the in-place edit is one undo step, like the field's.
+  - **React does not own the editable text.** The block renders empty and its
+    contents are written imperatively. A contentEditable node whose children
+    React reconciles is a caret that jumps on every keystroke: the store
+    update a keystroke causes comes back as a re-render, and React rewriting
+    the text node under the caret moves it. So the DOM is written only when
+    what it already says differs from the draft — never true of the keystroke
+    that produced that draft, always true of an undo, a form edit or a revert.
+    The browser check types five letters in a row and asserts they land
+    contiguously and in order, which is that failure's tripwire.
+  - The same rule disposes of the desync a controlled contentEditable is
+    famous for. React holds no virtual copy of the nodes a browser creates
+    while typing, so it cannot be surprised by them later; the block is either
+    rebuilt from the draft whole or left entirely alone.
+  - §16.3's markup survives, because the block is read back as *markup* rather
+    than as text — a serializer that is the parser's inverse, checked by
+    round-tripping every bullet shape the parser has a case for. It escapes
+    only where the plain spelling would re-pair into emphasis nobody applied,
+    so a bullet mentioning one asterisk comes out of the preview spelled the
+    way the field spells it. It reads `<i>` as well as `<em>`, since that is
+    what a browser's own italic key inserts, and stores a typed U+00A0 as an
+    ordinary space — an invisible difference the field would never have made.
+  - Only text that *is* a library bullet is editable. Education's description
+    renders as a bullet (§16.4) but is a field of its entry, and a skill is
+    curated rather than written, so both stay exactly what they were — and
+    both keep the click-to-jump they had.
+  - Which is the trade this makes: inside editable text a click places a caret
+    instead of jumping to the form, because jumping would focus the field and
+    take the caret straight back out. Every other block keeps the jump, and
+    the block that lost it is the one that no longer needs it.
+  - Spellcheck is off in the preview and on in the field. A spelling marker
+    costs no layout but it paints, and this surface's whole claim is that what
+    is on it is what prints.
+  - Nothing reaches the print route. The writer arrives by context and
+    defaults to absent, so `/render` renders `InlineText` exactly as before —
+    asserted directly, by rendering a bullet list with and without the writer
+    in scope and comparing the markup.
+  - `npm test` **540/540** (up from 524 — 11 over the serializer and its
+    round-trip, 5 over which block gets drawn), `tsc --noEmit`, `lint`,
+    `check:tailwind-scope`, and `npm run harness` **84/84**, text and faces
+    identical. Browser check **11/11**, including typing beside an italic run
+    and finding the markup and the italic face both still there, and Enter
+    declining to break a bullet into something the stored string cannot spell.

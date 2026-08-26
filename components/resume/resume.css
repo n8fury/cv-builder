@@ -319,6 +319,32 @@ body {
     box-shadow: 0 0 0 2px #fdeaa8;
     border-radius: 1px;
   }
+
+  /* Text that is typed where it prints (§7, §16.3). After the rule above, so
+     the caret wins over the pointer a bullet otherwise shows: inside this
+     block a click places a caret rather than jumping to the form.
+
+     The ring is a box-shadow for the same reason the highlight is — it costs
+     no layout, and an outline that reserved room would move the very line it
+     is drawn around. */
+  .resume-linked [data-editable] {
+    cursor: text;
+  }
+
+  .resume-linked [data-editable]:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px #bcd9ff;
+    border-radius: 1px;
+  }
+
+  /* A bullet emptied from inside the preview has nothing left to click on.
+     The strip is what gives the caret somewhere to go back to; it is drawn
+     only while the block is empty, which on a finished CV is never. */
+  .resume-linked [data-editable]:empty::after {
+    content: "";
+    display: inline-block;
+    width: 6px;
+  }
 }
 
 /* Header (§5.1, §15.9). The name block sits flush against the top padding

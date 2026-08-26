@@ -24,7 +24,7 @@ import { EMPTY_HISTORY, recorded, redone, undone, type History } from "./history
 import { moved, movedById, movedIds } from "./ordering";
 import { taggedBulletRefs, taggedEntryIds } from "./tags";
 
-import type { Bullet, ContentLibrary, Header } from "@/lib/schema/library";
+import type { Bullet, BulletOwner, ContentLibrary, Header } from "@/lib/schema/library";
 import type {
   HeaderMode,
   RecommendationsMode,
@@ -44,8 +44,11 @@ export interface EditorSnapshot extends EditorDocument {
   variantId: string;
 }
 
-/** The library collections whose entries own bullets (§5.4, §5.5, §5.11). */
-export type BulletOwner = "experience" | "projects" | "customSections";
+/**
+ * The library collections whose entries own bullets (§5.4, §5.5, §5.11).
+ * Re-exported from the schema, which is where the preview reads it from too.
+ */
+export type { BulletOwner };
 
 export interface EditorState {
   profileId: string;
