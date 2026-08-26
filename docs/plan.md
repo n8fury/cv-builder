@@ -1618,12 +1618,57 @@ the code, so the spec stays the source of truth for values:
     and `npm run harness` **84/84**, text and faces identical. Nothing outside
     the editor's chrome moved.
 
-- [ ] Task 10.6: Add undo/redo (Ctrl+Z / Ctrl+Y)
+- [x] Task 10.6: Add undo/redo (Ctrl+Z / Ctrl+Y)
   - Verification: every store mutation is undoable and redoable in order, and
     undo past the last save leaves the dirty flag correct.
-  - The store holds one draft object, so a history stack of drafts is nearly
-    free. Today the only escape from a mistake is Revert, which throws away
-    the whole session.
+  - Result: both hold.
+    - **every mutation** is checked literally rather than by sampling:
+      `undo-redo.test.ts` lists one call of each action and asserts that list
+      equals the store's own function surface minus `markSaved`, `undo` and
+      `redo`. All 28 are driven in sequence, each undone back onto the exact
+      document that preceded it and then redone onto the exact document that
+      followed — and each is asserted to have changed something, so a step
+      that silently did nothing cannot pass as undone.
+    - **across a save**: `markSaved` adds no step, undo goes back past it and
+      the indicator reads unsaved, and the redo lands on the saved document
+      *with the server's stamp*, reading Saved again.
+    - and in a real browser (Puppeteer, 13/13): Ctrl+Z with the cursor still
+      in a text field, Ctrl+Y and Ctrl+Shift+Z for redo, the buttons undoing a
+      section toggle, both disabling themselves at the ends of the stack, and
+      nothing reaching disk throughout.
+  - The history is a list of whole documents, not of inverse operations. The
+    draft is already one immutable value, so a step is the value that preceded
+    it and every action — keystroke, toggle, drag, add, remove — is undone the
+    same way. There is nothing a new action has to remember to do to be
+    undoable, which is what the completeness test above is really checking.
+  - Recording happens outside the actions, not inside them: `createEditorStore`
+    now wraps zustand's `set`, comparing the draft before and after and
+    pushing the old one. `markSaved`, `undo` and `redo` take the raw `set` and
+    so stay off the stack — a save is not an edit.
+  - Consecutive edits to the *same* field within 600ms coalesce into one step,
+    keyed by a `tag` the text writers pass (`bullet:experience/exp-1/b1`,
+    `header:email`, …). Typing a word is one Ctrl+Z, not eleven; a toggle or a
+    reorder is untagged and always its own step, however fast two of them
+    arrive. The stack is capped at 100.
+  - A history entry is a whole document, so undoing across a save would drag
+    the old `updatedAt` back with it and leave a redone draft comparing unequal
+    to the disk it matches. `withCurrentStamp` carries the live stamp onto
+    every restored document — the same reasoning as `markSaved`'s.
+  - `revert` and `restore` are recorded, deliberately: throwing a session away
+    and adopting a recovered one are the two edits it would hurt most to have
+    made by accident. Undo now gets a session back out of Revert.
+  - The keys are taken even while a text field has focus, and Ctrl+Z is
+    `preventDefault`ed there. A bullet's field is a view of the draft, not a
+    document of its own: the browser's own undo would put text back in one box
+    while the preview, the crash copy and the dirty indicator carried on from
+    the store. One history, one Ctrl+Z. Ctrl+Y and Ctrl+Shift+Z both redo, and
+    Cmd works for Ctrl throughout.
+  - Buttons sit beside the save controls, disabled at the ends of the stack —
+    a shortcut nobody can see is a shortcut nobody uses, and the disabled
+    states are the only place the editor says how far back it can go.
+  - `npm test` **390/390** (up from 376 — 8 cases over the history itself, 6
+    over the store), `tsc --noEmit`, `lint`, and `npm run harness` **84/84**,
+    text and faces identical.
 
 ### Tier 2 — speed of tailoring
 

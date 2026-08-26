@@ -27,6 +27,7 @@ import { PageFit } from "./PageFit";
 import { PreviewLinkProvider } from "./preview-link";
 import { PreviewFrame } from "./PreviewFrame";
 import { SaveControls } from "./SaveControls";
+import { UndoRedo } from "./UndoRedo";
 import { VariantForm } from "./VariantForm";
 import { isDirty, type EditorSnapshot } from "./store";
 
@@ -130,6 +131,7 @@ export function EditorShell({ snapshot, css }: { snapshot: EditorSnapshot; css: 
             Library
           </PendingLink>
           <div className="ml-auto flex items-center gap-3">
+            <UndoRedo />
             <Status />
             <SaveControls />
           </div>

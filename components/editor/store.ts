@@ -19,6 +19,7 @@ import { generateLinkId, normalizeLinkUrl, type HeaderFieldName } from "@/lib/da
 import { generateId, libraryIds } from "@/lib/data/ids";
 import { build, type NewItemValues } from "@/lib/data/new-items";
 
+import { EMPTY_HISTORY, recorded, redone, undone, type History } from "./history";
 import { moved, movedById, movedIds } from "./ordering";
 
 import type { Bullet, ContentLibrary, Header } from "@/lib/schema/library";
@@ -158,6 +159,24 @@ export interface EditorState {
   markSaved(document: EditorDocument): void;
   /** Throw the draft away and go back to the files on disk. */
   revert(): void;
+  /**
+   * Every draft this session has passed through (§7).
+   *
+   * Held in the store rather than beside it because undo is a store mutation
+   * like any other: it replaces the draft, and everything reading the draft —
+   * the form, the preview, the crash copy — follows without being told.
+   */
+  history: History;
+  /**
+   * One step back, and one step forward again. Both are no-ops at the ends of
+   * the stack, so a bound key does not have to check first.
+   *
+   * `saved` is untouched: undoing past the last save leaves the draft
+   * differing from disk, which is exactly what "unsaved changes" means, and
+   * the indicator says so without anything having to track it.
+   */
+  undo(): void;
+  redo(): void;
   /**
    * Adopt a draft recovered from the crash copy (§7).
    *
@@ -805,267 +824,343 @@ function addBulletTo(
   }
 }
 
+/**
+ * A history entry is a whole document, so a step that changed `updatedAt` —
+ * only a save does — must not carry the old one back with it. The stamp is the
+ * server's, not the draft's (see `markSaved`), and rewinding it would leave a
+ * saved-and-undone-and-redone draft comparing unequal to the disk it matches.
+ */
+function withCurrentStamp(document: EditorDocument, current: EditorDocument): EditorDocument {
+  return {
+    ...document,
+    variant: { ...document.variant, updatedAt: current.variant.updatedAt },
+  };
+}
+
 export function createEditorStore({ profileId, variantId, ...document }: EditorSnapshot) {
-  return createStore<EditorState>()((set) => ({
-    profileId,
-    variantId,
-    saved: document,
-    draft: document,
+  return createStore<EditorState>()((rawSet, get) => {
+    /**
+     * Every draft-changing action goes through here, and history is recorded
+     * from the outside: the action says what the document becomes, and this
+     * remembers what it was. `tag` names the field the change was addressed
+     * to, for coalescing — untagged changes are each their own step.
+     *
+     * The three writers that must *not* be recorded — `markSaved`, `undo`,
+     * `redo` — use `rawSet` instead.
+     */
+    const set = (
+      updater: (state: EditorState) => Partial<EditorState>,
+      tag: string | null = null,
+    ): void => {
+      const before = get().draft;
+      rawSet(updater);
+      const after = get().draft;
+      if (after === before) return;
+      rawSet({ history: recorded(get().history, before, tag, Date.now()) });
+    };
 
-    setTag: (tag) =>
-      set(({ draft }) => ({ draft: { ...draft, variant: { ...draft.variant, tag } } })),
+    return {
+      profileId,
+      variantId,
+      saved: document,
+      draft: document,
+      history: EMPTY_HISTORY,
 
-    setLabel: (label) =>
-      set(({ draft }) => ({ draft: { ...draft, variant: { ...draft.variant, label } } })),
+      setTag: (tag) =>
+        set(({ draft }) => ({ draft: { ...draft, variant: { ...draft.variant, tag } } }), "tag"),
 
-    setBulletText: (owner, entryId, bulletId, text) =>
-      set(({ draft }) => ({
-        draft: { ...draft, library: withBulletText(draft.library, owner, entryId, bulletId, text) },
-      })),
+      setLabel: (label) =>
+        set(({ draft }) => ({ draft: { ...draft, variant: { ...draft.variant, label } } }), "label"),
 
-    setHeaderField: (name, value) =>
-      set(({ draft }) => ({
-        draft: {
-          ...draft,
-          library: withHeader(draft.library, { ...draft.library.header, [name]: value }),
-        },
-      })),
+      setBulletText: (owner, entryId, bulletId, text) =>
+        set(
+          ({ draft }) => ({
+            draft: {
+              ...draft,
+              library: withBulletText(draft.library, owner, entryId, bulletId, text),
+            },
+          }),
+          `bullet:${owner}/${entryId}/${bulletId}`,
+        ),
 
-    addHeaderLink: (values) =>
-      set(({ draft }) => {
-        const text = (values.text ?? "").trim();
-        if (text === "") return {};
-        const links = draft.library.header.links;
-        const id = generateLinkId(new Set(links.map((link) => link.id)));
-        return {
+      setHeaderField: (name, value) =>
+        set(
+          ({ draft }) => ({
+            draft: {
+              ...draft,
+              library: withHeader(draft.library, { ...draft.library.header, [name]: value }),
+            },
+          }),
+          `header:${name}`,
+        ),
+
+      addHeaderLink: (values) =>
+        set(({ draft }) => {
+          const text = (values.text ?? "").trim();
+          if (text === "") return {};
+          const links = draft.library.header.links;
+          const id = generateLinkId(new Set(links.map((link) => link.id)));
+          return {
+            draft: {
+              ...draft,
+              library: withHeader(draft.library, {
+                ...draft.library.header,
+                links: [...links, { id, text, url: normalizeLinkUrl(values.url) }],
+              }),
+            },
+          };
+        }),
+
+      setHeaderLinkText: (id, text) =>
+        set(
+          ({ draft }) => ({
+            draft: {
+              ...draft,
+              library: withHeader(draft.library, {
+                ...draft.library.header,
+                links: draft.library.header.links.map((link) =>
+                  link.id === id ? { ...link, text } : link,
+                ),
+              }),
+            },
+          }),
+          `link-text:${id}`,
+        ),
+
+      // Kept raw, unlike the store's other link writer: the field is normalized
+      // on blur (§18.1), because prefixing "https://" mid-word would rewrite the
+      // box under the cursor after the first keystroke.
+      setHeaderLinkUrl: (id, url) =>
+        set(
+          ({ draft }) => ({
+            draft: {
+              ...draft,
+              library: withHeader(draft.library, {
+                ...draft.library.header,
+                links: draft.library.header.links.map((link) =>
+                  link.id === id ? { ...link, url: url === "" ? null : url } : link,
+                ),
+              }),
+            },
+          }),
+          `link-url:${id}`,
+        ),
+
+      removeHeaderLink: (id) =>
+        set(({ draft }) => ({
           draft: {
             ...draft,
             library: withHeader(draft.library, {
               ...draft.library.header,
-              links: [...links, { id, text, url: normalizeLinkUrl(values.url) }],
+              links: draft.library.header.links.filter((link) => link.id !== id),
             }),
           },
-        };
-      }),
+        })),
 
-    setHeaderLinkText: (id, text) =>
-      set(({ draft }) => ({
-        draft: {
-          ...draft,
-          library: withHeader(draft.library, {
-            ...draft.library.header,
-            links: draft.library.header.links.map((link) =>
-              link.id === id ? { ...link, text } : link,
-            ),
+      setCustomSectionTitle: (id, title) =>
+        set(
+          ({ draft }) => ({
+            draft: {
+              ...draft,
+              library: withCustomSection(draft.library, id, (item) => ({ ...item, title })),
+            },
           }),
-        },
-      })),
+          `custom-title:${id}`,
+        ),
 
-    // Kept raw, unlike the store's other link writer: the field is normalized
-    // on blur (§18.1), because prefixing "https://" mid-word would rewrite the
-    // box under the cursor after the first keystroke.
-    setHeaderLinkUrl: (id, url) =>
-      set(({ draft }) => ({
-        draft: {
-          ...draft,
-          library: withHeader(draft.library, {
-            ...draft.library.header,
-            links: draft.library.header.links.map((link) =>
-              link.id === id ? { ...link, url: url === "" ? null : url } : link,
-            ),
+      setCustomSectionParagraph: (id, paragraph) =>
+        set(
+          ({ draft }) => ({
+            draft: {
+              ...draft,
+              library: withCustomSection(draft.library, id, (item) => ({
+                ...item,
+                paragraph: paragraph.trim() === "" ? null : paragraph,
+              })),
+            },
           }),
-        },
-      })),
+          `custom-paragraph:${id}`,
+        ),
 
-    removeHeaderLink: (id) =>
-      set(({ draft }) => ({
-        draft: {
-          ...draft,
-          library: withHeader(draft.library, {
-            ...draft.library.header,
-            links: draft.library.header.links.filter((link) => link.id !== id),
-          }),
-        },
-      })),
+      setSectionVisible: (index, visible) =>
+        set(({ draft }) => ({
+          draft: { ...draft, variant: withVisible(draft.variant, index, visible) },
+        })),
 
-    setCustomSectionTitle: (id, title) =>
-      set(({ draft }) => ({
-        draft: {
-          ...draft,
-          library: withCustomSection(draft.library, id, (item) => ({ ...item, title })),
-        },
-      })),
-
-    setCustomSectionParagraph: (id, paragraph) =>
-      set(({ draft }) => ({
-        draft: {
-          ...draft,
-          library: withCustomSection(draft.library, id, (item) => ({
-            ...item,
-            paragraph: paragraph.trim() === "" ? null : paragraph,
-          })),
-        },
-      })),
-
-    setSectionVisible: (index, visible) =>
-      set(({ draft }) => ({
-        draft: { ...draft, variant: withVisible(draft.variant, index, visible) },
-      })),
-
-    setHeaderMode: (index, mode) =>
-      set(({ draft }) => ({
-        draft: {
-          ...draft,
-          variant: withSection(draft.variant, index, "header", (section) => ({
-            ...section,
-            // Spread, not replace: the header has two options now, and writing
-            // a fresh object would switch the title off every time the mode
-            // changed (§16.6).
-            options: { ...section.options, mode },
-          })),
-        },
-      })),
-
-    setHeaderShowTitle: (index, showTitle) =>
-      set(({ draft }) => ({
-        draft: {
-          ...draft,
-          variant: withSection(draft.variant, index, "header", (section) => ({
-            ...section,
-            options: { ...section.options, showTitle },
-          })),
-        },
-      })),
-
-    setAboutMeId: (index, aboutMeId) =>
-      set(({ draft }) => ({
-        draft: {
-          ...draft,
-          variant: withSection(draft.variant, index, "aboutMe", (section) => ({
-            ...section,
-            options: { aboutMeId },
-          })),
-        },
-      })),
-
-    setRecommendationsMode: (index, mode) =>
-      set(({ draft }) => ({
-        draft: {
-          ...draft,
-          variant: withSection(draft.variant, index, "recommendations", (section) => ({
-            ...section,
-            options: { mode },
-          })),
-        },
-      })),
-
-    // `withSectionAny` rather than `withSection`: the option is shared by two
-    // section types, and the typed helper narrows to one.
-    setSplitEntries: (index, splitEntries) =>
-      set(({ draft }) => ({
-        draft: {
-          ...draft,
-          variant: withSectionAny(draft.variant, index, (section) =>
-            section.type === "experience" || section.type === "projects"
-              ? { ...section, options: { splitEntries } }
-              : section,
-          ),
-        },
-      })),
-
-    setCustomSectionId: (index, customSectionId) =>
-      set(({ draft }) => ({
-        draft: {
-          ...draft,
-          variant: withSection(draft.variant, index, "custom", (section) => ({
-            ...section,
-            options: { customSectionId },
-          })),
-        },
-      })),
-
-    setEntryIncluded: (index, entryId, included) =>
-      set(({ draft, saved }) => ({
-        draft: {
-          ...draft,
-          variant: withSectionAny(draft.variant, index, (section) =>
-            includeEntry(draft.library, saved.variant, index, section, entryId, included),
-          ),
-        },
-      })),
-
-    setBulletIncluded: (index, entryId, bulletId, included) =>
-      set(({ draft }) => ({
-        draft: {
-          ...draft,
-          variant: withSectionAny(draft.variant, index, (section) =>
-            includeBullet(draft.library, section, entryId, bulletId, included),
-          ),
-        },
-      })),
-
-    moveSection: (from, to) =>
-      set(({ draft }) => ({
-        draft: {
-          ...draft,
-          variant: { ...draft.variant, sections: moved(draft.variant.sections, from, to) },
-        },
-      })),
-
-    moveEntry: (index, fromId, toId) =>
-      set(({ draft }) => ({
-        draft: {
-          ...draft,
-          variant: withSectionAny(draft.variant, index, (section) =>
-            moveEntryIn(section, fromId, toId),
-          ),
-        },
-      })),
-
-    moveBullet: (index, entryId, fromId, toId) =>
-      set(({ draft }) => ({
-        draft: {
-          ...draft,
-          variant: withSectionAny(draft.variant, index, (section) =>
-            moveBulletIn(section, entryId, fromId, toId),
-          ),
-        },
-      })),
-
-    addEntry: (index, values) =>
-      set(({ draft }) => ({ draft: addEntryTo(draft, index, values) })),
-
-    addBullet: (index, ownerId, values) =>
-      set(({ draft }) => ({ draft: addBulletTo(draft, index, ownerId, values) })),
-
-    addCustomSection: (values) =>
-      set(({ draft }) => ({ draft: addCustomSectionTo(draft, values) })),
-
-    removeSection: (index) =>
-      set(({ draft }) => {
-        if (draft.variant.sections[index] === undefined) return {};
-        return {
+      setHeaderMode: (index, mode) =>
+        set(({ draft }) => ({
           draft: {
             ...draft,
-            variant: {
-              ...draft.variant,
-              sections: draft.variant.sections.filter((_, at) => at !== index),
-            },
+            variant: withSection(draft.variant, index, "header", (section) => ({
+              ...section,
+              // Spread, not replace: the header has two options now, and writing
+              // a fresh object would switch the title off every time the mode
+              // changed (§16.6).
+              options: { ...section.options, mode },
+            })),
           },
-        };
-      }),
+        })),
 
-    markSaved: (document) =>
-      set(({ draft }) => ({
-        saved: document,
-        draft: {
-          ...draft,
-          variant: { ...draft.variant, updatedAt: document.variant.updatedAt },
-        },
-      })),
+      setHeaderShowTitle: (index, showTitle) =>
+        set(({ draft }) => ({
+          draft: {
+            ...draft,
+            variant: withSection(draft.variant, index, "header", (section) => ({
+              ...section,
+              options: { ...section.options, showTitle },
+            })),
+          },
+        })),
 
-    revert: () => set((state) => ({ draft: state.saved })),
+      setAboutMeId: (index, aboutMeId) =>
+        set(({ draft }) => ({
+          draft: {
+            ...draft,
+            variant: withSection(draft.variant, index, "aboutMe", (section) => ({
+              ...section,
+              options: { aboutMeId },
+            })),
+          },
+        })),
 
-    restore: (document) => set(() => ({ draft: document })),
-  }));
+      setRecommendationsMode: (index, mode) =>
+        set(({ draft }) => ({
+          draft: {
+            ...draft,
+            variant: withSection(draft.variant, index, "recommendations", (section) => ({
+              ...section,
+              options: { mode },
+            })),
+          },
+        })),
+
+      // `withSectionAny` rather than `withSection`: the option is shared by two
+      // section types, and the typed helper narrows to one.
+      setSplitEntries: (index, splitEntries) =>
+        set(({ draft }) => ({
+          draft: {
+            ...draft,
+            variant: withSectionAny(draft.variant, index, (section) =>
+              section.type === "experience" || section.type === "projects"
+                ? { ...section, options: { splitEntries } }
+                : section,
+            ),
+          },
+        })),
+
+      setCustomSectionId: (index, customSectionId) =>
+        set(({ draft }) => ({
+          draft: {
+            ...draft,
+            variant: withSection(draft.variant, index, "custom", (section) => ({
+              ...section,
+              options: { customSectionId },
+            })),
+          },
+        })),
+
+      setEntryIncluded: (index, entryId, included) =>
+        set(({ draft, saved }) => ({
+          draft: {
+            ...draft,
+            variant: withSectionAny(draft.variant, index, (section) =>
+              includeEntry(draft.library, saved.variant, index, section, entryId, included),
+            ),
+          },
+        })),
+
+      setBulletIncluded: (index, entryId, bulletId, included) =>
+        set(({ draft }) => ({
+          draft: {
+            ...draft,
+            variant: withSectionAny(draft.variant, index, (section) =>
+              includeBullet(draft.library, section, entryId, bulletId, included),
+            ),
+          },
+        })),
+
+      moveSection: (from, to) =>
+        set(({ draft }) => ({
+          draft: {
+            ...draft,
+            variant: { ...draft.variant, sections: moved(draft.variant.sections, from, to) },
+          },
+        })),
+
+      moveEntry: (index, fromId, toId) =>
+        set(({ draft }) => ({
+          draft: {
+            ...draft,
+            variant: withSectionAny(draft.variant, index, (section) =>
+              moveEntryIn(section, fromId, toId),
+            ),
+          },
+        })),
+
+      moveBullet: (index, entryId, fromId, toId) =>
+        set(({ draft }) => ({
+          draft: {
+            ...draft,
+            variant: withSectionAny(draft.variant, index, (section) =>
+              moveBulletIn(section, entryId, fromId, toId),
+            ),
+          },
+        })),
+
+      addEntry: (index, values) =>
+        set(({ draft }) => ({ draft: addEntryTo(draft, index, values) })),
+
+      addBullet: (index, ownerId, values) =>
+        set(({ draft }) => ({ draft: addBulletTo(draft, index, ownerId, values) })),
+
+      addCustomSection: (values) =>
+        set(({ draft }) => ({ draft: addCustomSectionTo(draft, values) })),
+
+      removeSection: (index) =>
+        set(({ draft }) => {
+          if (draft.variant.sections[index] === undefined) return {};
+          return {
+            draft: {
+              ...draft,
+              variant: {
+                ...draft.variant,
+                sections: draft.variant.sections.filter((_, at) => at !== index),
+              },
+            },
+          };
+        }),
+
+      // Not recorded: a save is not an edit. It moves the baseline, and the one
+      // field it writes into the draft is the server's timestamp.
+      markSaved: (document) =>
+        rawSet(({ draft }) => ({
+          saved: document,
+          draft: {
+            ...draft,
+            variant: { ...draft.variant, updatedAt: document.variant.updatedAt },
+          },
+        })),
+
+      // Both of these *are* recorded, and deliberately: throwing a session away
+      // and adopting a recovered one are the two edits it would hurt most to
+      // have made by accident.
+      revert: () => set((state) => ({ draft: state.saved })),
+
+      restore: (document) => set(() => ({ draft: document })),
+
+      undo: () =>
+        rawSet((state) => {
+          const step = undone(state.history, state.draft);
+          if (!step) return {};
+          return { draft: withCurrentStamp(step.document, state.draft), history: step.history };
+        }),
+
+      redo: () =>
+        rawSet((state) => {
+          const step = redone(state.history, state.draft);
+          if (!step) return {};
+          return { draft: withCurrentStamp(step.document, state.draft), history: step.history };
+        }),
+    };
+  });
 }
