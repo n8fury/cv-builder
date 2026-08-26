@@ -100,6 +100,7 @@ const MUTATIONS: [name: string, run: (store: Store) => void][] = [
   ["addBullet", (s) => s.getState().addBullet(2, "exp-1", { text: "third" })],
   ["setEntryIncluded", (s) => s.getState().setEntryIncluded(2, "exp-1", false)],
   ["setTaggedIncluded", (s) => s.getState().setTaggedIncluded(2, "backend", true)],
+  ["setEntriesIncluded", (s) => s.getState().setEntriesIncluded(2, ["exp-1"], "invert")],
   ["setBulletIncluded", (s) => s.getState().setBulletIncluded(2, "exp-1", "b2", false)],
   ["moveSection", (s) => s.getState().moveSection(0, 2)],
   ["moveEntry", (s) => s.getState().moveEntry(3, "exp-1", "experience-2")],

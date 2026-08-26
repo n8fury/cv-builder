@@ -22,6 +22,7 @@ import { SECTION_TITLE } from "@/lib/render/section-titles";
 import type { ContentLibrary } from "@/lib/schema/library";
 import type { VariantSection } from "@/lib/schema/variant";
 
+import { BulkActions } from "./BulkActions";
 import { EntryCuration, type EntryChoice } from "./EntryCuration";
 import { useEditor } from "./EditorStoreProvider";
 import { NewItemForm } from "./NewItemForm";
@@ -717,6 +718,7 @@ export function SectionCard({
       <SectionOptions section={section} index={index} library={library} />
       {/* Above the list, not inside it: these act on the whole section, and
           the counts they show are read off the list below them (§6.1). */}
+      <BulkActions section={section} index={index} library={library} filter={filter} />
       <TagActions section={section} index={index} library={library} />
       {/* What the filter is holding back, said on the card that is holding it
           back. A shortened list read as the whole list is how someone rewords

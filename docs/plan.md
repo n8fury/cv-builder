@@ -1803,10 +1803,66 @@ the code, so the spec stays the source of truth for values:
     **84/84**, text and faces identical. Nothing outside the editor's left
     column moved.
 
-- [ ] Task 10.9: Add bulk curation per section
+- [x] Task 10.9: Add bulk curation per section
   - Verification: include-all, include-none and invert each produce the same
     draft as performing the equivalent toggles individually.
   - So a variant can start from empty rather than un-ticking twenty rows.
+  - Result: all three hold, and are checked literally rather than by sampling.
+    - **the same draft** is a whole-store comparison, not a spot check: for
+      each mode, a store driven by one press is compared against a second
+      store driven through `setEntryIncluded` over the same IDs in the same
+      order. The drafts must be equal, not merely similar — and the pair is
+      run over **every** section type that curates a list, since
+      `includeEntry` has a branch per collection and a mode proved on
+      Experience would prove nothing about Technical Skills. The list of
+      those seven types is itself asserted, so a new curated section cannot
+      slip past unexercised.
+    - the same comparison holds for a *subset* of the rows, which is what the
+      filter hands these buttons.
+    - and in a real browser (Puppeteer, 16/16) against the real profile:
+      None empties Experience and disables itself, the preview shrinks with
+      it, Invert from empty fills the section and All then disables itself,
+      Invert again empties it, three Ctrl+Z presses land exactly on the
+      opening state with the indicator reading Saved, and both files are
+      hashed before and after to confirm nothing reached disk.
+  - **Entry level only, deliberately.** Including an entry already restores
+    the bullets it was saved with (`restoredBullets`, §6.2), and an "include
+    all" that also forced every bullet in would be a *different* edit from
+    ticking the box — it would silently overwrite the bullet choices already
+    made inside the jobs the person was keeping. Pinned by a test: All over a
+    section leaves `exp-1` at its saved single bullet while a never-saved
+    entry arrives with all of its own. Bulk curation of bullets is what tags
+    are for (§6.1, Task 10.7); this is bulk curation of a *list*.
+  - Three actions because there are three things anyone does to a whole list.
+    Invert is the one that does not look worth a button until a variant needs
+    the *other* four jobs, at which point it is the entire task.
+  - The mode is resolved inside the store against the live draft, not by the
+    component at render time — a press must not apply a decision computed
+    from a section that has since moved on. `bulk.ts` resolves; the store
+    folds `includeEntry` over the result, which is why a re-included entry
+    still lands in its library position (§15.3) rather than at the end.
+    Pinned: All on Projects puts `proj-1` *above* the already-included
+    `proj-2`.
+  - Only real changes are returned, so a press with nothing to do leaves the
+    draft the identical object and records no step. The buttons disable
+    themselves at that point anyway, but a store invariant should not rest on
+    a view remembering to.
+  - One `set`, so one undo step: it was one decision. `None` followed by
+    Ctrl+Z is not twenty undos.
+  - **The filter (10.8) scopes them.** The counts and the actions are of the
+    rows the card is showing, and the label reads `Shown` rather than
+    `Entries` while it is narrowed. A button sitting above a list of three
+    rows that quietly cleared twenty would be offering something other than
+    what it appears to. Verified in the browser: filtered to one job, the bar
+    reads `1/1` and None left the other job untouched.
+  - Silent on the sections that curate no list — the header, About Me,
+    Languages, a custom section — for `TagActions`' reason: a control that
+    can do nothing should not be drawn.
+  - `npm test` **441/441** (up from 424 — 17 cases over the resolver, the
+    by-hand equivalence across all seven curated types, the restored bullets
+    and the single undo step), `tsc --noEmit`, `lint`,
+    `check:tailwind-scope`, and `npm run harness` **84/84**, text and faces
+    identical. Nothing outside the editor's left column moved.
 
 - [ ] Task 10.10: Add a section jump rail and sticky section headers
   - Verification: every section is reachable in one click from the rail, and

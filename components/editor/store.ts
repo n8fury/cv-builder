@@ -19,6 +19,7 @@ import { generateLinkId, normalizeLinkUrl, type HeaderFieldName } from "@/lib/da
 import { generateId, libraryIds } from "@/lib/data/ids";
 import { build, type NewItemValues } from "@/lib/data/new-items";
 
+import { bulkChanges, type BulkMode } from "./bulk";
 import { EMPTY_HISTORY, recorded, redone, undone, type History } from "./history";
 import { moved, movedById, movedIds } from "./ordering";
 import { taggedBulletRefs, taggedEntryIds } from "./tags";
@@ -122,6 +123,24 @@ export interface EditorState {
    * order, and why a tagged bullet never drags an excluded entry in with it.
    */
   setTaggedIncluded(index: number, tag: string, included: boolean): void;
+  /**
+   * The same edit again, over a whole list at once: all of it, none of it, or
+   * inverted (§6.2, `./bulk`).
+   *
+   * A variant forked from a detailed CV starts with everything in, so
+   * narrowing it means twenty un-tickings before the real work begins; "none,
+   * then pick" is the shorter sentence. Like the tag action it folds
+   * `setEntryIncluded`'s own path, so a press produces exactly the draft the
+   * equivalent ticking would — and it is one undo step, because it was one
+   * decision.
+   *
+   * `entryIds` is passed in rather than read off the section: under the form's
+   * text filter these act on the rows the card is showing. The *mode* is
+   * resolved here rather than by the caller, against the live draft, so a
+   * press cannot apply a decision computed from a section that has since
+   * moved on.
+   */
+  setEntriesIncluded(index: number, entryIds: readonly string[], mode: BulkMode): void;
   /**
    * The second level: a bullet inside an entry (§5.4, §5.5), or a skill inside
    * a skill group (§12.3) — one ID list nested in another, either way.
@@ -1106,6 +1125,38 @@ export function createEditorStore({ profileId, variantId, ...document }: EditorS
             }),
           },
         })),
+
+      setEntriesIncluded: (index, entryIds, mode) =>
+        set(({ draft, saved }) => {
+          const section = draft.variant.sections[index];
+          if (section === undefined) return {};
+          // Resolved before the write, so a press with nothing to do leaves
+          // the draft the identical object and records no step. The buttons
+          // disable themselves at that point anyway, but a store invariant
+          // should not rest on a view remembering to.
+          const changes = bulkChanges(section, entryIds, mode);
+          if (changes.length === 0) return {};
+
+          return {
+            draft: {
+              ...draft,
+              variant: withSectionAny(draft.variant, index, (current) =>
+                changes.reduce(
+                  (built, change) =>
+                    includeEntry(
+                      draft.library,
+                      saved.variant,
+                      index,
+                      built,
+                      change.id,
+                      change.included,
+                    ),
+                  current,
+                ),
+              ),
+            },
+          };
+        }),
 
       setBulletIncluded: (index, entryId, bulletId, included) =>
         set(({ draft }) => ({
