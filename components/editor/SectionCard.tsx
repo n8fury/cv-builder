@@ -20,6 +20,7 @@ import { useEditor } from "./EditorStoreProvider";
 import { NewItemForm } from "./NewItemForm";
 import { DragHandle, useSortableRow } from "./Sortable";
 import { SkillCuration } from "./SkillCuration";
+import { TagActions } from "./TagActions";
 import { ordered } from "./ordering";
 import { useLinkHover } from "./preview-link";
 
@@ -620,6 +621,9 @@ export function SectionCard({
         ) : null}
       </div>
       <SectionOptions section={section} index={index} library={library} />
+      {/* Above the list, not inside it: these act on the whole section, and
+          the counts they show are read off the list below them (§6.1). */}
+      <TagActions section={section} index={index} library={library} />
       {/* Shown for hidden sections too: curation is often prepared before a
           section is switched back on, and collapsing it would shuffle the
           whole column on every toggle. */}

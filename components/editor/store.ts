@@ -21,6 +21,7 @@ import { build, type NewItemValues } from "@/lib/data/new-items";
 
 import { EMPTY_HISTORY, recorded, redone, undone, type History } from "./history";
 import { moved, movedById, movedIds } from "./ordering";
+import { taggedBulletRefs, taggedEntryIds } from "./tags";
 
 import type { Bullet, ContentLibrary, Header } from "@/lib/schema/library";
 import type {
@@ -106,6 +107,21 @@ export interface EditorState {
    * which §12.3 defines as mirroring how an entry references its bullets.
    */
   setEntryIncluded(index: number, entryId: string, included: boolean): void;
+  /**
+   * The same edit, for everything in this section carrying `tag` (§6.1).
+   *
+   * "Include everything tagged `backend`" is most of what tailoring a variant
+   * to a posting is, and doing it a checkbox at a time is the slowest thing
+   * the editor asks of anyone. It is one undo step, because it was one
+   * decision — but it is not a new kind of edit: it folds the two per-item
+   * paths above over the IDs `./tags` resolves the tag to, so a re-included
+   * entry comes back with the bullets and in the position it had, exactly as
+   * ticking it would.
+   *
+   * Both curated levels, entries before bullets — see `./tags` for why that
+   * order, and why a tagged bullet never drags an excluded entry in with it.
+   */
+  setTaggedIncluded(index: number, tag: string, included: boolean): void;
   /**
    * The second level: a bullet inside an entry (§5.4, §5.5), or a skill inside
    * a skill group (§12.3) — one ID list nested in another, either way.
@@ -1066,6 +1082,28 @@ export function createEditorStore({ profileId, variantId, ...document }: EditorS
             variant: withSectionAny(draft.variant, index, (section) =>
               includeEntry(draft.library, saved.variant, index, section, entryId, included),
             ),
+          },
+        })),
+
+      setTaggedIncluded: (index, tag, included) =>
+        set(({ draft, saved }) => ({
+          draft: {
+            ...draft,
+            variant: withSectionAny(draft.variant, index, (section) => {
+              const entries = taggedEntryIds(draft.library, section, tag).reduce(
+                (current, entryId) =>
+                  includeEntry(draft.library, saved.variant, index, current, entryId, included),
+                section,
+              );
+              // Resolved against the section the entry pass produced, so an
+              // entry pulled in by this same action has its bullets curated
+              // too — and one left out has none of its bullets touched.
+              return taggedBulletRefs(draft.library, entries, tag).reduce(
+                (current, { entryId, bulletId }) =>
+                  includeBullet(draft.library, current, entryId, bulletId, included),
+                entries,
+              );
+            }),
           },
         })),
 

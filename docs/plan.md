@@ -1672,14 +1672,56 @@ the code, so the spec stays the source of truth for values:
 
 ### Tier 2 — speed of tailoring
 
-- [ ] Task 10.7: Use tags in the editor (§6.1)
+- [x] Task 10.7: Use tags in the editor (§6.1)
   - Verification: a section can include or exclude every entry carrying a
     given tag in one action, and the result is an ordinary curation edit no
     different from ticking the boxes by hand.
-  - Every library item carries `tags`, `TagFilter` exists in the library
-    manager, and the editor ignores them entirely. "Include everything tagged
-    `backend`" is precisely what tailoring a variant to a posting *is* — the
-    biggest capability gap on this list.
+  - Result: both hold.
+    - **one action**: each curated section now carries a row of tag chips, one
+      per tag its own content uses, each with `+` and `−` and a live `n/m`
+      count. One press curates everything the tag names.
+    - **no different by hand** is checked literally rather than by sampling:
+      for five tag/direction pairs across three section types, a store driven
+      by the bulk action is compared whole against a second store driven
+      through `setEntryIncluded` and `setBulletIncluded` over the same IDs. The
+      drafts must be equal, not merely similar.
+    - and in a real browser (CDP, 10/10) against the real profile: the chips
+      render with the counts the library actually produces, one click clears
+      six competencies at once and the chip drops to `0/6`, include-all puts
+      back exactly what exclude-all took, one Ctrl+Z undoes the lot, and both
+      files are hashed before and after to confirm nothing reached disk.
+  - **Both curated levels, not just entries** — which the real library forced.
+    Of the 25 tagged items on `jordan-rivera`, 16 sit on *bullets*; only Core
+    Competencies is tagged at entry level. An entry-level-only action would
+    have rendered inert chips on Experience and Projects, the two sections
+    tailoring spends its time in. A tag is wherever the person put it.
+  - The two levels resolve in one order: entries first, then bullets inside
+    whatever the section includes *after* that pass. So a press can pull an
+    entry in and curate its bullets in the same action — and a tagged bullet
+    inside an *excluded* entry is left alone, because an action that silently
+    adds a job to the CV is not the one the button offers. An entry joins the
+    variant only when the entry itself is tagged.
+  - `tags.ts` resolves; it never writes. The store's `setTaggedIncluded` folds
+    `includeEntry` and `includeBullet` — the same functions the checkboxes
+    call — over the resolved IDs, which is why a re-included entry still comes
+    back with its saved bullet curation and in its library position (§15.3)
+    rather than at the bottom of the section.
+  - One `set`, so one undo step: it was one decision. `− backend` followed by
+    Ctrl+Z is not six undos.
+  - Chips are scoped per section, not offered once for the whole variant. A
+    tag means something different in Experience than in Projects, the counts
+    only make sense against one list, and a global press would reach sections
+    the person is not looking at. A tag naming nothing in a section is not
+    shown there at all.
+  - The count is the affordance: `3/5` says what the button will do before it
+    does it, and is what lets each action disable itself at its end rather
+    than push an empty step. It moves as the section does — pulling a job in
+    brings its tagged bullets into scope, so `2/2` can become `2/7`. That is
+    the honest reading; those bullets were genuinely not on the CV before.
+  - `npm test` **402/402** (up from 390 — 12 cases over the resolver, the two
+    levels, the by-hand equivalence and the single undo step), `tsc --noEmit`,
+    `lint`, and `npm run harness` **84/84** and `npm run harness:export`
+    **84/84**, text and faces identical. Nothing outside the editor moved.
 
 - [ ] Task 10.8: Add a filter box over the whole form
   - Verification: typing a term narrows every section to matching entries and
