@@ -23,6 +23,7 @@ import type { Pagination } from "@/lib/render/pagination";
 import { DraftRecovery } from "./DraftRecovery";
 import { EditorStoreProvider, useEditor } from "./EditorStoreProvider";
 import { FontWarning } from "./FontWarning";
+import { LineCountProvider } from "./line-counts";
 import { PageFit } from "./PageFit";
 import { PreviewLinkProvider } from "./preview-link";
 import { PreviewFrame } from "./PreviewFrame";
@@ -112,6 +113,9 @@ export function EditorShell({ snapshot, css }: { snapshot: EditorSnapshot; css: 
       {/* Both columns, since the link runs both ways: the form points into the
           preview, and a click in the preview comes back out to the form. */}
       <PreviewLinkProvider>
+      {/* Both columns again, and for the same reason: the preview measures
+          each bullet's line count and the form's fields are what show it. */}
+      <LineCountProvider>
       <div className="mx-auto max-w-[1600px] px-6 py-6">
         <header className="mb-4 flex items-baseline gap-3">
           <h1 className="text-lg font-semibold text-gray-900">
@@ -154,6 +158,7 @@ export function EditorShell({ snapshot, css }: { snapshot: EditorSnapshot; css: 
           </div>
         </div>
       </div>
+      </LineCountProvider>
       </PreviewLinkProvider>
     </EditorStoreProvider>
   );

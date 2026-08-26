@@ -52,6 +52,12 @@ import {
   SPLIT_HEAD_KEEPS_LINES,
   UNBREAKABLE_SELECTOR,
 } from "./page-blocks";
+import {
+  measureBulletLines,
+  sameLines,
+  useLineCountListener,
+  type BulletLines,
+} from "./line-counts";
 import { usePaginationListener } from "./pagination-context";
 
 /**
@@ -200,13 +206,24 @@ function proseRuns(flow: HTMLElement, origin: number, pxPerPt: number): ProseRun
   return runs;
 }
 
+/**
+ * What one pass over page one's flow reads off it: the page model, and — only
+ * when the editor is listening for them — each bullet's line count (§16.3).
+ * One pass, because both are readings of the same laid-out boxes and a second
+ * walk would measure a document that had already re-rendered underneath it.
+ */
+interface Reading {
+  pagination: Pagination;
+  lines: BulletLines | null;
+}
+
 /** Reads page one's flow and runs the §11.5 model over it. */
-function measure(flow: HTMLElement): Pagination {
+function measure(flow: HTMLElement, withLines: boolean): Reading {
   const flowRect = flow.getBoundingClientRect();
   // Zero width means the document is not laid out yet — a freshly written
   // iframe, or a collapsed column. Nothing to measure, and dividing by it
   // would report Infinity as a page count.
-  if (flowRect.width === 0) return EMPTY_PAGINATION;
+  if (flowRect.width === 0) return { pagination: EMPTY_PAGINATION, lines: null };
 
   // Derived from the box rather than assumed to be 96/72: it absorbs whatever
   // the browser rounded 502pt to, so the blocks and the page height are
@@ -240,7 +257,7 @@ function measure(flow: HTMLElement): Pagination {
     label: blockLabel(item.element),
   }));
 
-  return paginate({
+  const pagination = paginate({
     blocks,
     proseRuns: proseRuns(flow, origin, pxPerPt),
     // The flow's own height, not the sheet's: the sheet is clipped to one
@@ -249,13 +266,17 @@ function measure(flow: HTMLElement): Pagination {
     usableHeight: CONTENT_HEIGHT_PT,
     tolerance: TOLERANCE_PT,
   });
+
+  return { pagination, lines: withLines ? measureBulletLines(flow, pxPerPt) : null };
 }
 
 export function PagedDocument({ children }: { children: ReactNode }) {
   const firstFlow = useRef<HTMLDivElement>(null);
   const [pagination, setPagination] = useState<Pagination>(EMPTY_PAGINATION);
   const latest = useRef<Pagination>(EMPTY_PAGINATION);
+  const latestLines = useRef<BulletLines>(new Map());
   const report = usePaginationListener();
+  const reportLines = useLineCountListener();
 
   // Re-measures in place, and returns without touching state when nothing
   // moved — which is what stops a measurement that runs on every render from
@@ -271,11 +292,22 @@ export function PagedDocument({ children }: { children: ReactNode }) {
   const remeasure = useCallback(() => {
     const flow = firstFlow.current;
     if (!flow) return;
-    const next = measure(flow);
-    if (samePagination(latest.current, next)) return;
-    latest.current = next;
-    setPagination(next);
-  }, []);
+    const next = measure(flow, reportLines !== null);
+
+    // The line counts go straight out to whoever asked for them, without
+    // passing through state here: a bullet's field is the only thing that
+    // shows them, and re-rendering this document to tell it would re-measure
+    // the document on every keystroke that changed a count. Unchanged
+    // readings are dropped for the same reason one screen further on.
+    if (reportLines && next.lines && !sameLines(latestLines.current, next.lines)) {
+      latestLines.current = next.lines;
+      reportLines(next.lines);
+    }
+
+    if (samePagination(latest.current, next.pagination)) return;
+    latest.current = next.pagination;
+    setPagination(next.pagination);
+  }, [reportLines]);
 
   // No dependency array on purpose: every draft keystroke re-renders the
   // document, and a reorder can move the breaks without changing its overall

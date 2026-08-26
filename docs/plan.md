@@ -1932,7 +1932,7 @@ the code, so the spec stays the source of truth for values:
 
 ### Tier 3 — writing comfort
 
-- [ ] Task 10.11: Improve the bullet editing fields (§16.3)
+- [x] Task 10.11: Improve the bullet editing fields (§16.3)
   - Verification: bullet fields grow with their content rather than scrolling
     inside two rows; each shows the wrapped line count the preview measures;
     Ctrl+I wraps the selection in `*…*`.
@@ -1941,6 +1941,66 @@ the code, so the spec stays the source of truth for values:
     scrollbar in a two-line box. The wrapped-line count tells you the true
     cost of a word before committing to it, and the preview already measures
     it. `*inline italic*` is the markup (§16.3) and currently has no helper.
+  - Result: all three hold, driven in a real browser (Puppeteer, 15/15)
+    against the real profile.
+    - **no field scrolls inside itself** — every bullet field on the page is
+      checked, not one: `scrollHeight` may not exceed `clientHeight` on any of
+      the sixteen, before or after typing into one. Typing six lines of prose
+      into the longest bullet grew its box from 128px to 208px with the
+      scrollbar never appearing.
+    - **the count is the preview's** — asserted against a *second*,
+      independent measurement taken inside the iframe: a `Range` over each
+      bullet's contents, its client rects deduplicated into line boxes, which
+      is the definition the readout claims to be. Every field agrees with it,
+      several bullets really do wrap, and the count moves with an edit.
+    - **Ctrl+I** wraps the selected word in `*…*`, leaves the phrase itself
+      selected, and the preview sets that phrase — and only that phrase — in
+      italic. Pressed again it comes off; Ctrl+Z steps back through it like
+      any other edit. Both files hashed before and after: unchanged.
+  - **The count is a reading of the document, not of the box it is typed in.**
+    The textarea is a different width in a different face; its own wrapping
+    says nothing about the page. So the figure comes from the preview, where
+    the bullet is laid out at 502pt in Charter — the same boxes `PagedDocument`
+    paginates, read in the same pass.
+  - Read as arithmetic, not as line boxes: bullets are consecutive
+    body-leading lines with no gap (§4.5), so a bullet's height *is* its count
+    times the leading. `proseRuns` walks client rects because it needs the
+    position of each line; a count needs one rect, and this runs inside a
+    measurement that already re-runs on every keystroke. Rounded, not floored
+    — heights come back rounded to whole device pixels, and a three-line
+    bullet must not read as two.
+  - **The counts never pass through React state above the columns.** They
+    reach the fields through a subscribe-by-id store (`line-counts.tsx`),
+    which is `preview-link`'s reasoning applied to a value that has to render:
+    state above the two columns would re-render the preview — and therefore
+    re-measure the document — to update a four-character label, and only the
+    fields whose own figure moved are notified. `/render` provides no listener
+    at all, so it does not measure and pays nothing.
+  - `BulletField` is one control for every place a bullet's wording is
+    editable — curated bullets and a custom section's own list — rather than
+    the fix being applied twice. The library manager's generic multiline
+    fields and the "add a bullet" boxes are deliberately left alone: those are
+    empty when they appear, so a two-row box is a starting size rather than a
+    scrollbar, and one of them is an uncontrolled server-action form.
+  - The border is added back onto `scrollHeight` when the height is set. The
+    box is sized border-box and `scrollHeight` is content plus padding, so the
+    obvious one-liner leaves *every* field two pixels short of its own text —
+    which is a scrollbar on every field, which is the thing being removed.
+    Caught by the browser check, which is why it measures all sixteen.
+  - Ctrl+I is a toggle, and takes the markup off whether the asterisks were
+    inside the selection or just outside it — anything else is a one-way trip
+    to be undone by hand. A literal asterisk inside the phrase is escaped to
+    `\*` on the way in and unescaped on the way out (§16.3), so the pair
+    cannot close on it. Whitespace a double-click swept up stays outside the
+    markers: `* word *` prints its spaces in italic and reads as a wider gap.
+  - `toggleItalic` is a pure string function, and its tests read every wrap
+    back through `parseInlineMarkup` — the function the PDF is built with —
+    rather than comparing against a string that merely looks right.
+  - `npm test` **472/472** (up from 456 — 16 cases over the toggle, the
+    shortcut, the rounding and the reading), `tsc --noEmit`, `lint`,
+    `check:tailwind-scope`, and `npm run harness` / `harness:export` both
+    **84/84**, text and faces identical — the print route renders the same
+    document it did before.
 
 - [ ] Task 10.12: Add keyboard shortcuts
   - Verification: Ctrl+S saves, Ctrl+Shift+S opens Save As, `/` focuses the

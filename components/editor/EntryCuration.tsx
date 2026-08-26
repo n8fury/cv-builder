@@ -23,15 +23,13 @@ import type { ReactNode } from "react";
 import { NEW_BULLET, type NewItemSpec } from "@/lib/data/new-items";
 import type { Bullet } from "@/lib/schema/library";
 
+import { BulletField } from "./BulletField";
 import { useEditor } from "./EditorStoreProvider";
 import { NewItemForm } from "./NewItemForm";
 import { DragHandle, SortableList, useSortableRow } from "./Sortable";
 import { ordered } from "./ordering";
 import { useLinkHover } from "./preview-link";
 import type { BulletOwner } from "./store";
-
-const TEXTAREA =
-  "w-full rounded border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-500 focus:outline-none resize-y";
 
 /** Holds the un-draggable rows in line with the draggable ones. */
 function HandleSpacer({ className = "" }: { className?: string }) {
@@ -78,12 +76,11 @@ function BulletControls({ sectionIndex, entryId, bullet, included, owner }: Bull
       />
       {/* Text stays editable either way: wording belongs to the library, not
           to this variant's selection (§11.4). */}
-      <textarea
-        className={`${TEXTAREA} ${included ? "" : "text-gray-400"}`}
-        data-bullet={bullet.id}
-        rows={2}
+      <BulletField
+        dimmed={!included}
+        id={bullet.id}
+        onChange={(next) => setBulletText(owner, entryId, bullet.id, next)}
         value={bullet.text}
-        onChange={(event) => setBulletText(owner, entryId, bullet.id, event.target.value)}
       />
     </>
   );

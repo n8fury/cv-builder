@@ -27,6 +27,7 @@ import type { ContentLibrary } from "@/lib/schema/library";
 import type { VariantSection } from "@/lib/schema/variant";
 
 import { BulkActions } from "./BulkActions";
+import { BulletField } from "./BulletField";
 import { EntryCuration, type EntryChoice } from "./EntryCuration";
 import { useEditor } from "./EditorStoreProvider";
 import { NewItemForm } from "./NewItemForm";
@@ -173,15 +174,11 @@ function CustomBullet({
   const hover = useLinkHover("bullet", bullet.id);
 
   return (
-    <textarea
-      className={`${FIELD} resize-y`}
-      data-bullet={bullet.id}
-      rows={2}
+    <BulletField
+      hover={hover}
+      id={bullet.id}
+      onChange={(next) => setBulletText("customSections", entryId, bullet.id, next)}
       value={bullet.text}
-      onChange={(event) =>
-        setBulletText("customSections", entryId, bullet.id, event.target.value)
-      }
-      {...hover}
     />
   );
 }
