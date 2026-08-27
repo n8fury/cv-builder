@@ -45,7 +45,7 @@ function ProfileCard({ rows }: { rows: number }) {
 export default function DashboardLoading() {
   return (
     <main className="mx-auto max-w-3xl p-8">
-      <h1 className="text-2xl font-semibold text-gray-900">CV Builder</h1>
+      <h1 className="text-2xl font-semibold text-gray-900">Vitae</h1>
       <Loading label="Loading profiles…">
         <div className="mt-2 space-y-2">
           <Bar className="w-80" />

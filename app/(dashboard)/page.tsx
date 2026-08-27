@@ -139,7 +139,7 @@ export default async function Home() {
 
   return (
     <main className="mx-auto max-w-3xl p-8">
-      <h1 className="text-2xl font-semibold text-gray-900">CV Builder</h1>
+      <h1 className="text-2xl font-semibold text-gray-900">Vitae</h1>
       <p className="mt-1 text-sm text-gray-600">
         Profiles and their saved variants, read from <code>data/profiles/</code>.
       </p>

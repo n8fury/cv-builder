@@ -1,4 +1,4 @@
-# CV Builder — Build Spec
+# Vitae — Build Spec
 
 Compiled from planning conversation. This is the brief for implementation
 in Claude Code / VS Code. Nothing here should require further design

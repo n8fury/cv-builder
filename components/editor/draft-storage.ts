@@ -28,7 +28,7 @@ import type { EditorDocument } from "./store";
 /** Bumped if the stored shape changes; older records are dropped, not migrated. */
 const RECORD_VERSION = 1;
 
-const KEY_PREFIX = "cv-maker:draft:";
+const KEY_PREFIX = "vitae:draft:";
 
 /** The subset of `Storage` used here, so a test can pass a plain object. */
 export interface DraftStorage {

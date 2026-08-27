@@ -1,4 +1,4 @@
-# CV Builder — Implementation Plan
+# Vitae — Implementation Plan
 
 Derived from `SPEC.md` (§14's build order, expanded). `SPEC.md` remains the
 source of truth for values; this file is the source of truth for sequencing

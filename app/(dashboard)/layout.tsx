@@ -4,7 +4,7 @@ import "../globals.css";
 import { ToastProvider } from "./Toaster";
 
 export const metadata: Metadata = {
-  title: "CV Builder",
+  title: "Vitae",
   description: "Tailored, pixel-perfect CVs from one content library",
 };
 
