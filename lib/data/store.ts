@@ -12,7 +12,7 @@
  */
 import { randomUUID } from "node:crypto";
 import { access, mkdir, readdir, readFile, rename, rm, unlink, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { basename, join, relative, sep } from "node:path";
 
 import {
   LIBRARY_SCHEMA_VERSION,
@@ -83,12 +83,26 @@ function isMissing(error: unknown): boolean {
   return (error as NodeJS.ErrnoException | null)?.code === "ENOENT";
 }
 
+/**
+ * The store-relative form of a path, for error messages that reach a client.
+ *
+ * §13 puts a NotFoundError's message in the 404 body, so an absolute path
+ * here would hand every caller the filesystem layout of the machine — and
+ * with `CV_PROFILES_DIR` pointing at a private data directory, its location
+ * too. The profile-relative tail is the part worth reading anyway. Anything
+ * that somehow resolves outside the store falls back to the bare filename.
+ */
+function displayPath(path: string): string {
+  const rel = relative(profilesRoot(), path);
+  return rel && !rel.startsWith("..") ? rel.split(sep).join("/") : basename(path);
+}
+
 async function readJsonFile(path: string, label: string): Promise<unknown> {
   let raw: string;
   try {
     raw = await readFile(path, "utf8");
   } catch (error) {
-    if (isMissing(error)) throw new NotFoundError(`No ${label} at ${path}`);
+    if (isMissing(error)) throw new NotFoundError(`No ${label} at ${displayPath(path)}`);
     throw error;
   }
   try {

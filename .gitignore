@@ -30,5 +30,10 @@ yarn-error.log*
 # source reference PDFs — never committed (SPEC §12.6)
 data/reference/
 
+# real personal content. Only the fictional example profile is tracked;
+# every other profile stays on the machine that made it (SPEC §12.6).
+data/profiles/*
+!data/profiles/jordan-rivera/
+
 # local, personal working agreement — not shared
 claude.md

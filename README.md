@@ -19,8 +19,7 @@ drafting through n8n is documented in [docs/n8n.md](docs/n8n.md).
 There are no accounts, no login, and no authorization checks anywhere (SPEC
 §9). A single admin — you — manages every profile, and every route trusts
 whoever can reach it: anyone who can open the app can read, edit, and delete
-every profile's content. The 404 body from the export endpoint also includes
-the absolute path of the missing variant file.
+every profile's content.
 
 The one exception is the drafting write endpoint: set `CV_API_TOKEN` and
 `POST /api/variants` requires `Authorization: Bearer <token>`, which is what
@@ -149,14 +148,21 @@ never leave half a variant behind.
 npm run validate:data       # parse every profile's files against the schemas
 ```
 
-`data/profiles/**` holds real personal content and `data/reference/` (the
-source PDFs) is gitignored entirely. Point the store somewhere else with
-`CV_PROFILES_DIR` — useful for running the browser checks against a scratch
-copy:
+`jordan-rivera` is a fictional example profile, and it is the only one this
+repo tracks. `.gitignore` excludes `data/profiles/*` and re-includes just that
+one, so real content you add here cannot be committed by accident;
+`data/reference/` (the source PDFs) is gitignored entirely.
+
+Keep your own content outside the repo and point the store at it:
 
 ```sh
-CV_PROFILES_DIR=/tmp/scratch-profiles npm run dev
+CV_PROFILES_DIR=../cv-data npm run dev
 ```
+
+`CV_PROFILES_DIR` relocates the whole profile store, so a private data
+directory — or a separate private repo holding nothing but profiles — works
+without forking this one. It is also how you run the browser checks against a
+scratch copy instead of your real data.
 
 `theme.json` is reserved by SPEC §9 for per-profile font/spacing overrides but
 is not read by anything yet; every profile renders with the same metrics.
@@ -165,10 +171,9 @@ is not read by anything yet; every profile renders with the same metrics.
 
 The fidelity harness (SPEC §11.2) is the thing that makes "pixel-perfect" a
 claim you can check. It extracts text-item geometry from a generated PDF and
-diffs it against `harness/golden.json` — the positions measured off the
-canonical reference PDF, committed to the repo — failing when any line drifts
-past ±2pt in x or baseline y, when a single character of text differs, or when
-any font face was substituted.
+diffs it against `harness/golden.json` — a committed baseline — failing when
+any line drifts past ±2pt in x or baseline y, when a single character of text
+differs, or when any font face was substituted.
 
 **It needs a dev server running on port 3000.** In one terminal:
 
@@ -183,7 +188,7 @@ npm run harness          # prints /render to PDF itself
 npm run harness:export   # measures what /api/generate-pdf actually returns
 ```
 
-Both should end with `84/84 lines placed within +/-2pt … document text
+Both should end with `82/82 lines placed within +/-2pt … document text
 identical, faces identical`. Run `harness:export` too before trusting a
 change: it exercises the export route, the font pre-flight and the page
 options, which the default mode deliberately bypasses so it can gate them.
@@ -194,8 +199,30 @@ word spaces; Chromium breaks greedily and CSS can only stretch. So a few lines
 carry one word more or less while landing in the same place. `--strict-wrap`
 makes that fatal again if you are working on the composition problem itself.
 
-Regenerating the goldens needs the reference PDFs in `data/reference/`, which
-are gitignored — `npm run extract:golden` only works if you have them.
+### What the golden files are, and are not
+
+The metrics in `lib/render/metrics.ts` were measured off two Illustrator-composed
+source PDFs. Those carry real personal content, so they are not distributable and
+`data/reference/` is gitignored — which means **the committed goldens are not
+those measurements.** They are produced by rendering the example profile and
+freezing the result.
+
+So the harness gates *regression*, not fidelity to the original source: the
+goldens are frozen at commit time, so any change that moves a line more than
+±2pt, alters a character, or substitutes a face still fails. What it can no
+longer do on your machine is prove the output matches the private original.
+
+To re-cut the baseline after a deliberate layout change, render the example
+profile and extract from that:
+
+```sh
+npm run dev
+node scripts/harness.mjs --url http://localhost:3000/render/jordan-rivera/detailed   --save-pdf /tmp/detailed.pdf
+node scripts/extract-golden.mjs --pdf /tmp/detailed.pdf --out harness/golden.json
+```
+
+`npm run extract:golden` reads from `data/reference/` instead, and only works
+if you hold the original PDFs.
 
 ## Other checks
 
@@ -219,3 +246,10 @@ you would rather it never see your real data.
 Measured values in `lib/render/metrics.ts` — page setup, font sizes, spacing —
 were taken off the source PDF and are exact. `resume.css` is generated from
 them, and `npm test` fails if the committed stylesheet is stale.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
+
+This covers the code only. The Charter BT font faces are **not** included and
+are not ours to license; see "Fonts" above before self-hosting them.

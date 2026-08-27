@@ -54,7 +54,7 @@ describe("assertSameText", () => {
 describe("assertSameFaces", () => {
   const golden = faced(
     ["CharterBT-Roman", "Architected full-stack"],
-    ["CharisSIL-Italic", "Northwind Energy Ltd."],
+    ["CharisSIL-Italic", "Northwind Energy Limited"],
   );
 
   it("passes when every face carries the same copy", () => {
@@ -64,7 +64,7 @@ describe("assertSameFaces", () => {
   it("catches a face substituted for a fallback serif", () => {
     const substituted = faced(
       ["CharterBT-Roman", "Architected full-stack"],
-      ["TimesNewRomanPS-ItalicMT", "Northwind Energy Ltd."],
+      ["TimesNewRomanPS-ItalicMT", "Northwind Energy Limited"],
     );
     const problems = assertSameFaces(golden, substituted);
     expect(problems.join(" ")).toContain("CharisSIL-Italic is absent");

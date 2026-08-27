@@ -1,0 +1,197 @@
+{
+  "schemaVersion": 1,
+  "tag": "detailed",
+  "label": "Detailed — full two-page CV",
+  "createdAt": "2026-08-22T11:00:00Z",
+  "updatedAt": "2026-08-22T11:00:00Z",
+  "sections": [
+    {
+      "type": "header",
+      "visible": true,
+      "options": {
+        "mode": "minimal"
+      }
+    },
+    {
+      "type": "aboutMe",
+      "visible": true,
+      "options": {
+        "aboutMeId": "about-default"
+      }
+    },
+    {
+      "type": "competencies",
+      "visible": true,
+      "options": {},
+      "items": [
+        "comp-fullstack",
+        "comp-restapi",
+        "comp-iot",
+        "comp-realtime",
+        "comp-db",
+        "comp-auth",
+        "comp-perf",
+        "comp-agile",
+        "comp-docs"
+      ]
+    },
+    {
+      "type": "experience",
+      "visible": true,
+      "options": {},
+      "entries": [
+        {
+          "id": "northwind",
+          "bullets": [
+            "nw-depot",
+            "nw-investor",
+            "nw-iot-backend",
+            "nw-frontend",
+            "nw-ml-drivecycle",
+            "nw-corporate-site"
+          ]
+        },
+        {
+          "id": "freelance",
+          "bullets": [
+            "fl-brightpath",
+            "fl-messaging",
+            "fl-atlas",
+            "fl-modular"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "projects",
+      "visible": true,
+      "options": {},
+      "entries": [
+        {
+          "id": "drivecycle",
+          "bullets": [
+            "dc-accuracy",
+            "dc-standards",
+            "dc-dashboard"
+          ]
+        },
+        {
+          "id": "symptom-triage",
+          "bullets": [
+            "st-realtime",
+            "st-dataset",
+            "st-gui"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "education",
+      "visible": true,
+      "options": {},
+      "entries": [
+        {
+          "id": "sit"
+        }
+      ]
+    },
+    {
+      "type": "skills",
+      "visible": true,
+      "options": {},
+      "groups": [
+        {
+          "id": "skills-languages",
+          "skills": [
+            "skill-js",
+            "skill-ts",
+            "skill-py",
+            "skill-cpp"
+          ]
+        },
+        {
+          "id": "skills-frontend",
+          "skills": [
+            "skill-react",
+            "skill-nextjs",
+            "skill-tailwind",
+            "skill-html5",
+            "skill-css3",
+            "skill-gsap",
+            "skill-responsive",
+            "skill-seo"
+          ]
+        },
+        {
+          "id": "skills-backend",
+          "skills": [
+            "skill-nodejs",
+            "skill-express",
+            "skill-restapi",
+            "skill-jwt",
+            "skill-swagger",
+            "skill-mongoose"
+          ]
+        },
+        {
+          "id": "skills-databases",
+          "skills": [
+            "skill-mongodb",
+            "skill-mysql",
+            "skill-postgresql",
+            "skill-dbdesign"
+          ]
+        },
+        {
+          "id": "skills-devops",
+          "skills": [
+            "skill-git",
+            "skill-github",
+            "skill-vscode",
+            "skill-vercel",
+            "skill-cloudinary",
+            "skill-postman",
+            "skill-linux",
+            "skill-docker"
+          ]
+        },
+        {
+          "id": "skills-testing",
+          "skills": [
+            "skill-unittest",
+            "skill-agile",
+            "skill-techdocs",
+            "skill-perfopt"
+          ]
+        },
+        {
+          "id": "skills-specialized",
+          "skills": [
+            "skill-esp32",
+            "skill-realtime",
+            "skill-ml"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "certifications",
+      "visible": true,
+      "options": {},
+      "entries": [
+        {
+          "id": "cert-northwind"
+        },
+        {
+          "id": "cert-pybootcamp"
+        },
+        {
+          "id": "cert-jsudemy"
+        },
+        {
+          "id": "cert-hackerrank"
+        }
+      ]
+    }
+  ]
+}

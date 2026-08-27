@@ -1,0 +1,302 @@
+{
+  "schemaVersion": 1,
+  "header": {
+    "name": "Jordan A. Rivera",
+    "title": "",
+    "location": "Northside, Springfield, SP-1010",
+    "email": "jordan.rivera@example.com",
+    "phone": "+1-555-0142",
+    "linkedin": "linkedin.com/in/jordan-rivera-demo",
+    "github": "github.com/jordan-rivera-demo",
+    "links": []
+  },
+  "aboutMe": [
+    {
+      "id": "about-default",
+      "key": "default",
+      "text": "Backend-focused Software Engineer with 2+ years of experience specializing in the MERN stack and sensor-integrated web applications. Proven track record of independently architecting and delivering production-ready systems including real-time fleet tracking platforms, telemetry backend infrastructure, and enterprise management dashboards. Experienced in building scalable APIs serving 1000+ daily transactions, implementing comprehensive testing with 100% coverage, and optimizing web performance. Passionate about creating efficient, well-documented solutions that drive business value.",
+      "tags": []
+    }
+  ],
+  "competencies": [
+    { "id": "comp-fullstack", "text": "Full Stack Development (MERN)", "tags": ["fullstack"] },
+    { "id": "comp-restapi", "text": "RESTful API Design", "tags": ["backend"] },
+    { "id": "comp-iot", "text": "IoT Backend Systems", "tags": ["iot", "backend"] },
+    { "id": "comp-realtime", "text": "Real-Time Data Processing", "tags": ["backend", "iot"] },
+    { "id": "comp-db", "text": "Database Design & Optimization", "tags": ["backend", "data"] },
+    { "id": "comp-auth", "text": "Authentication & Security", "tags": ["backend"] },
+    { "id": "comp-perf", "text": "Performance Optimization", "tags": ["frontend", "backend"] },
+    { "id": "comp-agile", "text": "Agile Development", "tags": ["process"] },
+    { "id": "comp-docs", "text": "Technical Documentation", "tags": ["docs"] }
+  ],
+  "experience": [
+    {
+      "id": "northwind",
+      "title": "Software Engineer",
+      "company": "Northwind Energy Ltd.",
+      "location": "Downtown, Springfield",
+      "dates": "February 2024 – January 2026",
+      "tags": [],
+      "bullets": [
+        {
+          "id": "nw-depot",
+          "text": "Architected full-stack depot management system with real-time vehicle tracking, automated invoicing, and role-based access control—achieving 100% test coverage across 200+ unit tests",
+          "tags": ["backend", "iot", "fullstack"]
+        },
+        {
+          "id": "nw-investor",
+          "text": "Developed enterprise investor portal with live fleet analytics and dynamic ROI calculations, supporting multi-role authentication for 100+ fleet operators",
+          "tags": ["backend", "frontend"]
+        },
+        {
+          "id": "nw-iot-backend",
+          "text": "Built production-ready telemetry backend infrastructure serving 1000+ daily transactions with Swagger/OpenAPI documentation across 50+ endpoints",
+          "tags": ["backend", "iot", "docs"]
+        },
+        {
+          "id": "nw-frontend",
+          "text": "Led frontend modernization with dynamic product catalogs, blog CMS (Payload integration), and internationalization (Spanish/English)—reducing load times by 40% via CDN asset optimization",
+          "tags": ["frontend"]
+        },
+        {
+          "id": "nw-ml-drivecycle",
+          "text": "Engineered ML-driven drive cycle analysis system processing location telemetry through clustering algorithms, generating validated driving patterns (2.7-5.8km range) with velocity-acceleration matrix analysis",
+          "tags": ["ml", "data"]
+        },
+        {
+          "id": "nw-corporate-site",
+          "text": "Established corporate web presence using Next.js with GSAP animations and SEO optimization, achieving 90+ PageSpeed scores",
+          "tags": ["frontend"]
+        }
+      ]
+    },
+    {
+      "id": "freelance",
+      "title": "Freelance Full Stack Developer",
+      "company": "Self-Employed",
+      "location": "Remote",
+      "dates": "February 2026 – Present",
+      "tags": [],
+      "bullets": [
+        {
+          "id": "fl-brightpath",
+          "text": "Delivered production website for *BrightPath* (academic services platform serving the regional student market) achieving 90+ PageSpeed scores by developing Next.js 15 application with TypeScript, Tailwind CSS, and Framer Motion—completing deployment in 5-day sprint with 28+ feature commits",
+          "tags": ["frontend"]
+        },
+        {
+          "id": "fl-messaging",
+          "text": "Reduced client response overhead by 50% by implementing business messaging integration, automated email notification system, and dynamic blog platform with SEO-optimized static site generation for research methodology content",
+          "tags": ["backend", "frontend"]
+        },
+        {
+          "id": "fl-atlas",
+          "text": "Rebuilt a legacy inventory tool as a documented REST service with seeded fixtures and contract tests, cutting onboarding time for new maintainers from days to hours",
+          "tags": ["backend"]
+        },
+        {
+          "id": "fl-modular",
+          "text": "Established a modular component library and shared config package across three client codebases, removing duplicated setup and standardizing lint, type and test gates",
+          "tags": ["frontend", "process"]
+        }
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "id": "drivecycle",
+      "title": "Fleet Drive-Cycle Analysis Toolkit",
+      "subtitle": "Data Science Pipeline | Python, TensorFlow, Jupyter, MCMC",
+      "dates": "February 2025 – March 2025",
+      "repoUrl": null,
+      "demoUrl": null,
+      "tags": ["ml", "data"],
+      "bullets": [
+        {
+          "id": "dc-accuracy",
+          "text": "Achieved 98%+ accuracy in driving pattern classification by implementing ML-based behavior segmentation on 40MB+ vehicular datasets using supervised learning algorithms",
+          "tags": ["ml"]
+        },
+        {
+          "id": "dc-standards",
+          "text": "Generated validated automotive testing cycles compliant with WLTP/FUDS international standards by engineering data science pipeline with statistical VA matrix correlation analysis",
+          "tags": ["data"]
+        },
+        {
+          "id": "dc-dashboard",
+          "text": "Reduced manual reporting time by 60% by building interactive visualization dashboard with automated reporting system for automotive testing workflows",
+          "tags": ["data", "frontend"]
+        }
+      ]
+    },
+    {
+      "id": "symptom-triage",
+      "title": "ML-Based Symptom Triage Application",
+      "subtitle": "Desktop Application | Python, NumPy, Pandas, Tkinter, Scikit-learn",
+      "dates": "September 2021 – November 2021",
+      "repoUrl": null,
+      "demoUrl": null,
+      "tags": ["ml"],
+      "bullets": [
+        {
+          "id": "st-realtime",
+          "text": "Enabled real-time triage suggestions for practitioners by developing intelligent prediction system analyzing 132 symptom inputs using supervised learning models",
+          "tags": ["ml"]
+        },
+        {
+          "id": "st-dataset",
+          "text": "Processed 1.3MB clinical training dataset with 90%+ prediction accuracy by implementing rigorous validation protocols and feature engineering techniques",
+          "tags": ["ml", "data"]
+        },
+        {
+          "id": "st-gui",
+          "text": "Improved accessibility by creating user-friendly desktop GUI with intuitive symptom selection interface for practitioners",
+          "tags": ["frontend"]
+        }
+      ]
+    }
+  ],
+  "education": [
+    {
+      "id": "sit",
+      "institution": "Springfield Institute of Technology",
+      "degree": "BSc in Computer Science and Engineering",
+      "dates": "2018 - 2022",
+      "description": "Coursework: Data Structures & Algorithms, Database Systems, Operating Systems, Software Engineering, Design & Analysis of Algorithms, Probability & Statistics",
+      "tags": []
+    }
+  ],
+  "skillGroups": [
+    {
+      "id": "skills-languages",
+      "label": "Languages",
+      "tags": [],
+      "skills": [
+        { "id": "skill-js", "text": "JavaScript (ES6+)", "tags": [] },
+        { "id": "skill-ts", "text": "TypeScript", "tags": [] },
+        { "id": "skill-py", "text": "Python", "tags": [] },
+        { "id": "skill-cpp", "text": "C/C++", "tags": [] }
+      ]
+    },
+    {
+      "id": "skills-frontend",
+      "label": "Frontend",
+      "tags": [],
+      "skills": [
+        { "id": "skill-react", "text": "React.js", "tags": [] },
+        { "id": "skill-nextjs", "text": "Next.js", "tags": [] },
+        { "id": "skill-tailwind", "text": "Tailwind CSS", "tags": [] },
+        { "id": "skill-html5", "text": "HTML5", "tags": [] },
+        { "id": "skill-css3", "text": "CSS3", "tags": [] },
+        { "id": "skill-gsap", "text": "GSAP", "tags": [] },
+        { "id": "skill-responsive", "text": "Responsive Design", "tags": [] },
+        { "id": "skill-seo", "text": "SEO Optimization", "tags": [] }
+      ]
+    },
+    {
+      "id": "skills-backend",
+      "label": "Backend",
+      "tags": [],
+      "skills": [
+        { "id": "skill-nodejs", "text": "Node.js", "tags": [] },
+        { "id": "skill-express", "text": "Express.js", "tags": [] },
+        { "id": "skill-restapi", "text": "RESTful API Design", "tags": [] },
+        { "id": "skill-jwt", "text": "JWT Authentication", "tags": [] },
+        { "id": "skill-swagger", "text": "Swagger/OpenAPI", "tags": [] },
+        { "id": "skill-mongoose", "text": "Mongoose ODM", "tags": [] }
+      ]
+    },
+    {
+      "id": "skills-databases",
+      "label": "Databases",
+      "tags": [],
+      "skills": [
+        { "id": "skill-mongodb", "text": "MongoDB", "tags": [] },
+        { "id": "skill-mysql", "text": "MySQL", "tags": [] },
+        { "id": "skill-postgresql", "text": "PostgreSQL", "tags": [] },
+        { "id": "skill-dbdesign", "text": "Database Schema Design & Optimization", "tags": [] }
+      ]
+    },
+    {
+      "id": "skills-devops",
+      "label": "DevOps & Tools",
+      "tags": [],
+      "skills": [
+        { "id": "skill-git", "text": "Git", "tags": [] },
+        { "id": "skill-github", "text": "GitHub", "tags": [] },
+        { "id": "skill-vscode", "text": "VS Code", "tags": [] },
+        { "id": "skill-vercel", "text": "Vercel", "tags": [] },
+        { "id": "skill-cloudinary", "text": "Cloudinary", "tags": [] },
+        { "id": "skill-postman", "text": "Postman", "tags": [] },
+        { "id": "skill-linux", "text": "Linux", "tags": [] },
+        { "id": "skill-docker", "text": "Docker", "tags": [] }
+      ]
+    },
+    {
+      "id": "skills-testing",
+      "label": "Testing & Practices",
+      "tags": [],
+      "skills": [
+        { "id": "skill-unittest", "text": "Unit Testing", "tags": [] },
+        { "id": "skill-agile", "text": "Agile/Scrum", "tags": [] },
+        { "id": "skill-techdocs", "text": "Technical Documentation", "tags": [] },
+        { "id": "skill-perfopt", "text": "Performance Optimization", "tags": [] }
+      ]
+    },
+    {
+      "id": "skills-specialized",
+      "label": "Specialized",
+      "tags": [],
+      "skills": [
+        { "id": "skill-esp32", "text": "IoT Integration (ESP32)", "tags": [] },
+        { "id": "skill-realtime", "text": "Real-Time Data Processing", "tags": [] },
+        { "id": "skill-ml", "text": "Machine Learning (TensorFlow, Scikit-learn)", "tags": [] }
+      ]
+    }
+  ],
+  "certifications": [
+    {
+      "id": "cert-northwind",
+      "text": "Career Development Program | Northwind Training Center",
+      "dates": "Jan 2023 – Apr 2023",
+      "credentialUrl": null,
+      "tags": []
+    },
+    {
+      "id": "cert-pybootcamp",
+      "text": "Python Bootcamp 2021: Build 15 Working Applications and Games | Udemy",
+      "dates": "2021",
+      "credentialUrl": null,
+      "tags": []
+    },
+    {
+      "id": "cert-jsudemy",
+      "text": "JavaScript for Beginners: Create 27 Projects from Scratch | Udemy",
+      "dates": "2021",
+      "credentialUrl": null,
+      "tags": []
+    },
+    {
+      "id": "cert-hackerrank",
+      "text": "JavaScript (Basic) Certification | HackerRank",
+      "dates": "2021",
+      "credentialUrl": null,
+      "tags": []
+    }
+  ],
+  "recommendations": [],
+  "languages": [
+    {
+      "id": "lang-es",
+      "language": "Spanish",
+      "proficiency": "Native (Mother Tongue)",
+      "tags": []
+    },
+    {
+      "id": "lang-en",
+      "language": "English",
+      "proficiency": "Professional Working Proficiency (Fluent in Reading, Writing, and Speaking)",
+      "tags": []
+    }
+  ],
+  "customSections": []
+}
