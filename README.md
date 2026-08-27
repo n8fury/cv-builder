@@ -226,6 +226,14 @@ if you hold the original PDFs.
 
 ## Other checks
 
+On a fresh clone, generate Next's route types once before type-checking —
+`LayoutProps` and `PageProps` are generated into `.next/types`, so `tsc` has
+nothing to resolve them against until then:
+
+```sh
+npx next typegen
+```
+
 ```sh
 npm test                      # vitest, the whole unit suite
 npm run lint                  # eslint
